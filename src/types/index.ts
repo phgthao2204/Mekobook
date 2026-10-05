@@ -1,0 +1,95 @@
+/**
+ * Mekobook TypeScript Types & Headless API Contracts
+ */
+
+export interface LiferayItemResponse<T> {
+  actions?: Record<string, { method: string; href: string }>;
+  facets?: any[];
+  items: T[];
+  lastPage: number;
+  page: number;
+  pageSize: number;
+  totalCount: number;
+}
+
+/** 1. Book - Sách điện tử & Giáo trình (/o/c/books) */
+export interface Book {
+  id: number;
+  creator?: { id: number; name: string };
+  dateCreated?: string;
+  dateModified?: string;
+  title: string;
+  author: string;
+  publisher?: string;
+  language?: 'vi' | 'en';
+  description?: string;
+  coverUrl: string;
+  documentUrl?: string;
+  fileSize?: number;
+  totalPages: number;
+  isFree?: boolean;
+  samplePagesLimit?: number;
+  flipbookBaseUrl: string;
+  screenPattern: string;
+  thumbPattern: string;
+  readingProgression?: 'ltr' | 'rtl';
+  defaultSpread?: 'auto' | 'single' | 'double';
+  isEncrypted?: boolean;
+}
+
+/** 2. ChapterTOC - Mục lục cây phân cấp (/o/c/chaptertocs) */
+export interface ChapterTOC {
+  id: number;
+  bookId: number;
+  parentChapterId?: number | null;
+  title: string;
+  startPage: number;
+  level: number;
+  displayOrder: number;
+}
+
+/** 5. UserPreference - Cấu hình trải nghiệm đọc (/o/c/userpreferences) */
+export interface UserPreference {
+  id?: number;
+  themeMode: 'LIGHT' | 'SEPIA' | 'DARK';
+  brightness: number;
+  enablePageCurl3D: boolean;
+  pageCurlSpeed: number;
+  defaultViewMode: 'SINGLE' | 'DUAL' | 'AUTO';
+  keepScreenAwake: boolean;
+  fontSizeScale?: number;
+}
+
+/** 6. ReadingProgress - Tiến độ đọc sách (/o/c/readingprogresses) */
+export interface ReadingProgress {
+  id?: number;
+  bookId: number;
+  currentPage: number;
+  totalPages: number;
+  percentage: number;
+  readStatus: 'NOT_STARTED' | 'READING' | 'COMPLETED';
+  readDurationSeconds?: number;
+  lastReadTimestamp?: number;
+}
+
+/** 7. Bookmark - Đánh dấu ruy băng trang (/o/c/bookmarks) */
+export interface Bookmark {
+  id?: number;
+  bookId: number;
+  pageNumber: number;
+  bookmarkTitle: string;
+  colorCode?: string;
+}
+
+/** Bridge Messages between React Native and Flipbook WebView Engine */
+export type FlipbookToReactNativeMessage =
+  | { type: 'ENGINE_READY'; totalPages: number }
+  | { type: 'PAGE_CHANGED'; page: number; totalPages: number }
+  | { type: 'TAP_CENTER' }
+  | { type: 'ERROR'; message: string };
+
+export type ReactNativeToFlipbookMessage =
+  | { type: 'TURN_NEXT' }
+  | { type: 'TURN_PREV' }
+  | { type: 'GO_TO_PAGE'; page: number };
+

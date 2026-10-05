@@ -1,0 +1,2595 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mekobook CDM & Architecture Viewer - 10 Models CTUPress</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-sidebar: #f1f5f9;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-light: #64748b;
+      
+      --primary: #2563eb;
+      --primary-subtle: #eff6ff;
+      --primary-border: #bfdbfe;
+      
+      --accent-green-bg: #ecfdf5;
+      --accent-green-text: #065f46;
+      --accent-green-border: #a7f3d0;
+      
+      --accent-amber-bg: #fffbeb;
+      --accent-amber-text: #92400e;
+      --accent-amber-border: #fde68a;
+
+      --workspace-bg: radial-gradient(circle at 50% 50%, #ffffff 0%, #f1f5f9 100%);
+    }
+
+    [data-theme="dark"] {
+      --bg-page: #070b14;
+      --bg-surface: #0f172a;
+      --bg-sidebar: #1e293b;
+      --border: #334155;
+      --border-strong: #475569;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      
+      --primary: #3b82f6;
+      --primary-subtle: #1e3a8a33;
+      --primary-border: #3b82f655;
+
+      --accent-green-bg: #064e3b44;
+      --accent-green-text: #6ee7b7;
+      --accent-green-border: #059669;
+
+      --accent-amber-bg: #78350f22;
+      --accent-amber-text: #fde68a;
+      --accent-amber-border: #d97706;
+
+      --workspace-bg: radial-gradient(circle at 50% 50%, #111e38 0%, #070b14 85%);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      background: #2563eb;
+      color: #fff;
+      font-weight: 800;
+      font-size: 15px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .header-title h1 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .header-title p {
+      font-size: 0.75rem;
+      color: var(--text-light);
+    }
+
+    .tab-nav {
+      display: flex;
+      background: var(--bg-sidebar);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-ctrl {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-ctrl:hover {
+      background: var(--bg-sidebar);
+      border-color: var(--primary);
+    }
+
+    .workspace {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      background: var(--workspace-bg);
+    }
+
+    .tab-content {
+      width: 100%;
+      height: 100%;
+      display: none;
+      position: relative;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    .panzoom-wrap {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      overflow: hidden;
+    }
+
+    .panzoom-wrap:active {
+      cursor: grabbing;
+    }
+
+    .side-info {
+      width: 320px;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border);
+      padding: 20px;
+      overflow-y: auto;
+      flex-shrink: 0;
+      box-shadow: -2px 0 6px rgba(0,0,0,0.02);
+    }
+
+    .side-info h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .side-info p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-bottom: 14px;
+    }
+
+    .step-box {
+      background: var(--bg-sidebar);
+      border-left: 3px solid var(--primary);
+      padding: 10px 12px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    .step-box b {
+      display: block;
+      color: var(--text-main);
+      margin-bottom: 3px;
+      font-size: 0.82rem;
+    }
+
+    .step-box.focus {
+      background: var(--accent-green-bg);
+      border-left-color: #10b981;
+      color: var(--accent-green-text);
+    }
+
+    .step-box.focus b {
+      color: var(--accent-green-text);
+    }
+
+    /* TAB 1: DICTIONARY CONTAINER */
+    .dict-container {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      padding: 24px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .dict-header {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .dict-search {
+      padding: 8px 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      width: 320px;
+      font-size: 0.85rem;
+      background: var(--bg-page);
+      color: var(--text-main);
+    }
+
+    .quick-jump-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+    }
+
+    .jump-pill {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--primary);
+      background: var(--primary-subtle);
+      border: 1px solid var(--primary-border);
+      padding: 3px 8px;
+      border-radius: 12px;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+
+    .jump-pill:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .dict-section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dict-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .dict-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .dict-badge {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .badge-p1 { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .badge-p2 { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .badge-p3 { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+
+    .model-meta-box {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      background: var(--bg-sidebar);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      font-size: 0.78rem;
+    }
+
+    .meta-item b {
+      color: var(--text-main);
+    }
+
+    .meta-item code {
+      font-family: 'Fira Code', monospace;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .model-desc-box {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-bottom: 14px;
+      padding: 8px 12px;
+      background: #fafafa;
+      border-left: 3px solid var(--primary);
+      border-radius: 0 4px 4px 0;
+    }
+
+    .dict-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .dict-table th {
+      background: var(--bg-sidebar);
+      padding: 9px 10px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-strong);
+    }
+
+    .dict-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-main);
+      line-height: 1.45;
+    }
+
+    .dict-table tr:hover td {
+      background: rgba(37, 99, 235, 0.03);
+    }
+
+    .type-col { font-family: 'Fira Code', monospace; font-size: 0.75rem; color: #2563eb; }
+    .constraint-col { font-family: 'Fira Code', monospace; font-size: 0.72rem; color: #475569; }
+
+    /* COLOR LEGEND & FILTER PILLS */
+    .color-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 14px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .legend-color-box {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid transparent;
+    }
+    .legend-pk { background: #fee2e2; border-color: #ef4444; }
+    .legend-ref { background: #fef3c7; border-color: #f59e0b; }
+    .legend-audit { background: #ede9fe; border-color: #8b5cf6; }
+    .legend-biz { background: #eff6ff; border-color: #3b82f6; }
+
+    .filter-pills {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .pill-btn {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      color: var(--text-muted);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .pill-btn:hover {
+      border-color: var(--primary);
+      color: var(--text-main);
+    }
+    .pill-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    /* FIELD ROWS CLASSIFICATION */
+    .row-pk {
+      background: #fef2f2 !important;
+      border-left: 3px solid #ef4444 !important;
+    }
+    .row-ref {
+      background: #fffbeb !important;
+      border-left: 3px solid #f59e0b !important;
+    }
+    .row-audit {
+      background: #f5f3ff !important;
+      border-left: 3px solid #8b5cf6 !important;
+    }
+    .row-biz {
+      background: var(--bg-surface) !important;
+    }
+
+    .badge-kind {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .badge-kind-pk {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+    .badge-kind-ref {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+    }
+    .badge-kind-audit {
+      background: #ede9fe;
+      color: #6d28d9;
+      border: 1px solid #c4b5fd;
+    }
+    .badge-kind-biz {
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+
+    /* MASTER MATRIX TABLE */
+    .master-matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .master-matrix-table th {
+      background: var(--bg-sidebar);
+      padding: 9px 12px;
+      text-align: left;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 2px solid var(--primary);
+    }
+    .master-matrix-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-main);
+      vertical-align: top;
+      line-height: 1.5;
+    }
+    .master-matrix-table tr:hover td {
+      background: rgba(37, 99, 235, 0.03);
+    }
+    .cell-pk {
+      background: rgba(239, 68, 68, 0.05);
+      color: #991b1b;
+      font-weight: 600;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.75rem;
+    }
+    .cell-ref {
+      background: rgba(245, 158, 11, 0.08);
+      color: #92400e;
+      font-weight: 600;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.75rem;
+    }
+    .cell-audit {
+      background: rgba(139, 92, 246, 0.06);
+      color: #6d28d9;
+      font-size: 0.75rem;
+      font-family: 'Fira Code', monospace;
+    }
+    .cell-biz {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .mapping-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .mapping-table th {
+      background: var(--bg-sidebar);
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 2px solid var(--primary);
+    }
+    .mapping-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-main);
+      vertical-align: top;
+      line-height: 1.5;
+    }
+    .mapping-table tr:hover td {
+      background: rgba(37, 99, 235, 0.03);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <div class="brand-logo">MEKOBOOK</div>
+      <div class="header-title">
+        <h1>Kiến Trúc & Mô Hình Dữ Liệu Đối Tượng (CDM Architecture & 10 Models)</h1>
+        <p>10 Model Chuẩn Thực Tế CTUPress • Liferay 7.4 GA132 CE Objects • Phân Định Màu Sắc</p>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs (TAB 1 ACTIVE MẶC ĐỊNH) -->
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('tab-models')">Bảng Mô Tả 10 Model</button>
+      <button class="tab-btn" onclick="switchTab('tab-cdm')">Sơ Đồ CDM Quan Hệ</button>
+      <button class="tab-btn" onclick="switchTab('tab-so-do-3')">Sơ Đồ 3: Bản Đồ Gốc</button>
+      <button class="tab-btn" onclick="switchTab('tab-scenario')">Luồng Kịch Bản Chính</button>
+      <button class="tab-btn" onclick="switchTab('tab-srs-map')">Bảng Ánh Xạ SRS</button>
+    </div>
+
+    <div class="controls">
+      <button class="btn-ctrl" onclick="toggleTheme()" id="themeBtn">Giao diện Sáng/Tối</button>
+      <button class="btn-ctrl" id="zoomIn" title="Phóng to">+</button>
+      <button class="btn-ctrl" id="zoomOut" title="Thu nhỏ">-</button>
+      <button class="btn-ctrl" id="resetZoom" title="Đặt lại kích thước">Reset</button>
+      <a href="../specs/srs_viewer.html" class="btn-ctrl" style="text-decoration: none; color: inherit;">Xem Đặc Tả SRS</a>
+    </div>
+  </header>
+
+  <div class="workspace">
+
+    <!-- ============================================================== -->
+    <!-- TAB 1: BẢNG MÔ TẢ 10 MODEL ĐẦY ĐỦ CHI TIẾT (ACTIVE MẶC ĐỊNH)   -->
+    <!-- ============================================================== -->
+    <div class="tab-content active" id="tab-models">
+      <div class="dict-container">
+        
+        <div class="dict-header">
+          <div>
+            <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Từ Điển 10 Model Đối Tượng Mekobook (Chuẩn Thực Tế CTUPress)</h2>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+              Đã tối ưu: Dùng gói FlipBuilder tĩnh thay cho PageRendition • Dùng Asset Categories có sẵn • Hợp nhất Tủ sách vào DrmLicense
+            </p>
+          </div>
+          <input type="text" class="dict-search" id="dictSearchInput" placeholder="Tìm model hoặc thuộc tính (vd: shelf, license, progress)..." onkeyup="filterDict()">
+        </div>
+
+        
+        <div class="quick-jump-bar">
+          <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-right: 4px;">Nhảy nhanh tới Model:</span>
+    
+          <a href="#Book" class="jump-pill">1. Book</a>
+        
+          <a href="#ChapterTOC" class="jump-pill">2. ChapterTOC</a>
+        
+          <a href="#PersonalShelf" class="jump-pill">3. PersonalShelf</a>
+        
+          <a href="#ShelfItem" class="jump-pill">4. ShelfItem</a>
+        
+          <a href="#UserPreference" class="jump-pill">5. UserPreference</a>
+        
+          <a href="#ReadingProgress" class="jump-pill">6. ReadingProgress</a>
+        
+          <a href="#Bookmark" class="jump-pill">7. Bookmark</a>
+        
+          <a href="#Annotation" class="jump-pill">8. Annotation</a>
+        
+          <a href="#DrmLicense" class="jump-pill">9. DrmLicense</a>
+        
+          <a href="#DeviceRegistration" class="jump-pill">10. DeviceRegistration</a>
+        
+        </div>
+    
+
+        
+        <!-- BẢNG TỔNG HỢP 10 MODEL (MASTER MATRIX) -->
+        <div class="dict-card" style="margin-bottom: 24px; padding: 20px;">
+          <div class="dict-card-head" style="margin-bottom: 12px;">
+            <div>
+              <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Bảng Tổng Hợp 10 Model Tinh Gọn (Chuẩn Thực Tế CTUPress)</h3>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+                Đã loại bỏ PageRendition (dùng đường dẫn gói FlipBuilder tĩnh) và Category Store (dùng Asset Categories có sẵn của Liferay).
+              </p>
+            </div>
+            <span class="dict-badge badge-p1" style="font-size: 0.8rem; padding: 4px 10px;">10 Model Cốt Lõi</span>
+          </div>
+
+          <table class="master-matrix-table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">STT</th>
+                <th style="width: 150px;">Tên Model (Object)</th>
+                <th style="width: 140px;">Liferay REST API</th>
+                <th style="width: 120px;">Phân Kỳ</th>
+                <th style="width: 110px;">Khóa Chính (PK)</th>
+                <th style="width: 230px;">Tham Chiếu (Reference / FK)</th>
+                <th style="width: 190px;">Kiểm Toán (Liferay Audit)</th>
+                <th>Thuộc Tính Nghiệp Vụ Chính (Business)</th>
+              </tr>
+            </thead>
+            <tbody>
+    
+              <tr>
+                <td style="text-align: center; font-weight: 700; color: var(--text-light);">1</td>
+                <td>
+                  <a href="#Book" style="text-decoration: none; color: var(--primary); font-weight: 700; font-family: 'Fira Code', monospace; font-size: 0.82rem;">Book</a>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">Bảng: <code>c_book</code></div>
+                </td>
+                <td><code style="font-size: 0.72rem; background: var(--bg-sidebar); padding: 2px 4px; border-radius: 3px;">/o/c/books</code></td>
+                <td><span class="dict-badge badge-p1">Giai đoạn 1</span></td>
+                <td class="cell-pk">bookId</td>
+                <td class="cell-ref"><i>Không có (Bảng gốc)</i></td>
+                <td class="cell-audit">companyId, userId, userName, createDate, modifiedDate, status</td>
+                <td class="cell-biz">title, author, publisher, language, description, coverUrl (+11 trường)</td>
+              </tr>
+        
+              <tr>
+                <td style="text-align: center; font-weight: 700; color: var(--text-light);">2</td>
+                <td>
+                  <a href="#ChapterTOC" style="text-decoration: none; color: var(--primary); font-weight: 700; font-family: 'Fira Code', monospace; font-size: 0.82rem;">ChapterTOC</a>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">Bảng: <code>c_chaptertoc</code></div>
+                </td>
+                <td><code style="font-size: 0.72rem; background: var(--bg-sidebar); padding: 2px 4px; border-radius: 3px;">/o/c/chaptertocs</code></td>
+                <td><span class="dict-badge badge-p1">Giai đoạn 1</span></td>
+                <td class="cell-pk">chapterId</td>
+                <td class="cell-ref">bookId, parentChapterId</td>
+                <td class="cell-audit">companyId, createDate, modifiedDate</td>
+                <td class="cell-biz">title, startPage, level, displayOrder</td>
+              </tr>
+        
+              <tr>
+                <td style="text-align: center; font-weight: 700; color: var(--text-light);">3</td>
+                <td>
+                  <a href="#PersonalShelf" style="text-decoration: none; color: var(--primary); font-weight: 700; font-family: 'Fira Code', monospace; font-size: 0.82rem;">PersonalShelf</a>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">Bảng: <code>c_personalshelf</code></div>
+                </td>
+                <td><code style="font-size: 0.72rem; background: var(--bg-sidebar); padding: 2px 4px; border-radius: 3px;">/o/c/personalshelfs</code></td>
+                <td><span class="dict-badge badge-p2">Giai đoạn 2</span></td>
+                <td class="cell-pk">shelfId</td>
+                <td class="cell-ref">userId</td>
+                <td class="cell-audit">companyId, createDate, modifiedDate</td>
+                <td class="cell-biz">shelfName, colorTag, displayOrder</td>
+              </tr>
+        
+              <tr>
+                <td style="text-align: center; font-weight: 700; color: var(--text-light);">4</td>
+                <td>
+                  <a href="#ShelfItem" style="text-decoration: none; color: var(--primary); font-weight: 700; font-family: 'Fira Code', monospace; font-size: 0.82rem;">ShelfItem</a>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">Bảng: <code>c_shelfitem</code></div>
+                </td>
+                <td><code style="font-size: 0.72rem; background: var(--bg-sidebar); padding: 2px 4px; border-radius: 3px;">/o/c/shelfitems</code></td>
+                <td><span class="dict-badge badge-p2">Giai đoạn 2</span></td>
+                <td class="cell-pk">shelfItemId</td>
+                <td class="cell-ref">shelfId, bookId</td>
+                <td class="cell-audit">companyId, addedAt</td>
+                <td class="cell-biz"></td>
+              </tr>
+        
+              <tr>
+                <td style="text-align: center; font-weight: 700; color: var(--text-light);">5</td>
+                <td>
+                  <a href="#UserPreference" style="text-decoration: none; color: var(--primary); font-weight: 700; font-family: 'Fira Code', monospace; font-size: 0.82rem;">UserPreference</a>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">Bảng: <code>c_userpreference</code></div>
+                </td>
+                <td><code style="font-size: 0.72rem; background: var(--bg-sidebar); padding: 2px 4px; border-radius: 3px;">/o/c/userpreferences</code></td>
+                <td><span class="dict-badge badge-p2">Giai đoạn 2</span></td>
+                <td class="cell-pk">preferenceId</td>
+                <td class="cell-ref">userId</td>
+                <td class="cell-audit">companyId, modifiedDate</td>
+                <td class="cell-biz">themeMode, brightness, pageTurnEffect, pageTurnSoundEnabled, autoHideToolbar</td>
+              </tr>
+        
+              <tr>
+                <td style="text-align: center; font-weight: 700; color: var(--text-light);">6</td>
+                <td>
+                  <a href="#ReadingProgress" style="text-decoration: none; color: var(--primary); font-weight: 700; font-family: 'Fira Code', monospace; font-size: 0.82rem;">ReadingProgress</a>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">Bảng: <code>c_readingprogress</code></div>
+                </td>
+                <td><code style="font-size: 0.72rem; background: var(--bg-sidebar); padding: 2px 4px; border-radius: 3px;">/o/c/readingprogresses</code></td>
+                <td><span class="dict-badge badge-p2">Giai đoạn 2</span></td>
+                <td class="cell-pk">progressId</td>
+                <td class="cell-ref">userId, bookId</td>
+                <td class="cell-audit">companyId, lastReadAt</td>
+                <td class="cell-biz">currentPage, totalPages, percentage, readStatus, readDurationSeconds, lastReadTimestamp</td>
+              </tr>
+        
+              <tr>
+                <td style="text-align: center; font-weight: 700; color: var(--text-light);">7</td>
+                <td>
+                  <a href="#Bookmark" style="text-decoration: none; color: var(--primary); font-weight: 700; font-family: 'Fira Code', monospace; font-size: 0.82rem;">Bookmark</a>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">Bảng: <code>c_bookmark</code></div>
+                </td>
+                <td><code style="font-size: 0.72rem; background: var(--bg-sidebar); padding: 2px 4px; border-radius: 3px;">/o/c/bookmarks</code></td>
+                <td><span class="dict-badge badge-p2">Giai đoạn 2</span></td>
+                <td class="cell-pk">bookmarkId</td>
+                <td class="cell-ref">userId, bookId</td>
+                <td class="cell-audit">companyId, createdAt</td>
+                <td class="cell-biz">pageNumber, chapterTitle, colorTag, pageThumbnailUrl</td>
+              </tr>
+        
+              <tr>
+                <td style="text-align: center; font-weight: 700; color: var(--text-light);">8</td>
+                <td>
+                  <a href="#Annotation" style="text-decoration: none; color: var(--primary); font-weight: 700; font-family: 'Fira Code', monospace; font-size: 0.82rem;">Annotation</a>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">Bảng: <code>c_annotation</code></div>
+                </td>
+                <td><code style="font-size: 0.72rem; background: var(--bg-sidebar); padding: 2px 4px; border-radius: 3px;">/o/c/annotations</code></td>
+                <td><span class="dict-badge badge-p2">Giai đoạn 2</span></td>
+                <td class="cell-pk">annotationId</td>
+                <td class="cell-ref">userId, bookId</td>
+                <td class="cell-audit">companyId, createdAt, modifiedAt</td>
+                <td class="cell-biz">pageNumber, type, color, strokeWidth, coordinateData, noteText</td>
+              </tr>
+        
+              <tr>
+                <td style="text-align: center; font-weight: 700; color: var(--text-light);">9</td>
+                <td>
+                  <a href="#DrmLicense" style="text-decoration: none; color: var(--primary); font-weight: 700; font-family: 'Fira Code', monospace; font-size: 0.82rem;">DrmLicense</a>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">Bảng: <code>c_drmlicense</code></div>
+                </td>
+                <td><code style="font-size: 0.72rem; background: var(--bg-sidebar); padding: 2px 4px; border-radius: 3px;">/o/c/drmlicenses</code></td>
+                <td><span class="dict-badge badge-p3">Giai đoạn 3</span></td>
+                <td class="cell-pk">licenseId</td>
+                <td class="cell-ref">userId, bookId</td>
+                <td class="cell-audit">companyId, createDate</td>
+                <td class="cell-biz">licenseUuid, orderId, licenseType, encryptedContentKey, userKeyCheck, startDate (+5 trường)</td>
+              </tr>
+        
+              <tr>
+                <td style="text-align: center; font-weight: 700; color: var(--text-light);">10</td>
+                <td>
+                  <a href="#DeviceRegistration" style="text-decoration: none; color: var(--primary); font-weight: 700; font-family: 'Fira Code', monospace; font-size: 0.82rem;">DeviceRegistration</a>
+                  <div style="font-size: 0.72rem; color: var(--text-light);">Bảng: <code>c_deviceregistration</code></div>
+                </td>
+                <td><code style="font-size: 0.72rem; background: var(--bg-sidebar); padding: 2px 4px; border-radius: 3px;">/o/c/deviceregistrations</code></td>
+                <td><span class="dict-badge badge-p3">Giai đoạn 3</span></td>
+                <td class="cell-pk">registrationId</td>
+                <td class="cell-ref">licenseId</td>
+                <td class="cell-audit">companyId, registeredDate</td>
+                <td class="cell-biz">deviceUuid, deviceName, platform, lastActiveDate</td>
+              </tr>
+        
+            </tbody>
+          </table>
+        </div>
+    
+
+        
+        <!-- CHI TIẾT ĐẦY ĐỦ 10 MODEL -->
+        <div style="margin-top: 10px;">
+          <div class="dict-section-title">
+            <span>Chi Tiết Thuộc Tính & Phân Định Màu Sắc Từng Model (10 Models)</span>
+          </div>
+
+          <!-- THANH CHÚ GIẢI MÀU SẮC (COLOR LEGEND) -->
+          <div class="color-legend">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-main); margin-right: 8px;">Chú giải phân loại màu:</span>
+            <div class="legend-item">
+              <div class="legend-color-box legend-pk"></div>
+              <span style="color: #991b1b;">Khóa Chính (Primary Key - PK)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color-box legend-ref"></div>
+              <span style="color: #92400e;">Thuộc Tính Tham Chiếu (Reference / FK)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color-box legend-audit"></div>
+              <span style="color: #6d28d9;">Kiểm Toán Hệ Thống (Liferay Audit Fields)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color-box legend-biz"></div>
+              <span style="color: #1e40af;">Dữ Liệu Nghiệp Vụ (Business Fields)</span>
+            </div>
+          </div>
+
+          <!-- BỘ LỌC PHÂN LOẠI NHANH (FILTER PILLS) -->
+          <div class="filter-pills">
+            <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-right: 4px;">Lọc loại thuộc tính:</span>
+            <button class="pill-btn active" onclick="filterFieldKind('all')">Tất cả thuộc tính</button>
+            <button class="pill-btn" onclick="filterFieldKind('ref')">Chỉ xem Reference (Khóa ngoại)</button>
+            <button class="pill-btn" onclick="filterFieldKind('audit')">Chỉ xem Audit (Kiểm toán)</button>
+            <button class="pill-btn" onclick="filterFieldKind('biz')">Chỉ xem Business (Nghiệp vụ)</button>
+            <button class="pill-btn" onclick="filterFieldKind('pk')">Chỉ xem Khóa chính (PK)</button>
+          </div>
+    
+          <!-- CARD 1: Book -->
+          <div class="dict-card entity-item" id="Book" data-keywords="book c_book">
+            <div class="dict-card-head">
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); display: inline-block;">1. Model: <code>Book</code></h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 6px;">- Sách & Giáo Trình Số</span>
+              </div>
+              <span class="dict-badge badge-p1">Giai đoạn 1: Core Reader</span>
+            </div>
+
+            <!-- META INFO BOX -->
+            <div class="model-meta-box">
+              <div class="meta-item"><b>Bảng MySQL:</b> <code>c_book</code></div>
+              <div class="meta-item"><b>Liferay REST:</b> <code>/o/c/books</code></div>
+              <div class="meta-item"><b>Số trường:</b> <span>24 thuộc tính</span></div>
+            </div>
+
+            <div class="model-desc-box">
+              <b>Mô tả nghiệp vụ:</b> Thực thể trung tâm quản lý ấn phẩm số. Chứa đường dẫn gói FlipBuilder tĩnh (flipbookBaseUrl) và các quy tắc nạp ảnh trang (mobile/{page}.jpg), cờ miễn phí (isFree) và giới hạn đọc thử theo đúng thực tế vận hành CTUPress.
+            </div>
+
+            <table class="dict-table">
+              <thead>
+                <tr>
+                  <th style="width: 170px;">Tên Trường (Field)</th>
+                  <th style="width: 130px;">Kiểu Dữ Liệu</th>
+                  <th style="width: 140px;">Ràng Buộc / Khóa</th>
+                  <th style="width: 150px;">Phân Loại</th>
+                  <th>Mô Tả Nghiệp Vụ & Quy Tắc</th>
+                </tr>
+              </thead>
+              <tbody>
+        
+                <tr class="row-pk field-row" data-field-kind="pk">
+                  <td><b>bookId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">PK, Auto Increment</td>
+                  <td><span class="badge-kind badge-kind-pk">Primary Key</span></td>
+                  <td>Khóa chính tự tăng, định danh duy nhất cuốn sách.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>companyId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Mã portal instance Liferay (Multi-tenancy).</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>userId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Mã tài khoản quản trị viên / giảng viên đăng tải giáo trình.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>userName</b></td>
+                  <td class="type-col">VARCHAR(75)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Tên người tạo / biên tập bản ghi sách.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>createDate</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm tạo bản ghi sách trên hệ thống.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>modifiedDate</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm cập nhật thông tin sách gần nhất.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>status</b></td>
+                  <td class="type-col">INT</td>
+                  <td class="constraint-col">DEFAULT 0</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Trạng thái phê duyệt Liferay Workflow (0: Approved, 1: Pending, 2: Draft).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>title</b></td>
+                  <td class="type-col">VARCHAR(255)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Tên đầy đủ của giáo trình hoặc ấn phẩm (ví dụ: 'Giáo Trình Kiến Trúc Máy Tính & Hợp Ngữ').</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>author</b></td>
+                  <td class="type-col">VARCHAR(255)</td>
+                  <td class="constraint-col">NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Họ tên tác giả, nhóm giảng viên hoặc hội đồng biên soạn.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>publisher</b></td>
+                  <td class="type-col">VARCHAR(255)</td>
+                  <td class="constraint-col">NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Nhà xuất bản hoặc đơn vị phát hành (ví dụ: NXB Đại Học Cần Thơ).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>language</b></td>
+                  <td class="type-col">VARCHAR(20)</td>
+                  <td class="constraint-col">DEFAULT 'vi'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Ngôn ngữ tài liệu ('vi': Tiếng Việt, 'en': Tiếng Anh).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>description</b></td>
+                  <td class="type-col">TEXT</td>
+                  <td class="constraint-col">NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Tóm tắt đề cương môn học và mục tiêu học phần của cuốn sách.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>coverUrl</b></td>
+                  <td class="type-col">VARCHAR(500)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>URL ảnh bìa sách chất lượng cao hiển thị trên Tủ sách và Store.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>documentUrl</b></td>
+                  <td class="type-col">VARCHAR(500)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Đường dẫn file PDF gốc lưu trữ an toàn trong kho tài liệu Liferay Documents & Media.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>fileSize</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Dung lượng tệp PDF gốc tính bằng bytes.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>totalPages</b></td>
+                  <td class="type-col">INT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Tổng số trang của cuốn sách (ví dụ: 350 trang).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>isFree</b></td>
+                  <td class="type-col">TINYINT(1)</td>
+                  <td class="constraint-col">DEFAULT 0</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>True: Ấn phẩm đọc miễn phí/Kỷ yếu/Tạp chí (không cần đăng nhập, không DRM). False: Giáo trình có phí/bản quyền.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>samplePagesLimit</b></td>
+                  <td class="type-col">INT</td>
+                  <td class="constraint-col">DEFAULT 15</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Số trang cho phép độc giả đọc thử miễn phí khi chưa mua (mặc định: 15 trang đầu).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>flipbookBaseUrl</b></td>
+                  <td class="type-col">VARCHAR(500)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>URL thư mục gói FlipBuilder trên Liferay D&M (ví dụ: 'https://ctupress.vn/flipbooks/giao-trinh-101/files/').</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>screenPattern</b></td>
+                  <td class="type-col">VARCHAR(50)</td>
+                  <td class="constraint-col">DEFAULT 'mobile/{page}.jpg'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Mẫu đường dẫn ảnh trang nét 1080p để Mobile tự nạp vào Shader lật 3D 60 FPS.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>thumbPattern</b></td>
+                  <td class="type-col">VARCHAR(50)</td>
+                  <td class="constraint-col">DEFAULT 'thumb/{page}.jpg'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Mẫu đường dẫn ảnh thumbnail nhỏ để nạp vào thanh trượt Scrubber dưới đáy màn hình.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>readingProgression</b></td>
+                  <td class="type-col">VARCHAR(10)</td>
+                  <td class="constraint-col">DEFAULT 'ltr'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Hướng lật sách mặc định ('ltr': Trái sang Phải).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>defaultSpread</b></td>
+                  <td class="type-col">VARCHAR(15)</td>
+                  <td class="constraint-col">DEFAULT 'auto'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Chế độ dàn trang mặc định ('auto', 'single', 'double').</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>isEncrypted</b></td>
+                  <td class="type-col">TINYINT(1)</td>
+                  <td class="constraint-col">DEFAULT 0</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Cờ đánh dấu tài liệu đã được mã hóa bản quyền DRM AES-256.</td>
+                </tr>
+            
+              </tbody>
+            </table>
+          </div>
+        
+          <!-- CARD 2: ChapterTOC -->
+          <div class="dict-card entity-item" id="ChapterTOC" data-keywords="chaptertoc c_chaptertoc">
+            <div class="dict-card-head">
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); display: inline-block;">2. Model: <code>ChapterTOC</code></h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 6px;">- Mục Lục Cây Phân Cấp</span>
+              </div>
+              <span class="dict-badge badge-p1">Giai đoạn 1: Core Reader</span>
+            </div>
+
+            <!-- META INFO BOX -->
+            <div class="model-meta-box">
+              <div class="meta-item"><b>Bảng MySQL:</b> <code>c_chaptertoc</code></div>
+              <div class="meta-item"><b>Liferay REST:</b> <code>/o/c/chaptertocs</code></div>
+              <div class="meta-item"><b>Số trường:</b> <span>10 thuộc tính</span></div>
+            </div>
+
+            <div class="model-desc-box">
+              <b>Mô tả nghiệp vụ:</b> Quản lý cây mục lục phân cấp đa tầng (chương, phần, tiểu mục). Cho phép biên tập viên sửa mục lục trực tiếp trên Liferay Admin mà không cần mở lại phần mềm FlipBuilder.
+            </div>
+
+            <table class="dict-table">
+              <thead>
+                <tr>
+                  <th style="width: 170px;">Tên Trường (Field)</th>
+                  <th style="width: 130px;">Kiểu Dữ Liệu</th>
+                  <th style="width: 140px;">Ràng Buộc / Khóa</th>
+                  <th style="width: 150px;">Phân Loại</th>
+                  <th>Mô Tả Nghiệp Vụ & Quy Tắc</th>
+                </tr>
+              </thead>
+              <tbody>
+        
+                <tr class="row-pk field-row" data-field-kind="pk">
+                  <td><b>chapterId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">PK, Auto Increment</td>
+                  <td><span class="badge-kind badge-kind-pk">Primary Key</span></td>
+                  <td>Khóa chính tự tăng, mã định danh duy nhất của chương mục.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>companyId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Mã portal instance Liferay.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>createDate</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm tạo mục lục.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>modifiedDate</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm cập nhật mục lục gần nhất.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>bookId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> Book</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới Book.bookId (CASCADE on delete: xóa sách tự xóa mục lục).</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>parentChapterId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> ChapterTOC</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại tự tham chiếu tới chapterId cấp cha (NULL nếu là chương lớn cấp 1).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>title</b></td>
+                  <td class="type-col">VARCHAR(255)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Tiêu đề chương / phần mục (ví dụ: 'Chương 1: Tổng quan kiến trúc phần cứng').</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>startPage</b></td>
+                  <td class="type-col">INT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Số thứ tự trang bắt đầu của chương để Reader nhảy tới khi độc giả chạm vào.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>level</b></td>
+                  <td class="type-col">INT</td>
+                  <td class="constraint-col">DEFAULT 1</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Cấp độ thụt lề trên cây mục lục (1: Phần lớn, 2: Chương con, 3: Tiểu mục).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>displayOrder</b></td>
+                  <td class="type-col">INT</td>
+                  <td class="constraint-col">DEFAULT 0</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Thứ tự sắp xếp hiển thị trên cây TOC.</td>
+                </tr>
+            
+              </tbody>
+            </table>
+          </div>
+        
+          <!-- CARD 3: PersonalShelf -->
+          <div class="dict-card entity-item" id="PersonalShelf" data-keywords="personalshelf c_personalshelf">
+            <div class="dict-card-head">
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); display: inline-block;">3. Model: <code>PersonalShelf</code></h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 6px;">- Kệ Sách Cá Nhân Của Độc Giả</span>
+              </div>
+              <span class="dict-badge badge-p2">Giai đoạn 2: Tủ Sách & Kệ Sách</span>
+            </div>
+
+            <!-- META INFO BOX -->
+            <div class="model-meta-box">
+              <div class="meta-item"><b>Bảng MySQL:</b> <code>c_personalshelf</code></div>
+              <div class="meta-item"><b>Liferay REST:</b> <code>/o/c/personalshelfs</code></div>
+              <div class="meta-item"><b>Số trường:</b> <span>8 thuộc tính</span></div>
+            </div>
+
+            <div class="model-desc-box">
+              <b>Mô tả nghiệp vụ:</b> Kệ sách cá nhân do từng độc giả tự tạo (ví dụ: 'Môn Kiến Trúc', 'Tài Liệu Ôn Thi') để phân loại sách theo nhu cầu học tập riêng. Độc giả khác không nhìn thấy kệ này.
+            </div>
+
+            <table class="dict-table">
+              <thead>
+                <tr>
+                  <th style="width: 170px;">Tên Trường (Field)</th>
+                  <th style="width: 130px;">Kiểu Dữ Liệu</th>
+                  <th style="width: 140px;">Ràng Buộc / Khóa</th>
+                  <th style="width: 150px;">Phân Loại</th>
+                  <th>Mô Tả Nghiệp Vụ & Quy Tắc</th>
+                </tr>
+              </thead>
+              <tbody>
+        
+                <tr class="row-pk field-row" data-field-kind="pk">
+                  <td><b>shelfId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">PK, Auto Increment</td>
+                  <td><span class="badge-kind badge-kind-pk">Primary Key</span></td>
+                  <td>Khóa chính tự tăng, mã kệ sách cá nhân.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>companyId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Mã portal instance Liferay.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>createDate</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm độc giả tạo kệ sách.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>modifiedDate</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm sửa tên hoặc đổi màu nhãn kệ gần nhất.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>userId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> Liferay User</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới tài khoản độc giả sở hữu kệ sách.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>shelfName</b></td>
+                  <td class="type-col">VARCHAR(255)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Tên kệ sách do độc giả tự đặt (ví dụ: 'Môn Kiến Trúc Máy Tính').</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>colorTag</b></td>
+                  <td class="type-col">VARCHAR(30)</td>
+                  <td class="constraint-col">DEFAULT '#3B82F6'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Mã màu nhãn dán hiển thị trên ứng dụng (#3B82F6, #10B981, #F59E0B...).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>displayOrder</b></td>
+                  <td class="type-col">INT</td>
+                  <td class="constraint-col">DEFAULT 0</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Thứ tự sắp xếp hiển thị kệ sách trên màn hình tủ sách cá nhân.</td>
+                </tr>
+            
+              </tbody>
+            </table>
+          </div>
+        
+          <!-- CARD 4: ShelfItem -->
+          <div class="dict-card entity-item" id="ShelfItem" data-keywords="shelfitem c_shelfitem">
+            <div class="dict-card-head">
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); display: inline-block;">4. Model: <code>ShelfItem</code></h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 6px;">- Ánh Xạ Sách Vào Kệ Cá Nhân</span>
+              </div>
+              <span class="dict-badge badge-p2">Giai đoạn 2: Tủ Sách & Kệ Sách</span>
+            </div>
+
+            <!-- META INFO BOX -->
+            <div class="model-meta-box">
+              <div class="meta-item"><b>Bảng MySQL:</b> <code>c_shelfitem</code></div>
+              <div class="meta-item"><b>Liferay REST:</b> <code>/o/c/shelfitems</code></div>
+              <div class="meta-item"><b>Số trường:</b> <span>5 thuộc tính</span></div>
+            </div>
+
+            <div class="model-desc-box">
+              <b>Mô tả nghiệp vụ:</b> Bảng liên kết Nhiều - Nhiều (N:N) gán một cuốn sách vào một hoặc nhiều kệ cá nhân. Khi xóa kệ cá nhân, chỉ xóa bản ghi liên kết này, tuyệt đối không làm mất quyền sở hữu sách trong DrmLicense và không xóa sách gốc Book.
+            </div>
+
+            <table class="dict-table">
+              <thead>
+                <tr>
+                  <th style="width: 170px;">Tên Trường (Field)</th>
+                  <th style="width: 130px;">Kiểu Dữ Liệu</th>
+                  <th style="width: 140px;">Ràng Buộc / Khóa</th>
+                  <th style="width: 150px;">Phân Loại</th>
+                  <th>Mô Tả Nghiệp Vụ & Quy Tắc</th>
+                </tr>
+              </thead>
+              <tbody>
+        
+                <tr class="row-pk field-row" data-field-kind="pk">
+                  <td><b>shelfItemId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">PK, Auto Increment</td>
+                  <td><span class="badge-kind badge-kind-pk">Primary Key</span></td>
+                  <td>Khóa chính tự tăng (chuẩn hóa thay cho id_ cũ).</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>companyId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Mã portal instance Liferay.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>addedAt</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm độc giả gán cuốn sách vào kệ cá nhân.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>shelfId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> PersonalShelf</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới PersonalShelf.shelfId (CASCADE: xóa kệ tự xóa ánh xạ).</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>bookId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> Book</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới Book.bookId (CASCADE: xóa sách tự xóa ánh xạ).</td>
+                </tr>
+            
+              </tbody>
+            </table>
+          </div>
+        
+          <!-- CARD 5: UserPreference -->
+          <div class="dict-card entity-item" id="UserPreference" data-keywords="userpreference c_userpreference">
+            <div class="dict-card-head">
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); display: inline-block;">5. Model: <code>UserPreference</code></h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 6px;">- Cấu Hình Trải Nghiệm Đọc</span>
+              </div>
+              <span class="dict-badge badge-p2">Giai đoạn 2: Tiện Ích Đọc</span>
+            </div>
+
+            <!-- META INFO BOX -->
+            <div class="model-meta-box">
+              <div class="meta-item"><b>Bảng MySQL:</b> <code>c_userpreference</code></div>
+              <div class="meta-item"><b>Liferay REST:</b> <code>/o/c/userpreferences</code></div>
+              <div class="meta-item"><b>Số trường:</b> <span>9 thuộc tính</span></div>
+            </div>
+
+            <div class="model-desc-box">
+              <b>Mô tả nghiệp vụ:</b> Lưu trữ cấu hình môi trường đọc sách của từng độc giả (Theme Light/Dark, độ sáng màn hình, hiệu ứng lật trang 3D, âm thanh lật giấy). Quan hệ 1:1 với từng tài khoản User.
+            </div>
+
+            <table class="dict-table">
+              <thead>
+                <tr>
+                  <th style="width: 170px;">Tên Trường (Field)</th>
+                  <th style="width: 130px;">Kiểu Dữ Liệu</th>
+                  <th style="width: 140px;">Ràng Buộc / Khóa</th>
+                  <th style="width: 150px;">Phân Loại</th>
+                  <th>Mô Tả Nghiệp Vụ & Quy Tắc</th>
+                </tr>
+              </thead>
+              <tbody>
+        
+                <tr class="row-pk field-row" data-field-kind="pk">
+                  <td><b>preferenceId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">PK, Auto Increment</td>
+                  <td><span class="badge-kind badge-kind-pk">Primary Key</span></td>
+                  <td>Khóa chính tự tăng, mã cấu hình trải nghiệm đọc.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>companyId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Mã portal instance Liferay.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>modifiedDate</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm cập nhật cài đặt gần nhất.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>userId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> Liferay User</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại duy nhất (Unique 1:1) trỏ tới Liferay User.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>themeMode</b></td>
+                  <td class="type-col">VARCHAR(20)</td>
+                  <td class="constraint-col">DEFAULT 'LIGHT'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Chế độ nền đọc sách ('LIGHT': Sáng, 'DARK': Đêm, 'SEPIA': Vàng dịu mắt, 'SYSTEM': Theo hệ điều hành).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>brightness</b></td>
+                  <td class="type-col">DOUBLE</td>
+                  <td class="constraint-col">DEFAULT 1.0</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Độ sáng vùng đọc sách (từ 0.1 đến 1.0).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>pageTurnEffect</b></td>
+                  <td class="type-col">VARCHAR(20)</td>
+                  <td class="constraint-col">DEFAULT 'CURL_3D'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Hiệu ứng lật trang ('CURL_3D': Lật uốn cong 3D vật lý, 'SLIDE': Trượt phẳng, 'FADE': Mờ dần).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>pageTurnSoundEnabled</b></td>
+                  <td class="type-col">TINYINT(1)</td>
+                  <td class="constraint-col">DEFAULT 1</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Bật/tắt âm thanh sột soạt lật giấy (1: Bật, 0: Tắt).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>autoHideToolbar</b></td>
+                  <td class="type-col">TINYINT(1)</td>
+                  <td class="constraint-col">DEFAULT 1</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Tự động ẩn thanh công cụ sau 3 giây không chạm màn hình để tối đa không gian đọc.</td>
+                </tr>
+            
+              </tbody>
+            </table>
+          </div>
+        
+          <!-- CARD 6: ReadingProgress -->
+          <div class="dict-card entity-item" id="ReadingProgress" data-keywords="readingprogress c_readingprogress">
+            <div class="dict-card-head">
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); display: inline-block;">6. Model: <code>ReadingProgress</code></h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 6px;">- Tiến Trình Đọc & Vị Trí Gần Nhất</span>
+              </div>
+              <span class="dict-badge badge-p2">Giai đoạn 2: Tiện Ích Đọc</span>
+            </div>
+
+            <!-- META INFO BOX -->
+            <div class="model-meta-box">
+              <div class="meta-item"><b>Bảng MySQL:</b> <code>c_readingprogress</code></div>
+              <div class="meta-item"><b>Liferay REST:</b> <code>/o/c/readingprogresses</code></div>
+              <div class="meta-item"><b>Số trường:</b> <span>11 thuộc tính</span></div>
+            </div>
+
+            <div class="model-desc-box">
+              <b>Mô tả nghiệp vụ:</b> Lưu trữ vị trí trang sách đang đọc dở và phần trăm hoàn thành, đồng bộ ngầm đa thiết bị. Hỗ trợ mốc thời gian lastReadTimestamp (Epoch ms) giải quyết xung đột khi đọc trên nhiều máy.
+            </div>
+
+            <table class="dict-table">
+              <thead>
+                <tr>
+                  <th style="width: 170px;">Tên Trường (Field)</th>
+                  <th style="width: 130px;">Kiểu Dữ Liệu</th>
+                  <th style="width: 140px;">Ràng Buộc / Khóa</th>
+                  <th style="width: 150px;">Phân Loại</th>
+                  <th>Mô Tả Nghiệp Vụ & Quy Tắc</th>
+                </tr>
+              </thead>
+              <tbody>
+        
+                <tr class="row-pk field-row" data-field-kind="pk">
+                  <td><b>progressId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">PK, Auto Increment</td>
+                  <td><span class="badge-kind badge-kind-pk">Primary Key</span></td>
+                  <td>Khóa chính tự tăng (chuẩn hóa thay cho id_ cũ).</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>companyId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Mã portal instance Liferay.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>lastReadAt</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm đọc sách gần nhất ghi nhận theo ngày giờ.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>userId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> Liferay User</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới tài khoản độc giả đang đọc sách.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>bookId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> Book</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới cuốn sách đang đọc.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>currentPage</b></td>
+                  <td class="type-col">INT</td>
+                  <td class="constraint-col">DEFAULT 1</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Trang sách hiện tại độc giả đang đọc dở (để hỏi đọc tiếp khi mở lại).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>totalPages</b></td>
+                  <td class="type-col">INT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Tổng số trang của cuốn sách tại thời điểm đọc.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>percentage</b></td>
+                  <td class="type-col">DOUBLE</td>
+                  <td class="constraint-col">DEFAULT 0.0</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Tỷ lệ phần trăm hoàn thành cuốn sách (0.0 đến 100.0).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>readStatus</b></td>
+                  <td class="type-col">VARCHAR(20)</td>
+                  <td class="constraint-col">DEFAULT 'READING'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Trạng thái tiến trình đọc ('UNREAD': Chưa đọc, 'READING': Đang đọc, 'COMPLETED': Đã đọc xong).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>readDurationSeconds</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">DEFAULT 0</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Tổng thời gian thực tế đã mở đọc cuốn sách tính theo giây.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>lastReadTimestamp</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Mốc thời gian Epoch ms dùng để giải quyết xung đột đồng bộ giữa nhiều thiết bị.</td>
+                </tr>
+            
+              </tbody>
+            </table>
+          </div>
+        
+          <!-- CARD 7: Bookmark -->
+          <div class="dict-card entity-item" id="Bookmark" data-keywords="bookmark c_bookmark">
+            <div class="dict-card-head">
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); display: inline-block;">7. Model: <code>Bookmark</code></h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 6px;">- Đánh Dấu Trang Yêu Thích</span>
+              </div>
+              <span class="dict-badge badge-p2">Giai đoạn 2: Tiện Ích Đọc</span>
+            </div>
+
+            <!-- META INFO BOX -->
+            <div class="model-meta-box">
+              <div class="meta-item"><b>Bảng MySQL:</b> <code>c_bookmark</code></div>
+              <div class="meta-item"><b>Liferay REST:</b> <code>/o/c/bookmarks</code></div>
+              <div class="meta-item"><b>Số trường:</b> <span>9 thuộc tính</span></div>
+            </div>
+
+            <div class="model-desc-box">
+              <b>Mô tả nghiệp vụ:</b> Quản lý các trang sách quan trọng độc giả gắn dải ruy băng để xem lại nhanh kèm tên chương và ảnh chụp thu nhỏ.
+            </div>
+
+            <table class="dict-table">
+              <thead>
+                <tr>
+                  <th style="width: 170px;">Tên Trường (Field)</th>
+                  <th style="width: 130px;">Kiểu Dữ Liệu</th>
+                  <th style="width: 140px;">Ràng Buộc / Khóa</th>
+                  <th style="width: 150px;">Phân Loại</th>
+                  <th>Mô Tả Nghiệp Vụ & Quy Tắc</th>
+                </tr>
+              </thead>
+              <tbody>
+        
+                <tr class="row-pk field-row" data-field-kind="pk">
+                  <td><b>bookmarkId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">PK, Auto Increment</td>
+                  <td><span class="badge-kind badge-kind-pk">Primary Key</span></td>
+                  <td>Khóa chính tự tăng, mã đánh dấu trang.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>companyId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Mã portal instance Liferay.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>createdAt</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm tạo đánh dấu trang.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>userId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> Liferay User</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới Liferay User sở hữu bookmark.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>bookId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> Book</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới Book cuốn sách được đánh dấu.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>pageNumber</b></td>
+                  <td class="type-col">INT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Số thứ tự trang sách được đánh dấu.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>chapterTitle</b></td>
+                  <td class="type-col">VARCHAR(255)</td>
+                  <td class="constraint-col">NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Tiêu đề chương sách tương ứng tại vị trí trang đánh dấu.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>colorTag</b></td>
+                  <td class="type-col">VARCHAR(20)</td>
+                  <td class="constraint-col">DEFAULT '#F59E0B'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Mã màu ruy băng đánh dấu (#F59E0B: Vàng, #EF4444: Đỏ...).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>pageThumbnailUrl</b></td>
+                  <td class="type-col">VARCHAR(500)</td>
+                  <td class="constraint-col">NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Ảnh chụp thu nhỏ của trang để hiển thị trực quan trong panel danh sách bookmark.</td>
+                </tr>
+            
+              </tbody>
+            </table>
+          </div>
+        
+          <!-- CARD 8: Annotation -->
+          <div class="dict-card entity-item" id="Annotation" data-keywords="annotation c_annotation">
+            <div class="dict-card-head">
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); display: inline-block;">8. Model: <code>Annotation</code></h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 6px;">- Tô Sáng & Vẽ Ghi Chú Vector</span>
+              </div>
+              <span class="dict-badge badge-p2">Giai đoạn 2: Tiện Ích Đọc</span>
+            </div>
+
+            <!-- META INFO BOX -->
+            <div class="model-meta-box">
+              <div class="meta-item"><b>Bảng MySQL:</b> <code>c_annotation</code></div>
+              <div class="meta-item"><b>Liferay REST:</b> <code>/o/c/annotations</code></div>
+              <div class="meta-item"><b>Số trường:</b> <span>12 thuộc tính</span></div>
+            </div>
+
+            <div class="model-desc-box">
+              <b>Mô tả nghiệp vụ:</b> Lưu trữ các nét vẽ bút dạ quang (Highlight), bút chì và ghi chú tương tác theo hệ tọa độ vector chuẩn hóa (0.0 đến 1.0) độc lập với độ phân giải màn hình thiết bị.
+            </div>
+
+            <table class="dict-table">
+              <thead>
+                <tr>
+                  <th style="width: 170px;">Tên Trường (Field)</th>
+                  <th style="width: 130px;">Kiểu Dữ Liệu</th>
+                  <th style="width: 140px;">Ràng Buộc / Khóa</th>
+                  <th style="width: 150px;">Phân Loại</th>
+                  <th>Mô Tả Nghiệp Vụ & Quy Tắc</th>
+                </tr>
+              </thead>
+              <tbody>
+        
+                <tr class="row-pk field-row" data-field-kind="pk">
+                  <td><b>annotationId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">PK, Auto Increment</td>
+                  <td><span class="badge-kind badge-kind-pk">Primary Key</span></td>
+                  <td>Khóa chính tự tăng, mã ghi chú nét vẽ.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>companyId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Mã portal instance Liferay.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>createdAt</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm vẽ / tô sáng ghi chú.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>modifiedAt</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm sửa đổi nét vẽ gần nhất.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>userId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> Liferay User</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới Liferay User tạo nét vẽ.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>bookId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> Book</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới Book cuốn sách được ghi chú.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>pageNumber</b></td>
+                  <td class="type-col">INT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Số trang sách chứa nét vẽ hoặc ghi chú.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>type</b></td>
+                  <td class="type-col">VARCHAR(30)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Loại tương tác ('HIGHLIGHT': Dạ quang, 'DRAWING_PEN': Bút chì tự do, 'STICKY_NOTE': Giấy ghi chú).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>color</b></td>
+                  <td class="type-col">VARCHAR(20)</td>
+                  <td class="constraint-col">DEFAULT '#FFFF00'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Mã màu nét vẽ (#FFFF00: Vàng, #10B981: Xanh lá, #EC4899: Hồng...).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>strokeWidth</b></td>
+                  <td class="type-col">DOUBLE</td>
+                  <td class="constraint-col">DEFAULT 2.0</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Độ dày nét bút vẽ (pixel).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>coordinateData</b></td>
+                  <td class="type-col">LONGTEXT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Chuỗi JSON chứa mảng tọa độ vector chuẩn hóa (x, y từ 0.0 đến 1.0) độc lập màn hình.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>noteText</b></td>
+                  <td class="type-col">TEXT</td>
+                  <td class="constraint-col">NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Nội dung văn bản ghi chú đính kèm (nếu là dạng Sticky Note).</td>
+                </tr>
+            
+              </tbody>
+            </table>
+          </div>
+        
+          <!-- CARD 9: DrmLicense -->
+          <div class="dict-card entity-item" id="DrmLicense" data-keywords="drmlicense c_drmlicense">
+            <div class="dict-card-head">
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); display: inline-block;">9. Model: <code>DrmLicense</code></h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 6px;">- Giấy Phép Bản Quyền & Tủ Sách Sở Hữu</span>
+              </div>
+              <span class="dict-badge badge-p3">Giai đoạn 3: DRM & Commerce</span>
+            </div>
+
+            <!-- META INFO BOX -->
+            <div class="model-meta-box">
+              <div class="meta-item"><b>Bảng MySQL:</b> <code>c_drmlicense</code></div>
+              <div class="meta-item"><b>Liferay REST:</b> <code>/o/c/drmlicenses</code></div>
+              <div class="meta-item"><b>Số trường:</b> <span>16 thuộc tính</span></div>
+            </div>
+
+            <div class="model-desc-box">
+              <b>Mô tả nghiệp vụ:</b> Hợp nhất toàn diện: Vừa quản lý giấy phép bản quyền Readium LCP 1.0 (Mua vĩnh viễn / Thuê 120 ngày), vừa đóng vai trò là danh mục Tủ sách của độc giả (My Bookshelf) với các cờ yêu thích và lưu trữ.
+            </div>
+
+            <table class="dict-table">
+              <thead>
+                <tr>
+                  <th style="width: 170px;">Tên Trường (Field)</th>
+                  <th style="width: 130px;">Kiểu Dữ Liệu</th>
+                  <th style="width: 140px;">Ràng Buộc / Khóa</th>
+                  <th style="width: 150px;">Phân Loại</th>
+                  <th>Mô Tả Nghiệp Vụ & Quy Tắc</th>
+                </tr>
+              </thead>
+              <tbody>
+        
+                <tr class="row-pk field-row" data-field-kind="pk">
+                  <td><b>licenseId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">PK, Auto Increment</td>
+                  <td><span class="badge-kind badge-kind-pk">Primary Key</span></td>
+                  <td>Khóa chính tự tăng, mã giấy phép số đồng thời định danh cuốn sách trong tủ.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>companyId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Mã portal instance Liferay.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>createDate</b></td>
+                  <td class="type-col">DATETIME(6)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm cấp giấy phép / đưa sách vào tủ cá nhân.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>userId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> Liferay User</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới tài khoản độc giả sở hữu giấy phép đọc.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>bookId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> Book</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới cuốn sách được cấp quyền đọc.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>licenseUuid</b></td>
+                  <td class="type-col">VARCHAR(64)</td>
+                  <td class="constraint-col">NOT NULL, Unique</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Chuỗi UUID duy nhất định danh giấy phép chuẩn Readium LCP.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>orderId</b></td>
+                  <td class="type-col">VARCHAR(64)</td>
+                  <td class="constraint-col">NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Mã đơn hàng thanh toán qua cổng MekoPay (VietQR, MoMo...).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>licenseType</b></td>
+                  <td class="type-col">VARCHAR(30)</td>
+                  <td class="constraint-col">DEFAULT 'PERPETUAL'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Loại giấy phép ('PERPETUAL': Mua vĩnh viễn, 'RENTAL': Thuê học kỳ 120 ngày, 'TRIAL': Đọc thử).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>encryptedContentKey</b></td>
+                  <td class="type-col">TEXT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Khóa AES-256 mã hóa nội dung sách, bảo vệ bằng Passphrase độc giả.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>userKeyCheck</b></td>
+                  <td class="type-col">VARCHAR(128)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Chuỗi hash kiểm tra tính hợp lệ của mật khẩu giải mã.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>startDate</b></td>
+                  <td class="type-col">DATETIME</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Thời điểm giấy phép bắt đầu có hiệu lực.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>endDate</b></td>
+                  <td class="type-col">DATETIME</td>
+                  <td class="constraint-col">NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Thời điểm hết hạn đọc sách (NULL nếu là mua vĩnh viễn).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>maxDevices</b></td>
+                  <td class="type-col">INT</td>
+                  <td class="constraint-col">DEFAULT 3</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Số lượng thiết bị tối đa được phép đọc đồng thời (mặc định: 3 máy).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>isFavorite</b></td>
+                  <td class="type-col">TINYINT(1)</td>
+                  <td class="constraint-col">DEFAULT 0</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Đánh dấu sách yêu thích trong Tủ sách cá nhân (1: Yêu thích, 0: Thường).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>isArchived</b></td>
+                  <td class="type-col">TINYINT(1)</td>
+                  <td class="constraint-col">DEFAULT 0</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Độc giả chủ động ẩn bớt sách đã học xong khỏi tủ chính (1: Ẩn, 0: Hiện).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>status</b></td>
+                  <td class="type-col">VARCHAR(30)</td>
+                  <td class="constraint-col">DEFAULT 'ACTIVE'</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Trạng thái giấy phép ('ACTIVE': Hiệu lực, 'EXPIRED': Hết hạn thuê, 'REVOKED': Thu hồi vi phạm).</td>
+                </tr>
+            
+              </tbody>
+            </table>
+          </div>
+        
+          <!-- CARD 10: DeviceRegistration -->
+          <div class="dict-card entity-item" id="DeviceRegistration" data-keywords="deviceregistration c_deviceregistration">
+            <div class="dict-card-head">
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); display: inline-block;">10. Model: <code>DeviceRegistration</code></h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 6px;">- Quản Lý Thiết Bị Kích Hoạt Đọc</span>
+              </div>
+              <span class="dict-badge badge-p3">Giai đoạn 3: DRM & Commerce</span>
+            </div>
+
+            <!-- META INFO BOX -->
+            <div class="model-meta-box">
+              <div class="meta-item"><b>Bảng MySQL:</b> <code>c_deviceregistration</code></div>
+              <div class="meta-item"><b>Liferay REST:</b> <code>/o/c/deviceregistrations</code></div>
+              <div class="meta-item"><b>Số trường:</b> <span>8 thuộc tính</span></div>
+            </div>
+
+            <div class="model-desc-box">
+              <b>Mô tả nghiệp vụ:</b> Kiểm soát giới hạn thiết bị đọc của độc giả (tối đa 2-3 máy), ngăn chặn hành vi chia sẻ tài khoản xem lậu giáo trình.
+            </div>
+
+            <table class="dict-table">
+              <thead>
+                <tr>
+                  <th style="width: 170px;">Tên Trường (Field)</th>
+                  <th style="width: 130px;">Kiểu Dữ Liệu</th>
+                  <th style="width: 140px;">Ràng Buộc / Khóa</th>
+                  <th style="width: 150px;">Phân Loại</th>
+                  <th>Mô Tả Nghiệp Vụ & Quy Tắc</th>
+                </tr>
+              </thead>
+              <tbody>
+        
+                <tr class="row-pk field-row" data-field-kind="pk">
+                  <td><b>registrationId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">PK, Auto Increment</td>
+                  <td><span class="badge-kind badge-kind-pk">Primary Key</span></td>
+                  <td>Khóa chính tự tăng, mã bản ghi thiết bị.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>companyId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Mã portal instance Liferay.</td>
+                </tr>
+            
+                <tr class="row-audit field-row" data-field-kind="audit">
+                  <td><b>registeredDate</b></td>
+                  <td class="type-col">DATETIME</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-audit">Liferay Audit</span></td>
+                  <td>Thời điểm thiết bị được kích hoạt lần đầu.</td>
+                </tr>
+            
+                <tr class="row-ref field-row" data-field-kind="ref">
+                  <td><b>licenseId</b></td>
+                  <td class="type-col">BIGINT</td>
+                  <td class="constraint-col">FK -> DrmLicense</td>
+                  <td><span class="badge-kind badge-kind-ref">Reference (FK)</span></td>
+                  <td>Khóa ngoại trỏ tới DrmLicense.licenseId (Giấy phép được kích hoạt trên máy này).</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>deviceUuid</b></td>
+                  <td class="type-col">VARCHAR(128)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Mã UUID phần cứng duy nhất của thiết bị điện thoại / tablet.</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>deviceName</b></td>
+                  <td class="type-col">VARCHAR(255)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Tên thiết bị người dùng (ví dụ: 'iPhone 15 Pro Max', 'Galaxy Tab S9').</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>platform</b></td>
+                  <td class="type-col">VARCHAR(20)</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Nền tảng hệ điều hành ('iOS', 'Android').</td>
+                </tr>
+            
+                <tr class="row-biz field-row" data-field-kind="biz">
+                  <td><b>lastActiveDate</b></td>
+                  <td class="type-col">DATETIME</td>
+                  <td class="constraint-col">NOT NULL</td>
+                  <td><span class="badge-kind badge-kind-biz">Business</span></td>
+                  <td>Lần đọc sách gần nhất được ghi nhận từ thiết bị này.</td>
+                </tr>
+            
+              </tbody>
+            </table>
+          </div>
+        
+        </div>
+    
+
+      </div>
+    </div>
+
+    
+    <!-- ============================================================== -->
+    <!-- TAB 2: SƠ ĐỒ CDM QUAN HỆ KHỐI (10 MODEL CHUẨN CTUPRESS)        -->
+    <!-- ============================================================== -->
+    <div class="tab-content" id="tab-cdm">
+      <div class="panzoom-wrap" id="wrap-cdm">
+        <div class="mermaid">
+flowchart TB
+    %% PHÂN KỲ 1: CORE READER TRƯỚC (GÁN CỨNG / MOCK)
+    subgraph G1["GIAI ĐOẠN 1: CORE FLIPBOOK READER (MOCK / LOCAL MANIFEST)"]
+        direction TB
+        BOOK["<b>Book (Sách & Giáo Trình)</b><br/>• bookId (PK) • title • author • coverUrl<br/>• totalPages • isFree • flipbookBaseUrl<br/>• screenPattern • thumbPattern"]
+        TOC["<b>ChapterTOC (Mục lục cây)</b><br/>• chapterId (PK) • bookId (FK)<br/>• title • startPage • level"]
+        
+        BOOK --> TOC
+    end
+
+    %% PHÂN KỲ 2: TƯƠNG TÁC, KỆ SÁCH & TIẾN ĐỘ ĐỌC (LIFERAY OBJECTS)
+    subgraph G2["GIAI ĐOẠN 2: TỦ SÁCH, KỆ SÁCH CÁ NHÂN & TIỆN ÍCH ĐỌC"]
+        direction TB
+        USER["<b>Liferay User (Người đọc)</b><br/>• userId (PK) • email • fullName"]
+        
+        SHELF["<b>PersonalShelf (Kệ sách cá nhân)</b><br/>• shelfId (PK) • userId (FK)<br/>• shelfName • colorTag • displayOrder"]
+        SHELF_ITEM["<b>ShelfItem (Sách trong Kệ)</b><br/>• shelfItemId (PK) • shelfId (FK)<br/>• bookId (FK) • addedAt"]
+        
+        PREF["<b>UserPreference (Cấu hình)</b><br/>• themeMode • brightness • soundEnabled"]
+        PROG["<b>ReadingProgress (Tiến độ)</b><br/>• progressId (PK) • currentPage • percentage"]
+        BM["<b>Bookmark (Đánh dấu)</b><br/>• bookmarkId (PK) • pageNumber • chapterTitle"]
+        ANNO["<b>Annotation (Tô vẽ tọa độ)</b><br/>• annotationId (PK) • coordinateData JSON"]
+
+        USER --> SHELF
+        SHELF --> SHELF_ITEM
+        USER --> PREF
+        USER --> PROG
+        USER --> BM
+        USER --> ANNO
+    end
+
+    %% PHÂN KỲ 3: MEKOLICENSE, MEKOPAY & BẢN QUYỀN DRM
+    subgraph G3["GIAI ĐOẠN 3: BẢN QUYỀN DRM & TỦ SÁCH SỞ HỮU"]
+        direction TB
+        LIC["<b>DrmLicense (Giấy phép & Tủ sách)</b><br/>• licenseId (PK) • userId (FK) • bookId (FK)<br/>• licenseType: PERPETUAL / RENTAL / TRIAL<br/>• encryptedContentKey • startDate • endDate<br/>• isFavorite • isArchived • status: ACTIVE"]
+        DEV["<b>DeviceRegistration (Thiết bị)</b><br/>• registrationId (PK) • licenseId (FK)<br/>• deviceUuid • deviceName (Tối đa 2-3 máy)"]
+
+        LIC --> DEV
+    end
+
+    %% Liên kết giữa các khối
+    USER --> LIC
+    BOOK --> SHELF_ITEM
+    BOOK -.-> PROG
+    BOOK -.-> BM
+    BOOK -.-> ANNO
+    BOOK -.-> LIC
+        </div>
+      </div>
+
+      <div class="side-info">
+        <h3>Mô Hình CDM Quan Hệ 10 Model</h3>
+        <p>Kiến trúc tinh gọn khớp 100% với quy trình thực tế của CTUPress và Liferay 7.4 CE Objects:</p>
+        <div class="step-box focus">
+          <b>Giai đoạn 1: Focus Core Reader</b>
+          Nạp trực tiếp từ <code>flipbookBaseUrl</code> của gói FlipBuilder (không cần bảng PageRendition riêng).
+        </div>
+        <div class="step-box">
+          <b>Giai đoạn 2: Cloud Sync & Kệ sách (Liferay Objects)</b>
+          Độc giả tự tạo kệ sách cá nhân (<code>PersonalShelf</code>) và gán sách vào kệ (<code>ShelfItem</code>). Đồng bộ tiến độ, bookmark, highlight.
+        </div>
+        <div class="step-box">
+          <b>Nghiệp Vụ Kệ Sách Cá Nhân:</b>
+          • <b>Tạo kệ mới:</b> Thêm dòng vào <code>PersonalShelf</code>.<br/>
+          • <b>Sửa tên / đổi màu:</b> Update <code>shelfName</code>, <code>colorTag</code>.<br/>
+          • <b>Xóa kệ:</b> Xóa liên kết trong <code>ShelfItem</code> (không mất sách trong tủ).<br/>
+          • <b>Thêm / Gỡ sách:</b> Thêm / Xóa bản ghi trong <code>ShelfItem</code>.
+        </div>
+        <div class="step-box">
+          <b>Giai đoạn 3: DRM License & Tủ sách sở hữu</b>
+          <code>DrmLicense</code> hợp nhất quản lý cả Tủ sách và Giấy phép bản quyền thuê học kỳ 120 ngày, giới hạn 2-3 thiết bị.
+        </div>
+      </div>
+    </div>
+    
+
+    
+    <!-- ============================================================== -->
+    <!-- TAB 3: SƠ ĐỒ 3 GỐC (BẢN ĐỒ KIẾN TRÚC MEKOBOOK)                -->
+    <!-- ============================================================== -->
+    <div class="tab-content" id="tab-so-do-3">
+      <div class="panzoom-wrap" id="wrap-so-do-3">
+        <div class="mermaid">
+flowchart TB
+    %% 3 Trụ cột chính
+    subgraph S1["1. MEKOBOOK STORE<br/>(Cửa Hàng Giáo Trình Số)"]
+        direction TB
+        B1["<b>Tra Cứu & Trưng Bày Giáo Trình</b><br/>• Tìm kiếm thông minh theo chuyên ngành<br/>• Đọc thử 15 trang đầu tiên miễn phí"]
+        B2["<b>Thuê Giáo Trình Theo Học Kỳ</b><br/>• Gói học kỳ linh hoạt • Tiết kiệm 65%<br/>• Sở hữu vĩnh viễn hoặc theo môn học"]
+        B3["<b>Quản Trị Tác Phẩm & Phê Duyệt</b><br/>• Tiếp nhận bản in giáo trình PDF gốc<br/>• Phê duyệt xuất bản lên kệ sách số"]
+        B4["<b>Thương Mại & Cấp Phép Bản Quyền</b><br/>• Thanh toán trực tuyến đa kênh MekoPay<br/>• Cấp quyền đọc tự động (Zero-touch)"]
+        B1 --> B2 --> B3 --> B4
+    end
+
+    subgraph S2["2. MEKOBOOK READER & TRẢI NGHIỆM ĐỘC GIẢ<br/>(Bắt đầu từ Tủ Sách Cá Nhân)"]
+        direction TB
+        R0["<b>Tủ Sách Cá Nhân & Kệ Sách Tự Tạo</b><br/>• Danh mục hệ thống: Đang đọc, Mua, Thuê<br/>• Tạo kệ sách theo môn học / kỳ học<br/>• Tải sách đọc Offline an toàn khi mất mạng"]
+        R0_CHECK["<b>Khởi Tạo & Kiểm Tra Bản Quyền</b><br/>• Kiểm tra hạn License học kỳ còn hiệu lực<br/>• Khôi phục tiến trình đọc dở dang"]
+        R1["<b>Lõi Lật Trang 3D Mô Phỏng Thực Tế</b><br/>• Hiệu ứng lật trang 3D vật lý 60fps mượt mà<br/>• Tùy biến đọc ban đêm • Mục lục tương tác"]
+        R2["<b>Tiện Ích Học Tập & Tương Tác</b><br/>• Đánh dấu trang (Bookmark) • Tô sáng (Highlight)<br/>• Ghi chú nét vẽ vector • Đồng bộ tiến trình đa máy"]
+        R3["<b>Bảo Vệ Tác Quyền & Chống Rò Rỉ</b><br/>• Thủy vân số mờ thông tin người đọc (Watermark)<br/>• Ngăn chặn hành vi chụp & quay video màn hình"]
+        R0 --> R0_CHECK --> R1 --> R2 --> R3
+    end
+
+    subgraph S3["3. BẢO VỆ BẢN QUYỀN SỐ<br/>(Chế Bản Tự Động, Mã Hóa Dữ Liệu & Chống Lậu)"]
+        direction TB
+        D1["<b>Chế Bản Số Tự Động & Đa Định Dạng</b><br/>• Tiếp nhận bản in PDF gốc • Tự động bóc tách TOC<br/>• Xuất bản gói tĩnh FlipBuilder tối ưu WebP/JPG"]
+        D2["<b>Mã Hóa Bảo Vệ Dữ Liệu Tác Phẩm</b><br/>• Mã hóa nội dung từng trang sách bằng AES-256<br/>• Giải mã trực tiếp trong RAM tạm thời"]
+        D3["<b>Ràng Buộc Thiết Bị & Kiểm Soát Phiên</b><br/>• Giới hạn số lượng máy đọc trên một tài khoản (2-3 máy)<br/>• Chặn đăng nhập đồng thời • Chống chia sẻ tài khoản"]
+        D4["<b>Thu Hồi Bản Quyền & Tự Động Khóa</b><br/>• Tự động thu hồi quyền đọc khi hết hạn thuê học kỳ<br/>• Chặn triệt để hành vi trích xuất, in ấn và sao chép"]
+        D1 --> D2 --> D3 --> D4
+    end
+
+    %% 2 Trung tâm nền tảng phía dưới
+    subgraph COMMERCE_HUB["Meko Commerce Hub • Cổng Thanh Toán & Cấp Quyền Tự Động"]
+        PAY["<b>MekoPay • Cổng Thanh Toán Trực Tuyến</b><br/>VietQR, MoMo, ZaloPay, VNPay • Webhook an toàn"]
+        LIC["<b>MekoLicense • Bộ Cấp Quyền Tự Động</b><br/>Quản lý quyền sở hữu + Thuê học kỳ • Zero-touch Event"]
+        PAY -->|Thanh toán thành công| LIC
+    end
+
+    subgraph STORAGE_HUB["Kho Lưu Trữ Nội Dung & Hồ Sơ Bản Quyền (Content Storage)"]
+        STORE_DOC["<b>Kho Tài Liệu Giáo Trình Số</b><br/>Lưu an toàn bản in gốc & Gói tĩnh FlipBuilder"]
+        STORE_DRM["<b>Hệ Thống Quản Lý Bản Quyền Số</b><br/>Xác thực thiết bị độc quyền & Kiểm soát vòng đời"]
+    end
+
+    %% Các liên kết luồng nghiệp vụ
+    B4 -->|1. Thanh toán mua sách| PAY
+    LIC -->|2. Mở khóa Tủ sách tự động| R0
+    R0_CHECK -.->|3. Xác thực quyền đọc an toàn| D2
+    D1 -.->|Lưu trữ bản in gốc & gói flipbook| STORE_DOC
+    STORE_DOC -.->|Tải ảnh trang nạp 60fps| R1
+    D4 -.->|Kiểm soát thiết bị & Bản quyền| STORE_DRM
+        </div>
+      </div>
+
+      <div class="side-info">
+        <h3>Sơ Đồ 3: Bản Đồ Chức Năng Gốc</h3>
+        <p>Bản đồ chức năng chuẩn mực cho toàn bộ hệ thống Mekobook với 3 trụ cột và 2 trung tâm điều phối:</p>
+        <div class="step-box">
+          <b>Pillar 1: Mekobook Store</b>
+          Duyệt danh mục, đọc thử 15 trang, giỏ hàng, thuê theo học kỳ.
+        </div>
+        <div class="step-box focus">
+          <b>Pillar 2: Trải Nghiệm Độc Giả (GĐ1)</b>
+          Bắt đầu từ Tủ sách cá nhân & Kệ sách tự tạo -> Mở đọc -> Lật trang 3D 60fps, Bookmark, Highlight vector.
+        </div>
+        <div class="step-box">
+          <b>Pillar 3: Bảo Vệ Bản Quyền</b>
+          Gói tĩnh FlipBuilder, mã hóa từng trang AES-256, giới hạn 2-3 máy.
+        </div>
+        <div class="step-box">
+          <b>Hubs: Meko Commerce & Storage</b>
+          MekoPay kết nối MekoLicense tự động mở khóa tủ sách tức thì (Zero-touch).
+        </div>
+      </div>
+    </div>
+    
+
+    
+    <!-- ============================================================== -->
+    <!-- TAB 4: LUỒNG KỊCH BẢN CHÍNH (SEQUENCE DIAGRAM)                 -->
+    <!-- ============================================================== -->
+    <div class="tab-content" id="tab-scenario">
+      <div class="panzoom-wrap" id="wrap-scenario">
+        <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Reader as Độc giả (Mobile App)
+    participant Bookshelf as Tủ Sách Cá Nhân
+    participant FlipEngine as Lõi Lật 3D (Reader Engine)
+    participant LocalCache as Cache Máy (MMKV/SQLite)
+    participant Liferay as Liferay D&M / Objects
+    participant MekoLic as MekoLicense Server
+
+    Note over Reader, MekoLic: KỊCH BẢN 1: TỦ SÁCH CÁ NHÂN & MỞ SÁCH ĐỌC 3D (GIAI ĐOẠN 1)
+    Reader->>Bookshelf: Mở app -> Vào Tủ sách cá nhân
+    Bookshelf->>LocalCache: Lấy danh sách sách + Kệ cá nhân (PersonalShelf)
+    LocalCache-->>Bookshelf: Trả về danh sách sách (Đang đọc, Mua, Thuê)
+    Reader->>Bookshelf: Bấm vào 1 cuốn sách để đọc
+    Bookshelf->>Bookshelf: Kiểm tra hạn License (ACTIVE)
+    Bookshelf->>FlipEngine: Khởi tạo Reader (Truyền flipbookBaseUrl & lastReadPage: 42)
+    FlipEngine->>FlipEngine: Nạp trước ảnh WebP/JPG trang 41, 42, 43
+    Reader->>FlipEngine: Vuốt / Kéo góc uốn cong (Drag & Curl)
+    FlipEngine->>FlipEngine: Render hiệu ứng lật trang 3D vật lý (60 FPS)
+    FlipEngine->>LocalCache: Tự động lưu tiến độ mới: Trang 43 (dưới 1ms)
+
+    Note over Reader, MekoLic: KỊCH BẢN 2: TẠO KỆ SÁCH CÁ NHÂN & ĐỒNG BỘ TIỆN ÍCH (GIAI ĐOẠN 2)
+    Reader->>Bookshelf: Bấm [Tạo kệ sách mới] -> Đặt tên "Môn Kiến Trúc"
+    Bookshelf->>LocalCache: Lưu kệ sách mới vào máy
+    Bookshelf->>Liferay: Sync ngầm lên PersonalShelf
+    Reader->>Bookshelf: Thêm sách vào kệ
+    Bookshelf->>Liferay: Sync ngầm lên ShelfItem
+
+    Note over Reader, MekoLic: KỊCH BẢN 3: THANH TOÁN & MỞ KHÓA TỨC THÌ (GIAI ĐOẠN 3)
+    Reader->>MekoLic: Thanh toán thuê sách học kỳ qua MekoPay (VietQR/MoMo)
+    MekoLic->>MekoLic: Cấp DrmLicense (Gắn OrderId & Hạn 120 ngày)
+    MekoLic-->>Reader: Kích hoạt mở khóa Tủ sách tức thì (Zero-touch Event)
+        </div>
+      </div>
+
+      <div class="side-info">
+        <h3>Luồng Kịch Bản Trọng Tâm</h3>
+        <div class="step-box focus">
+          <b>Kịch bản 1: Tủ sách & Lật sách 3D</b>
+          Đi từ Tủ sách cá nhân -> Kiểm tra hạn dùng -> Đọc siêu tốc từ cache dưới 1 giây, lật 60fps.
+        </div>
+        <div class="step-box">
+          <b>Kịch bản 2: Quản lý Kệ sách cá nhân</b>
+          Tạo thư mục/kệ sách, gom sách theo môn học và đồng bộ ngầm lên Liferay.
+        </div>
+        <div class="step-box">
+          <b>Kịch bản 3: Cấp MekoLicense</b>
+          Thanh toán thành công là sách tự động nhảy vào Tủ sách cá nhân (Zero-touch).
+        </div>
+      </div>
+    </div>
+    
+
+    
+    <!-- ============================================================== -->
+    <!-- TAB 5: BẢNG ÁNH XẠ CHỨC NĂNG SRS SANG 10 MODEL CDM            -->
+    <!-- ============================================================== -->
+    <div class="tab-content" id="tab-srs-map">
+      <div class="dict-container">
+        <div class="dict-header">
+          <div>
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Bảng Ánh Xạ Nghiệp Vụ SRS (Phân Hệ 2) Sang 10 Model CDM</h2>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Đối chiếu 10 Use Case của Độc Giả với các Model Liferay Objects đảm trách</p>
+          </div>
+        </div>
+
+        <table class="mapping-table" style="margin-top: 20px;">
+          <thead>
+            <tr>
+              <th style="width: 100px;">Mã SRS</th>
+              <th style="width: 220px;">Tên Chức Năng Nghiệp Vụ</th>
+              <th style="width: 220px;">Model Đảm Trách</th>
+              <th>Thao Tác Dữ Liệu & Ràng Buộc Nghiệp Vụ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>UC-2.1</b></td>
+              <td><b>Quản lý Tủ sách & Kệ sách cá nhân</b></td>
+              <td><code>PersonalShelf</code><br/><code>ShelfItem</code><br/><code>DrmLicense</code></td>
+              <td>
+                • <b>Tạo kệ mới:</b> Thêm dòng vào <code>PersonalShelf (userId, shelfName, colorTag)</code>.<br/>
+                • <b>Sửa tên / đổi màu:</b> Update <code>shelfName, colorTag</code> theo <code>shelfId</code>.<br/>
+                • <b>Xóa kệ:</b> Xóa dòng khỏi <code>PersonalShelf</code>, trigger <code>ON DELETE CASCADE</code> xóa sạch ánh xạ trong <code>ShelfItem</code>. Tuyệt đối không làm mất quyền đọc sách trong <code>DrmLicense</code> hay sách gốc <code>Book</code>.<br/>
+                • <b>Thêm sách vào kệ:</b> Thêm bản ghi <code>ShelfItem (shelfId, bookId)</code>.<br/>
+                • <b>Gỡ sách khỏi kệ:</b> Xóa bản ghi trong <code>ShelfItem</code> theo cặp <code>(shelfId, bookId)</code>.<br/>
+                • <b>Lọc danh mục hệ thống:</b> Truy vấn theo trạng thái (Đang đọc, Đã mua vĩnh viễn, Thuê học kỳ).
+              </td>
+            </tr>
+            <tr>
+              <td><b>UC-2.2</b></td>
+              <td><b>Kiểm tra License & Khởi tạo phiên</b></td>
+              <td><code>DrmLicense</code><br/><code>ReadingProgress</code></td>
+              <td>
+                • Kiểm tra <code>status == 'ACTIVE'</code> và <code>endDate >= NOW()</code>.<br/>
+                • Lấy <code>currentPage</code> đọc gần nhất từ <code>ReadingProgress</code> để hỏi người dùng đọc tiếp hay từ đầu.
+              </td>
+            </tr>
+            <tr>
+              <td><b>UC-2.3</b></td>
+              <td><b>Lật trang 3D vật lý (60 FPS)</b></td>
+              <td><code>Book</code></td>
+              <td>Nạp ảnh trang từ <code>flipbookBaseUrl + screenPattern</code> (ví dụ: mobile/42.jpg), nạp trước bộ nhớ RAM trang lân cận (Pre-caching).</td>
+            </tr>
+            <tr>
+              <td><b>UC-2.4</b></td>
+              <td><b>Chuyển trang đa phương thức & Thumbnail</b></td>
+              <td><code>Book</code></td>
+              <td>Tải ảnh thumbnail từ <code>flipbookBaseUrl + thumbPattern</code> (ví dụ: thumb/42.jpg) cho thanh Scrubber trượt nhanh.</td>
+            </tr>
+            <tr>
+              <td><b>UC-2.5</b></td>
+              <td><b>Điều hướng Mục lục cây (TOC)</b></td>
+              <td><code>ChapterTOC</code></td>
+              <td>Truy xuất cây mục lục phân cấp theo <code>bookId</code>, sắp xếp theo <code>displayOrder</code> và <code>startPage</code>.</td>
+            </tr>
+            <tr>
+              <td><b>UC-2.6</b></td>
+              <td><b>Đánh dấu trang (Bookmark)</b></td>
+              <td><code>Bookmark</code></td>
+              <td>Thêm mới / Xóa bản ghi bookmark theo <code>(userId, bookId, pageNumber)</code>.</td>
+            </tr>
+            <tr>
+              <td><b>UC-2.7</b></td>
+              <td><b>Tô sáng & Ghi chú vẽ vector</b></td>
+              <td><code>Annotation</code></td>
+              <td>Lưu và nạp chuỗi JSON chứa tọa độ vector chuẩn hóa $(x, y)$ từ $0.0$ đến $1.0$ độc lập với độ phân giải màn hình.</td>
+            </tr>
+            <tr>
+              <td><b>UC-2.8</b></td>
+              <td><b>Tự động đồng bộ tiến trình đọc</b></td>
+              <td><code>ReadingProgress</code></td>
+              <td>Lưu cục bộ tức thì dưới 1ms (MMKV), đồng bộ ngầm lên Liferay theo chu kỳ hoặc khi đóng app với <code>lastReadTimestamp</code> giải quyết xung đột đa thiết bị.</td>
+            </tr>
+            <tr>
+              <td><b>UC-2.9</b></td>
+              <td><b>Tùy biến hiển thị & Chế độ đêm</b></td>
+              <td><code>UserPreference</code></td>
+              <td>Lưu cấu hình độc giả: <code>themeMode (LIGHT/DARK/SEPIA)</code>, <code>brightness</code>, <code>pageTurnSoundEnabled</code>.</td>
+            </tr>
+            <tr>
+              <td><b>UC-2.10</b></td>
+              <td><b>Tải sách đọc Offline an toàn</b></td>
+              <td><code>DrmLicense</code><br/><code>Book</code></td>
+              <td>Xác thực giấy phép cho phép tải offline, tải các trang từ thư mục mobile/ và mã hóa cục bộ bằng khóa AES-256 lưu trong hardware keystore.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+
+  </div>
+
+  <script>
+    function getMermaidConfig(isDark) {
+      return {
+        startOnLoad: false,
+        theme: isDark ? 'dark' : 'neutral',
+        themeVariables: isDark ? {
+          darkMode: true,
+          background: '#070b14',
+          primaryColor: '#1e293b',
+          primaryTextColor: '#f8fafc',
+          primaryBorderColor: '#3b82f6',
+          lineColor: '#60a5fa',
+          secondaryColor: '#0f172a'
+        } : {
+          darkMode: false,
+          background: '#ffffff',
+          primaryColor: '#eff6ff',
+          primaryTextColor: '#0f172a',
+          primaryBorderColor: '#2563eb',
+          lineColor: '#2563eb',
+          secondaryColor: '#f1f5f9'
+        }
+      };
+    }
+
+    const currentTheme = localStorage.getItem('mekobook_theme') || 'light';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+
+    mermaid.initialize(getMermaidConfig(currentTheme === 'dark'));
+
+    let pzInstances = {};
+
+    function initPanzoom(id) {
+      const container = document.getElementById(id);
+      if (!container) return;
+      const target = container.querySelector('.mermaid');
+      if (!target) return;
+      const pz = Panzoom(target, { maxScale: 3, minScale: 0.25, contain: false });
+      container.addEventListener('wheel', pz.zoomWithWheel);
+      return pz;
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await mermaid.run();
+
+      setTimeout(() => {
+        pzInstances['wrap-cdm'] = initPanzoom('wrap-cdm');
+        pzInstances['wrap-so-do-3'] = initPanzoom('wrap-so-do-3');
+        pzInstances['wrap-scenario'] = initPanzoom('wrap-scenario');
+      }, 300);
+
+      document.getElementById('zoomIn').addEventListener('click', () => {
+        getCurrentPz()?.zoomIn();
+      });
+      document.getElementById('zoomOut').addEventListener('click', () => {
+        getCurrentPz()?.zoomOut();
+      });
+      document.getElementById('resetZoom').addEventListener('click', () => {
+        getCurrentPz()?.reset();
+      });
+    });
+
+    function getCurrentPz() {
+      const activeTab = document.querySelector('.tab-content.active');
+      const wrap = activeTab.querySelector('.panzoom-wrap');
+      return wrap ? pzInstances[wrap.id] : null;
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      const targetTab = document.getElementById(tabId);
+      if (targetTab) {
+        targetTab.classList.add('active');
+      }
+      event.target.classList.add('active');
+    }
+
+    function filterFieldKind(kind) {
+      document.querySelectorAll('.pill-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      const rows = document.querySelectorAll('.field-row');
+      rows.forEach(row => {
+        if (kind === 'all' || row.getAttribute('data-field-kind') === kind) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    function filterDict() {
+      const q = document.getElementById('dictSearchInput').value.toLowerCase().trim();
+      const items = document.querySelectorAll('.entity-item');
+      items.forEach(item => {
+        const text = item.innerText.toLowerCase();
+        const kw = item.getAttribute('data-keywords') || '';
+        if (!q || text.includes(q) || kw.includes(q)) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('mekobook_theme', next);
+      location.reload();
+    }
+  </script>
+</body>
+</html>

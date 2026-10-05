@@ -1,0 +1,196 @@
+{
+  "status": "success",
+  "data": {
+    "userId": "usr_99812",
+    "userName": "Nguyễn Văn A",
+    "email": "student01@mekosmart.vn",
+    "totalBooks": 4,
+    "systemShelves": [
+      {
+        "id": "all",
+        "name": "Tất cả",
+        "count": 4
+      },
+      {
+        "id": "reading",
+        "name": "Đang đọc gần đây",
+        "count": 3
+      },
+      {
+        "id": "lifetime",
+        "name": "Sở hữu vĩnh viễn",
+        "count": 1
+      },
+      {
+        "id": "semester",
+        "name": "Thuê học kỳ",
+        "count": 2
+      }
+    ],
+    "customShelves": [
+      {
+        "categoryId": "shelf_01",
+        "categoryName": "Học Kỳ 1 - Đại Cương",
+        "colorTag": "#3B82F6",
+        "bookCount": 2,
+        "bookIds": ["book_gt_001", "book_gt_002"]
+      },
+      {
+        "categoryId": "shelf_02",
+        "categoryName": "Tài Liệu Ôn Thi Chuyên Ngành",
+        "colorTag": "#10B981",
+        "bookCount": 1,
+        "bookIds": ["book_gt_001"]
+      },
+      {
+        "categoryId": "shelf_03",
+        "categoryName": "Sách Tham Khảo Kinh Tế",
+        "colorTag": "#F59E0B",
+        "bookCount": 1,
+        "bookIds": ["book_gt_003"]
+      }
+    ],
+    "items": [
+      {
+        "book": {
+          "bookId": "book_gt_001",
+          "title": "Giáo Trình Kiến Trúc Máy Tính & Hợp Ngữ",
+          "author": "PGS.TS. Trần Văn B",
+          "publisher": "NXB Đại Học Quốc Gia",
+          "coverUrl": "https://picsum.photos/seed/cs_arch/400/600",
+          "totalPages": 128,
+          "category": "Công nghệ thông tin",
+          "isbn": "978-604-0-12345-6"
+        },
+        "license": {
+          "licenseId": "lic_908127391_a",
+          "licenseType": "LIFETIME",
+          "status": "ACTIVE",
+          "validFrom": "2026-09-01T08:00:00Z",
+          "expiresAt": null,
+          "daysRemaining": null,
+          "samplePagesLimit": null,
+          "deviceLimit": 3,
+          "activeDevices": 1
+        },
+        "readingProgress": {
+          "lastReadPage": 42,
+          "percentCompleted": 32.8,
+          "totalReadingMinutes": 185,
+          "lastReadAt": "2026-10-04T14:20:00Z"
+        },
+        "shelfCategoryIds": ["shelf_01", "shelf_02"],
+        "readerPayload": {
+          "manifestUrl": "/mock_book_manifest.json",
+          "offlineAvailable": false,
+          "offlineEncryptedPath": null
+        }
+      },
+      {
+        "book": {
+          "bookId": "book_gt_002",
+          "title": "Giáo Trình Cấu Trúc Dữ Liệu & Giải Thuật",
+          "author": "TS. Lê Hoàng C",
+          "publisher": "NXB Giáo Dục",
+          "coverUrl": "https://picsum.photos/seed/dsa_book/400/600",
+          "totalPages": 210,
+          "category": "Công nghệ thông tin",
+          "isbn": "978-604-0-67890-1"
+        },
+        "license": {
+          "licenseId": "lic_481029384_b",
+          "licenseType": "SEMESTER",
+          "status": "ACTIVE",
+          "validFrom": "2026-09-05T00:00:00Z",
+          "expiresAt": "2027-01-05T23:59:59Z",
+          "daysRemaining": 65,
+          "samplePagesLimit": null,
+          "deviceLimit": 2,
+          "activeDevices": 1
+        },
+        "readingProgress": {
+          "lastReadPage": 15,
+          "percentCompleted": 7.1,
+          "totalReadingMinutes": 45,
+          "lastReadAt": "2026-10-02T09:15:00Z"
+        },
+        "shelfCategoryIds": ["shelf_01"],
+        "readerPayload": {
+          "manifestUrl": "/mock_book_manifest.json",
+          "offlineAvailable": true,
+          "offlineEncryptedPath": "sandbox://books/book_gt_002.meko"
+        }
+      },
+      {
+        "book": {
+          "bookId": "book_gt_003",
+          "title": "Kinh Tế Vi Mô Ứng Dụng",
+          "author": "ThS. Phạm Thu D",
+          "publisher": "NXB Kinh Tế",
+          "coverUrl": "https://picsum.photos/seed/micro_econ/400/600",
+          "totalPages": 180,
+          "category": "Kinh tế",
+          "isbn": "978-604-1-11223-4"
+        },
+        "license": {
+          "licenseId": "lic_102938475_c",
+          "licenseType": "SEMESTER",
+          "status": "EXPIRED",
+          "validFrom": "2026-05-01T00:00:00Z",
+          "expiresAt": "2026-08-30T23:59:59Z",
+          "daysRemaining": 0,
+          "samplePagesLimit": null,
+          "deviceLimit": 2,
+          "activeDevices": 1
+        },
+        "readingProgress": {
+          "lastReadPage": 110,
+          "percentCompleted": 61.1,
+          "totalReadingMinutes": 420,
+          "lastReadAt": "2026-08-28T21:30:00Z"
+        },
+        "shelfCategoryIds": ["shelf_03"],
+        "readerPayload": {
+          "manifestUrl": null,
+          "offlineAvailable": false,
+          "offlineEncryptedPath": null
+        }
+      },
+      {
+        "book": {
+          "bookId": "book_gt_004",
+          "title": "Nhập Môn Trí Tuệ Nhân Tạo & Deep Learning",
+          "author": "TS. Vũ Minh E",
+          "publisher": "NXB Thông Tin & Truyền Thông",
+          "coverUrl": "https://picsum.photos/seed/ai_ml/400/600",
+          "totalPages": 96,
+          "category": "Công nghệ thông tin",
+          "isbn": "978-604-2-99887-7"
+        },
+        "license": {
+          "licenseId": "lic_trial_004",
+          "licenseType": "TRIAL",
+          "status": "ACTIVE",
+          "validFrom": "2026-10-04T00:00:00Z",
+          "expiresAt": null,
+          "daysRemaining": null,
+          "samplePagesLimit": 15,
+          "deviceLimit": 1,
+          "activeDevices": 1
+        },
+        "readingProgress": {
+          "lastReadPage": 1,
+          "percentCompleted": 1.0,
+          "totalReadingMinutes": 5,
+          "lastReadAt": "2026-10-04T15:00:00Z"
+        },
+        "shelfCategoryIds": [],
+        "readerPayload": {
+          "manifestUrl": "/mock_book_manifest.json",
+          "offlineAvailable": false,
+          "offlineEncryptedPath": null
+        }
+      }
+    ]
+  }
+}

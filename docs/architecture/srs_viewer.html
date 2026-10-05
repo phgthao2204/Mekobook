@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Mekobook - Bảng Đặc Tả Yêu Cầu Chức Năng (SRS Table Matrix)</title>
+ <link rel="preconnect" href="https://fonts.googleapis.com">
+ <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+ <style>
+ /* ==========================================================================
+ THEME VARIABLES (LIGHT THEME DEFAULT - SÁNG, RÕ RÀNG, DỄ ĐỌC CHUẨN TÀI LIỆU)
+ ========================================================================== */
+ :root {
+ --bg-page: #f8fafc;
+ --bg-surface: #ffffff;
+ --bg-subtle: #f1f5f9;
+ --border: #e2e8f0;
+ --border-strong: #cbd5e1;
+ --text-main: #0f172a;
+ --text-muted: #475569;
+ --text-light: #64748b;
+ 
+ --primary: #2563eb;
+ --primary-subtle: #eff6ff;
+ --primary-border: #bfdbfe;
+ 
+ --accent-green-bg: #ecfdf5;
+ --accent-green-text: #065f46;
+ --accent-green-border: #a7f3d0;
+ 
+ --accent-blue-bg: #eff6ff;
+ --accent-blue-text: #1e40af;
+ --accent-blue-border: #bfdbfe;
+ 
+ --accent-purple-bg: #faf5ff;
+ --accent-purple-text: #6b21a8;
+ --accent-purple-border: #e9d5ff;
+
+ --callout-amber-bg: #fffbeb;
+ --callout-amber-border: #f59e0b;
+ --callout-amber-text: #92400e;
+
+ --callout-green-bg: #f0fdf4;
+ --callout-green-border: #10b981;
+ --callout-green-text: #166534;
+
+ --reader-focus-bg: #f0fdf4;
+ --reader-focus-border: #10b981;
+ --reader-focus-text: #065f46;
+ }
+
+ [data-theme="dark"] {
+ --bg-page: #0f172a;
+ --bg-surface: #1e293b;
+ --bg-subtle: #182234;
+ --border: #334155;
+ --border-strong: #475569;
+ --text-main: #f8fafc;
+ --text-muted: #cbd5e1;
+ --text-light: #94a3b8;
+ 
+ --primary: #3b82f6;
+ --primary-subtle: #1e3a8a33;
+ --primary-border: #3b82f655;
+
+ --accent-green-bg: #064e3b44;
+ --accent-green-text: #6ee7b7;
+ --accent-green-border: #059669;
+
+ --accent-blue-bg: #1e3a8a44;
+ --accent-blue-text: #93c5fd;
+ --accent-blue-border: #2563eb;
+
+ --accent-purple-bg: #581c8744;
+ --accent-purple-text: #d8b4fe;
+ --accent-purple-border: #7e22ce;
+
+ --callout-amber-bg: #78350f22;
+ --callout-amber-border: #d97706;
+ --callout-amber-text: #fde68a;
+
+ --callout-green-bg: #064e3b22;
+ --callout-green-border: #059669;
+ --callout-green-text: #a7f3d0;
+
+ --reader-focus-bg: #064e3b22;
+ --reader-focus-border: #10b981;
+ --reader-focus-text: #6ee7b7;
+ }
+
+ * { box-sizing: border-box; margin: 0; padding: 0; }
+
+ body {
+ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+ background: var(--bg-page);
+ color: var(--text-main);
+ display: flex;
+ flex-direction: column;
+ height: 100vh;
+ overflow: hidden;
+ -webkit-font-smoothing: antialiased;
+ }
+
+ /* Top Navigation Header */
+ header {
+ background: var(--bg-surface);
+ border-bottom: 1px solid var(--border);
+ padding: 12px 24px;
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ flex-shrink: 0;
+ box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+ }
+
+ .header-left {
+ display: flex;
+ align-items: center;
+ gap: 12px;
+ }
+
+ .brand-logo {
+ background: #2563eb;
+ color: #fff;
+ font-weight: 800;
+ font-size: 16px;
+ padding: 6px 10px;
+ border-radius: 6px;
+ letter-spacing: 0.5px;
+ }
+
+ .header-title h1 {
+ font-size: 1.1rem;
+ font-weight: 700;
+ color: var(--text-main);
+ }
+
+ .header-title p {
+ font-size: 0.8rem;
+ color: var(--text-light);
+ }
+
+ .header-right {
+ display: flex;
+ align-items: center;
+ gap: 10px;
+ }
+
+ .btn-header {
+ background: var(--bg-surface);
+ border: 1px solid var(--border-strong);
+ color: var(--text-muted);
+ padding: 6px 12px;
+ border-radius: 6px;
+ font-size: 0.8rem;
+ font-weight: 600;
+ cursor: pointer;
+ display: inline-flex;
+ align-items: center;
+ gap: 6px;
+ text-decoration: none;
+ transition: all 0.15s ease;
+ }
+
+ .btn-header:hover {
+ background: var(--bg-subtle);
+ color: var(--text-main);
+ border-color: var(--primary);
+ }
+
+ /* Filter & Quick Navigation Bar */
+ .toolbar {
+ background: var(--bg-surface);
+ border-bottom: 1px solid var(--border);
+ padding: 10px 24px;
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ gap: 16px;
+ flex-shrink: 0;
+ flex-wrap: wrap;
+ }
+
+ .toolbar-left {
+ display: flex;
+ align-items: center;
+ gap: 10px;
+ flex-wrap: wrap;
+ }
+
+ .search-input {
+ padding: 7px 12px;
+ background: var(--bg-page);
+ border: 1px solid var(--border-strong);
+ border-radius: 6px;
+ color: var(--text-main);
+ font-size: 0.82rem;
+ width: 260px;
+ outline: none;
+ transition: border-color 0.15s;
+ }
+
+ .search-input:focus {
+ border-color: var(--primary);
+ box-shadow: 0 0 0 2px var(--primary-subtle);
+ }
+
+ .filter-btn {
+ background: var(--bg-surface);
+ border: 1px solid var(--border-strong);
+ color: var(--text-muted);
+ padding: 6px 12px;
+ border-radius: 6px;
+ font-size: 0.78rem;
+ font-weight: 600;
+ cursor: pointer;
+ transition: all 0.15s;
+ }
+
+ .filter-btn:hover {
+ background: var(--bg-subtle);
+ color: var(--text-main);
+ }
+
+ .filter-btn.active {
+ background: var(--primary);
+ color: #fff;
+ border-color: var(--primary);
+ }
+
+ /* Quick jump pills */
+ .quick-jumps {
+ display: flex;
+ align-items: center;
+ gap: 6px;
+ }
+
+ .jump-pill {
+ font-size: 0.75rem;
+ font-weight: 600;
+ padding: 4px 10px;
+ border-radius: 4px;
+ background: var(--bg-subtle);
+ color: var(--text-muted);
+ border: 1px solid var(--border);
+ text-decoration: none;
+ cursor: pointer;
+ transition: all 0.15s;
+ }
+
+ .jump-pill:hover {
+ background: var(--primary-subtle);
+ color: var(--primary);
+ border-color: var(--primary-border);
+ }
+
+ .jump-pill.highlight {
+ background: var(--accent-green-bg);
+ color: var(--accent-green-text);
+ border-color: var(--accent-green-border);
+ }
+
+ /* Main Table Container */
+ .table-container {
+ flex: 1;
+ overflow: auto;
+ background: var(--bg-page);
+ padding: 0;
+ }
+
+ table.srs-table {
+ width: 100%;
+ border-collapse: collapse;
+ font-size: 0.84rem;
+ background: var(--bg-surface);
+ text-align: left;
+ }
+
+ /* Sticky Table Header */
+ table.srs-table thead th {
+ background: var(--bg-subtle);
+ color: var(--text-main);
+ font-weight: 700;
+ font-size: 0.76rem;
+ text-transform: uppercase;
+ letter-spacing: 0.04em;
+ padding: 10px 14px;
+ border-bottom: 2px solid var(--border-strong);
+ border-right: 1px solid var(--border);
+ position: sticky;
+ top: 0;
+ z-index: 10;
+ }
+
+ /* ==========================================================================
+ MERGED GROUP HEADER ROWS (GOM THEO PHÂN HỆ - MERGE 1 DÒNG COLSPAN)
+ ========================================================================== */
+ tr.group-row td {
+ background: #f1f5f9;
+ padding: 12px 16px;
+ font-weight: 700;
+ font-size: 0.86rem;
+ color: var(--text-main);
+ border-top: 2px solid var(--border-strong);
+ border-bottom: 2px solid var(--border-strong);
+ cursor: pointer;
+ user-select: none;
+ }
+
+ [data-theme="dark"] tr.group-row td {
+ background: #182234;
+ }
+
+ .group-header-wrap {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ gap: 12px;
+ }
+
+ .group-title-left {
+ display: flex;
+ align-items: center;
+ gap: 10px;
+ }
+
+ .group-collapse-icon {
+ font-size: 0.8rem;
+ color: var(--text-light);
+ display: inline-block;
+ transition: transform 0.2s;
+ }
+
+ .group-row.collapsed .group-collapse-icon {
+ transform: rotate(-90deg);
+ }
+
+ .group-badge {
+ font-size: 0.72rem;
+ font-weight: 600;
+ padding: 2px 8px;
+ border-radius: 4px;
+ font-family: 'Fira Code', monospace;
+ }
+
+ /* Focus highlight for Subsystem 2 (Core Reader Giai đoạn 1) */
+ tr.group-row.reader-group td {
+ background: var(--reader-focus-bg) !important;
+ border-top: 2px solid var(--reader-focus-border) !important;
+ border-bottom: 2px solid var(--reader-focus-border) !important;
+ border-left: 6px solid var(--reader-focus-border) !important;
+ color: var(--reader-focus-text) !important;
+ }
+
+ /* Standard Data Rows */
+ table.srs-table tbody tr.data-row td {
+ padding: 11px 14px;
+ border-bottom: 1px solid var(--border);
+ border-right: 1px solid var(--border);
+ color: var(--text-main);
+ line-height: 1.55;
+ vertical-align: top;
+ background: var(--bg-surface);
+ }
+
+ table.srs-table tbody tr.data-row:hover td {
+ background: var(--bg-subtle);
+ }
+
+ table.srs-table tbody tr.data-row.phase-1-row td {
+ background: #fcfffd;
+ }
+
+ [data-theme="dark"] table.srs-table tbody tr.data-row.phase-1-row td {
+ background: #0d231e33;
+ }
+
+ /* Badges & Code tags */
+ .uc-code {
+ font-family: 'Fira Code', monospace;
+ font-weight: 700;
+ font-size: 0.78rem;
+ color: var(--primary);
+ background: var(--primary-subtle);
+ border: 1px solid var(--primary-border);
+ padding: 2px 6px;
+ border-radius: 4px;
+ display: inline-block;
+ white-space: nowrap;
+ }
+
+ .badge-phase {
+ font-family: 'Fira Code', monospace;
+ font-size: 0.7rem;
+ font-weight: 700;
+ padding: 3px 8px;
+ border-radius: 4px;
+ white-space: nowrap;
+ display: inline-block;
+ }
+
+ .p1 {
+ background: var(--accent-green-bg);
+ color: var(--accent-green-text);
+ border: 1px solid var(--accent-green-border);
+ }
+
+ .p2 {
+ background: var(--accent-blue-bg);
+ color: var(--accent-blue-text);
+ border: 1px solid var(--accent-blue-border);
+ }
+
+ .p3 {
+ background: var(--accent-purple-bg);
+ color: var(--accent-purple-text);
+ border: 1px solid var(--accent-purple-border);
+ }
+
+ .actor-primary {
+ font-weight: 600;
+ color: var(--text-main);
+ display: block;
+ font-size: 0.78rem;
+ }
+
+ .actor-secondary {
+ font-size: 0.73rem;
+ color: var(--text-light);
+ display: block;
+ margin-top: 2px;
+ }
+
+ .flow-list {
+ margin-left: 18px;
+ padding-left: 0;
+ }
+
+ .flow-list li {
+ margin-bottom: 5px;
+ }
+
+ .flow-list li:last-child {
+ margin-bottom: 0;
+ }
+
+ .callout-box {
+ font-size: 0.75rem;
+ padding: 6px 10px;
+ border-radius: 4px;
+ margin-top: 6px;
+ line-height: 1.5;
+ }
+
+ .callout-amber {
+ background: var(--callout-amber-bg);
+ border-left: 3px solid var(--callout-amber-border);
+ color: var(--callout-amber-text);
+ }
+
+ .callout-green {
+ background: var(--callout-green-bg);
+ border-left: 3px solid var(--callout-green-border);
+ color: var(--callout-green-text);
+ }
+
+ /* Print styles */
+ @media print {
+ body { height: auto; overflow: visible; background: #fff; color: #000; }
+ header, .toolbar { display: none; }
+ table.srs-table { width: 100%; border: 1px solid #ccc; font-size: 9pt; }
+ table.srs-table th, table.srs-table td { padding: 6px 8px; border: 1px solid #ccc; }
+ tr.group-row td { background: #eee !important; color: #000 !important; }
+ }
+ </style>
+</head>
+<body>
+
+ <!-- ========================================== -->
+ <!-- TOP HEADER -->
+ <!-- ========================================== -->
+ <header>
+ <div class="header-left">
+ <div class="brand-logo">MEKOBOOK</div>
+ <div class="header-title">
+ <h1>Bảng Đặc Tả Yêu Cầu Chức Năng (SRS Table Matrix)</h1>
+ <p>Phân rã 21 Use Case • Gom nhóm theo 4 Phân hệ • Phân định rõ 3 Giai đoạn triển khai</p>
+ </div>
+ </div>
+ <div class="header-right">
+ <button class="btn-header" onclick="toggleTheme()" id="themeBtn" title="Chuyển chế độ Sáng / Tối">
+ Đổi giao diện
+ </button>
+ <a href="1_DAC_TA_CHUC_NANG.md" class="btn-header" title="Xem tài liệu Markdown gốc">
+ File Markdown (.md)
+ </a>
+ <button class="btn-header" onclick="window.print()" title="In ra giấy hoặc xuất PDF">
+  Xuất PDF / In
+ </button>
+ </div>
+ </header>
+
+ <!-- ========================================== -->
+ <!-- TOOLBAR: SEARCH & PHASE FILTER -->
+ <!-- ========================================== -->
+ <div class="toolbar">
+ <div class="toolbar-left">
+ <input type="text" class="search-input" id="searchBox" placeholder="Tìm kiếm nhanh (lật trang, bookmark, zoom, mekopay...)">
+ 
+ <!-- Phase Filter -->
+ <button class="filter-btn active" onclick="filterPhase('all', event)">Tất cả (21 UC)</button>
+ <button class="filter-btn" onclick="filterPhase('p1', event)"> [GĐ1] (Core Reader - 10 UC)</button>
+ <button class="filter-btn" onclick="filterPhase('p2', event)">GĐ2 (Liferay Sync - 3 UC)</button>
+ <button class="filter-btn" onclick="filterPhase('p3', event)">GĐ3 (DRM & MekoPay - 8 UC)</button>
+ </div>
+
+ <!-- Quick Jump Subsystems -->
+ <div class="quick-jumps">
+ <span style="font-size: 0.75rem; color: var(--text-light); font-weight: 600;">Xem nhanh:</span>
+ <button class="jump-pill" onclick="scrollToGroup('sec-store')">1. Store (5)</button>
+ <button class="jump-pill highlight" onclick="scrollToGroup('sec-reader')"> 2. Reader [GĐ1] (10)</button>
+ <button class="jump-pill" onclick="scrollToGroup('sec-drm')">3. DRM (5)</button>
+ <button class="jump-pill" onclick="scrollToGroup('sec-commerce')">4. Commerce (2)</button>
+ <button class="jump-pill" onclick="toggleAllGroups()" id="toggleAllBtn" title="Thu gọn / Mở rộng tất cả"> Thu gọn</button>
+ </div>
+ </div>
+
+ <!-- ========================================== -->
+ <!-- TABLE CONTAINER -->
+ <!-- ========================================== -->
+ <div class="table-container" id="scrollContainer">
+ <table class="srs-table" id="srsTable">
+ <thead>
+ <tr>
+ <th style="width: 48px; text-align: center;">STT</th>
+ <th style="width: 85px;">Mã UC</th>
+ <th style="width: 220px;">Tên Chức Năng / Use Case</th>
+ <th style="width: 170px;">Tác Nhân</th>
+ <th style="width: 200px;">Tiền Điều Kiện & Kích Hoạt</th>
+ <th>Mô Tả & Luồng Xử Lý Chính</th>
+ <th style="width: 250px;">Ngoại Lệ & Ràng Buộc Kỹ Thuật</th>
+ <th style="width: 115px; text-align: center;">Phân Kỳ</th>
+ </tr>
+ </thead>
+ <tbody>
+
+ <!-- ============================================================== -->
+ <!-- MERGED ROW: PHÂN HỆ 1: MEKOBOOK STORE -->
+ <!-- ============================================================== -->
+ <tr class="group-row" id="sec-store" onclick="toggleSubsystem('store')">
+ <td colspan="8">
+ <div class="group-header-wrap">
+ <div class="group-title-left">
+ <span class="group-collapse-icon" id="icon-store">[v]</span>
+ <span> PHÂN HỆ 1: MEKOBOOK STORE (CỬA HÀNG SÁCH & GIÁO TRÌNH SỐ)</span>
+ </div>
+ <span class="group-badge" style="background: var(--accent-blue-bg); color: var(--accent-blue-text); border: 1px solid var(--accent-blue-border);">
+ 5 Use Cases • Triển khai: Giai đoạn 2 & 3 (Kèm 1 UC đọc thử ở [GĐ1])
+ </span>
+ </div>
+ </td>
+ </tr>
+
+ <!-- UC-1.1 -->
+ <tr class="data-row sub-store" data-phase="p2">
+ <td style="text-align: center; color: var(--text-light); font-weight: 600;">1</td>
+ <td><span class="uc-code">UC-1.1</span></td>
+ <td><b>Tìm kiếm & Lọc sách giáo trình thông minh</b></td>
+ <td>
+ <span class="actor-primary"> Khách vãng lai, Độc giả</span>
+ <span class="actor-secondary"> Liferay Elasticsearch, D&M</span>
+ </td>
+ <td>Độc giả truy cập màn hình Store; Nhập từ khóa hoặc chọn filter</td>
+ <td>
+ <ol class="flow-list">
+ <li>Nhập từ khóa tra cứu (tên sách, tác giả, nhà xuất bản, ISBN).</li>
+ <li>Chọn bộ lọc: Khoa/ngành (CNTT, Kinh tế, Y học), hình thức (Miễn phí, Thuê học kỳ, Mua đứt).</li>
+ <li>Hệ thống truy vấn qua Headless Delivery REST API và hiển thị kết quả kèm bìa, số trang, đánh giá, giá bán/thuê.</li>
+ </ol>
+ </td>
+ <td>
+ <div class="callout-box callout-amber"><b>Ngoại lệ:</b> Không có kết quả -> Gợi ý 5 giáo trình nổi bật cùng thể loại.</div>
+ <div class="callout-box callout-green"><b>Ràng buộc:</b> Phản hồi &lt; 500ms; hỗ trợ tìm tiếng Việt không dấu.</div>
+ </td>
+ <td style="text-align: center;"><span class="badge-phase p2">Giai đoạn 2</span></td>
+ </tr>
+
+ <!-- UC-1.2 -->
+ <tr class="data-row sub-store phase-1-row" data-phase="p1">
+ <td style="text-align: center; color: var(--text-light); font-weight: 600;">2</td>
+ <td><span class="uc-code">UC-1.2</span></td>
+ <td><b>Đọc thử trực tuyến miễn phí (15 trang đầu)</b></td>
+ <td>
+ <span class="actor-primary"> Khách vãng lai, Độc giả</span>
+ <span class="actor-secondary"> Core Flipbook 3D Engine</span>
+ </td>
+ <td>Màn hình Chi tiết sách; Chạm nút "Đọc thử miễn phí"</td>
+ <td>
+ <ol class="flow-list">
+ <li>Mở Reader 3D, nạp manifest giới hạn trang từ 1 đến 15.</li>
+ <li>Độc giả lật trang 3D, xem mục lục, zoom ảnh bình thường trong 15 trang này.</li>
+ <li>Khi lật sang trang 16: Dừng lật trang, làm mờ màn hình và hiển thị modal: <i>"Bạn đã đọc hết 15 trang đọc thử. Vui lòng mua hoặc thuê sách để đọc trọn vẹn"</i>.</li>
+ </ol>
+ </td>
+ <td>
+ <div class="callout-box callout-green"><b>Bảo mật:</b> Manifest đọc thử chỉ tải URL 15 trang đầu, chống bóc tách tải lậu các trang còn lại qua mạng.</div>
+ </td>
+ <td style="text-align: center;"><span class="badge-phase p1"> [GĐ1] (Reader)</span></td>
+ </tr>
+
+ <!-- UC-1.3 -->
+ <tr class="data-row sub-store" data-phase="p3">
+ <td style="text-align: center; color: var(--text-light); font-weight: 600;">3</td>
+ <td><span class="uc-code">UC-1.3</span></td>
+ <td><b>Giỏ hàng & Thuê sách theo học kỳ linh hoạt</b></td>
+ <td>
+ <span class="actor-primary"> Độc giả đã đăng nhập</span>
+ <span class="actor-secondary"> Meko Commerce Hub</span>
+ </td>
+ <td>Chọn hình thức: Mua vĩnh viễn (100% giá) hoặc Thuê học kỳ 120 ngày (tiết kiệm 65%)</td>
+ <td>
+ <ol class="flow-list">
+ <li>Độc giả chọn gói thời hạn sở hữu và bấm "Thêm vào giỏ".</li>
+ <li>Nhập mã voucher ưu đãi sinh viên (nếu có).</li>
+ <li>Xác nhận tổng đơn hàng và chuyển tiếp sang cổng thanh toán MekoPay.</li>
+ </ol>
+ </td>
+ <td>
+ <div class="callout-box callout-amber"><b>Hết hạn:</b> Hết 120 ngày, sách tự động khóa và gửi thông báo nhắc gia hạn.</div>
+ </td>
+ <td style="text-align: center;"><span class="badge-phase p3">Giai đoạn 3</span></td>
+ </tr>
+
+ <!-- UC-1.4 -->
+ <tr class="data-row sub-store" data-phase="p2">
+ <td style="text-align: center; color: var(--text-light); font-weight: 600;">4</td>
+ <td><span class="uc-code">UC-1.4</span></td>
+ <td><b>Quản trị tác phẩm & Phê duyệt xuất bản</b></td>
+ <td>
+ <span class="actor-primary">‍ Biên tập viên, Quản trị viên</span>
+ <span class="actor-secondary"> Liferay Workflow (Kaleo)</span>
+ </td>
+ <td>Admin upload 1 file PDF gốc lên Liferay D&M và nhập siêu dữ liệu tác phẩm</td>
+ <td>
+ <ol class="flow-list">
+ <li>Biên tập viên upload file PDF giáo trình lên thư mục D&M.</li>
+ <li>Thiết lập giá bán, giá thuê học kỳ, số trang đọc thử miễn phí.</li>
+ <li>Trưởng ban biên tập kiểm tra bản xem trước (Preview) và bấm "Phê duyệt xuất bản".</li>
+ <li>Tác phẩm chuyển trạng thái <code>PUBLISHED</code> và xuất hiện trên app.</li>
+ </ol>
+ </td>
+ <td>
+ <div class="callout-box callout-green"><b>Ràng buộc:</b> Dung lượng file PDF tối đa 300MB; tuân thủ RBAC phân quyền chặt chẽ.</div>
+ </td>
+ <td style="text-align: center;"><span class="badge-phase p2">Giai đoạn 2</span></td>
+ </tr>
+
+ <!-- UC-1.5 -->
+ <tr class="data-row sub-store" data-phase="p3">
+ <td style="text-align: center; color: var(--text-light); font-weight: 600;">5</td>
+ <td><span class="uc-code">UC-1.5</span></td>
+ <td><b>Thanh toán đa kênh & Cấp quyền đọc ngay (Zero-touch)</b></td>
+ <td>
+ <span class="actor-primary"> Độc giả</span>
+ <span class="actor-secondary"> Cổng MekoPay & MekoLicense</span>
+ </td>
+ <td>Đơn hàng được xác nhận; Chuyển sang màn hình thanh toán</td>
+ <td>
+ <ol class="flow-list">
+ <li>Quét mã VietQR (NAPAS 247) hoặc thanh toán qua MoMo/ZaloPay/VNPay.</li>
+ <li>MekoPay nhận IPN Webhook xác thực giao dịch thành công.</li>
+ <li>MekoLicense tự động phát hành bản ghi giấy phép DRM và mở khóa sách vào Tủ sách cá nhân của độc giả trong dưới 2 giây.</li>
+ </ol>
+ </td>
+ <td>
+ <div class="callout-box callout-green"><b>Zero-touch:</b> Người dùng vừa chuyển khoản xong là mở app đọc ngay lập tức, không cần duyệt tay.</div>
+ </td>
+ <td style="text-align: center;"><span class="badge-phase p3">Giai đoạn 3</span></td>
+ </tr>
+
+
+ <!-- ============================================================== -->
+        <!-- MERGED ROW: PHÂN HỆ 2: MEKOBOOK READER & TRẢI NGHIỆM ĐỘC GIẢ     -->
+        <!-- ============================================================== -->
+        <tr class="group-row reader-group" id="sec-reader" onclick="toggleSubsystem('reader')">
+          <td colspan="8">
+            <div class="group-header-wrap">
+              <div class="group-title-left">
+                <span class="group-collapse-icon" id="icon-reader">[v]</span>
+                <span>PHÂN HỆ 2: MEKOBOOK READER & TRẢI NGHIỆM ĐỘC GIẢ (TRỌNG TÂM GIAI ĐOẠN 1)</span>
+              </div>
+              <span class="group-badge" style="background: #10b981; color: #fff;">
+                10 Use Cases • Bắt đầu từ Tủ sách cá nhân • GĐ1 (Mock JSON 60 FPS)
+              </span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- UC-2.1 -->
+        <tr class="data-row sub-reader phase-1-row" data-phase="p1">
+          <td style="text-align: center; color: var(--text-light); font-weight: 600;">6</td>
+          <td><span class="uc-code">UC-2.1</span></td>
+          <td><b>Quản lý Tủ sách cá nhân & Kệ sách (My Bookshelf & Shelves)</b></td>
+          <td>
+            <span class="actor-primary">Độc giả</span>
+            <span class="actor-secondary">Download Manager, MMKV Cache, Liferay Object</span>
+          </td>
+          <td>Mở ứng dụng Mekobook; Chuyển sang tab "Tủ sách của tôi"</td>
+          <td>
+            <ol class="flow-list">
+              <li><b>Danh mục hệ thống:</b> Lọc theo "Tất cả", "Đang đọc gần đây" (kèm % tiến độ), "Sở hữu vĩnh viễn", "Thuê học kỳ" (đồng hồ đếm ngược số ngày).</li>
+              <li><b>Quản lý Kệ sách cá nhân:</b> Bấm `[+ Tạo kệ sách]` -> Nhập tên kệ (ví dụ: "Môn Kiến trúc máy tính", "Ôn thi") -> Chọn màu nhãn. Hỗ trợ đổi tên, xóa kệ (xóa kệ không xóa sách gốc trong tủ).</li>
+              <li><b>Phân loại sách:</b> Thêm sách vào kệ cá nhân, gỡ sách khỏi kệ hoặc chuyển kệ.</li>
+              <li><b>Tìm kiếm:</b> Tra cứu nhanh theo tên sách, tác giả trong tủ cá nhân.</li>
+              <li><b>Tải về đọc Offline:</b> Tải gói dữ liệu về sandbox máy để đọc không cần mạng.</li>
+            </ol>
+          </td>
+          <td>
+            <div class="callout-box callout-amber"><b>Ngoại lệ:</b> Báo lỗi khi tạo trùng tên kệ sách.</div>
+            <div class="callout-box callout-green"><b>Tải nền:</b> Hỗ trợ tải ngầm Background, Pause và Resume; kiểm tra bộ nhớ trống > 100MB.</div>
+          </td>
+          <td style="text-align: center;"><span class="badge-phase p1">[GĐ1] (Trọng tâm)</span></td>
+        </tr>
+
+        <!-- UC-2.2 -->
+        <tr class="data-row sub-reader phase-1-row" data-phase="p1">
+          <td style="text-align: center; color: var(--text-light); font-weight: 600;">7</td>
+          <td><span class="uc-code">UC-2.2</span></td>
+          <td><b>Mở sách, Kiểm tra License & Khởi tạo phiên đọc</b></td>
+          <td>
+            <span class="actor-primary">Độc giả</span>
+            <span class="actor-secondary">License Validator, Reader Engine</span>
+          </td>
+          <td>Chạm vào 1 cuốn sách từ Tủ sách cá nhân</td>
+          <td>
+            <ol class="flow-list">
+              <li><b>Kiểm tra License:</b> Nếu hết hạn học kỳ, hiển thị modal thông báo nhắc gia hạn. Nếu còn hạn (ACTIVE), tiếp tục khởi tạo sách.</li>
+              <li><b>Khôi phục tiến trình:</b> Nếu có trang đọc dở dang (ví dụ: trang 42), hiển thị thanh nhắc "Đang đọc dở trang 42" kèm 2 lựa chọn "Đọc tiếp" hoặc "Đọc từ đầu".</li>
+              <li>Nạp file <code>manifest.json</code> và tải trước ảnh trang hiện tại ± 1 trang (Pre-fetch buffer).</li>
+              <li>Mở Trình đọc Flipbook 3D sẵn sàng tương tác dưới 1 giây.</li>
+            </ol>
+          </td>
+          <td>
+            <div class="callout-box callout-green"><b>Hiệu năng:</b> Khởi động Cold Start &lt; 1.2s; RAM ban đầu &lt; 25MB; Không chớp màn hình trắng.</div>
+          </td>
+          <td style="text-align: center;"><span class="badge-phase p1">[GĐ1] (Trọng tâm)</span></td>
+        </tr>
+
+        <!-- UC-2.3 -->
+        <tr class="data-row sub-reader phase-1-row" data-phase="p1">
+          <td style="text-align: center; color: var(--text-light); font-weight: 600;">8</td>
+          <td><span class="uc-code">UC-2.3</span></td>
+          <td><b>Lật trang 3D vật lý mô phỏng thực tế (60 FPS)</b></td>
+          <td>
+            <span class="actor-primary">Độc giả</span>
+            <span class="actor-secondary">Mesh Curl Shader / Skia Canvas</span>
+          </td>
+          <td>Cử chỉ ngón tay: Vuốt nhanh (Swipe), Kéo góc (Drag & Curl), hoặc Chạm mép (Tap)</td>
+          <td>
+            <ol class="flow-list">
+              <li><b>Vuốt nhanh (Swipe):</b> Lật mượt sang trang sau hoặc quay lại trang trước.</li>
+              <li><b>Kéo góc (Drag & Curl):</b> Góc sách uốn cong 3D bám sát theo ngón tay, đổ bóng cong (Page Curl Shadow) và lộ dần trang dưới. Buông tay &gt;50% để lật hẳn; &lt;50% trang đàn hồi trở lại vị trí cũ.</li>
+              <li><b>Chạm mép:</b> Chạm 20% mép phải để tiến; chạm 20% mép trái để lùi.</li>
+              <li>Phát âm thanh tiếng sột soạt lật giấy chân thực khi hoàn tất.</li>
+            </ol>
+          </td>
+          <td>
+            <div class="callout-box callout-green"><b>Hiệu năng:</b> Tốc độ khung hình ổn định &ge; 58-60 FPS; độ trễ cảm ứng &lt; 16ms; không giật lag.</div>
+          </td>
+          <td style="text-align: center;"><span class="badge-phase p1">[GĐ1] (Trọng tâm)</span></td>
+        </tr>
+
+        <!-- UC-2.4 -->
+        <tr class="data-row sub-reader phase-1-row" data-phase="p1">
+          <td style="text-align: center; color: var(--text-light); font-weight: 600;">9</td>
+          <td><span class="uc-code">UC-2.4</span></td>
+          <td><b>Chuyển đổi Trang Đơn / Trang Đôi (Spread View)</b></td>
+          <td>
+            <span class="actor-primary">Độc giả</span>
+            <span class="actor-secondary">Cảm biến xoay màn hình (Gyroscope)</span>
+          </td>
+          <td>Xoay ngang điện thoại hoặc mở app trên Máy tính bảng (Tablet / iPad)</td>
+          <td>
+            <ol class="flow-list">
+              <li><b>Chiều dọc (Portrait):</b> Tự động hiển thị <b>Trang Đơn (Single Page)</b> căn vừa khít màn hình.</li>
+              <li><b>Chiều ngang (Landscape) / Tablet:</b> Tự động chuyển sang <b>Trang Đôi (Double Spread)</b> mô phỏng cuốn sách mở ra 2 bên kèm rãnh gáy sách 3D ở giữa.</li>
+              <li>Khi lật trang đôi: Trang bên phải uốn cong 3D úp sang trang bên trái qua gáy sách.</li>
+            </ol>
+          </td>
+          <td>
+            <div class="callout-box callout-green"><b>Trải nghiệm:</b> Chuyển đổi mượt &lt; 150ms; không nạp lại ảnh từ đầu; có thể khóa cố định chế độ trong cài đặt.</div>
+          </td>
+          <td style="text-align: center;"><span class="badge-phase p1">[GĐ1] (Trọng tâm)</span></td>
+        </tr>
+
+        <!-- UC-2.5 -->
+        <tr class="data-row sub-reader phase-1-row" data-phase="p1">
+          <td style="text-align: center; color: var(--text-light); font-weight: 600;">10</td>
+          <td><span class="uc-code">UC-2.5</span></td>
+          <td><b>Phóng to / Thu nhỏ & Kéo xem đa điểm (Zoom & Pan)</b></td>
+          <td>
+            <span class="actor-primary">Độc giả</span>
+            <span class="actor-secondary">Pinch Gesture Handler</span>
+          </td>
+          <td>Dãn 2 ngón tay (Pinch to Zoom) hoặc Chạm đúp (Double tap) vào màn hình</td>
+          <td>
+            <ol class="flow-list">
+              <li>Dãn 2 ngón tay để phóng to trang sách lên tỷ lệ 2x, 3x hoặc tối đa 4x.</li>
+              <li>Khi đang Zoom: Cử chỉ lật trang 3D tạm thời khóa lại; dùng 1 ngón tay vuốt để di chuyển tự do (Pan) soi rõ biểu đồ, công thức toán.</li>
+              <li>Chụm 2 ngón tay hoặc chạm đúp lần nữa để đưa về 1x và mở lại cử chỉ lật 3D.</li>
+            </ol>
+          </td>
+          <td>
+            <div class="callout-box callout-green"><b>Ràng buộc:</b> Rubber-banding effect chống kéo lệch khỏi màn hình; tự động đổi texture sắc nét hơn.</div>
+          </td>
+          <td style="text-align: center;"><span class="badge-phase p1">[GĐ1] (Trọng tâm)</span></td>
+        </tr>
+
+        <!-- UC-2.6 -->
+        <tr class="data-row sub-reader phase-1-row" data-phase="p1">
+          <td style="text-align: center; color: var(--text-light); font-weight: 600;">11</td>
+          <td><span class="uc-code">UC-2.6</span></td>
+          <td><b>Điều hướng Mục Lục (TOC), Scrubber & Nhập Trang</b></td>
+          <td>
+            <span class="actor-primary">Độc giả</span>
+            <span class="actor-secondary">Flipbook Navigation System</span>
+          </td>
+          <td>Chạm vào giữa màn hình để mở thanh công cụ điều hướng</td>
+          <td>
+            <ol class="flow-list">
+              <li><b>Mục lục TOC:</b> Mở ngăn kéo bên trái hiển thị cây phân cấp (Chương 1, Mục 1.1 kèm số trang). Chạm mục để lật ngay tới trang đó.</li>
+              <li><b>Thanh trượt Scrubber:</b> Trượt đáy màn hình kèm Thumbnail nhỏ xem trước từng trang.</li>
+              <li><b>Nhập số trang:</b> Chạm vào nhãn "Trang 42/128" -> Nhập số trang mong muốn (ví dụ `85`) -> Bấm "Đi tới".</li>
+            </ol>
+          </td>
+          <td>
+            <div class="callout-box callout-amber"><b>Ngoại lệ:</b> Nhập sai số trang -> Rung phản hồi (Haptic) báo số trang không hợp lệ.</div>
+          </td>
+          <td style="text-align: center;"><span class="badge-phase p1">[GĐ1] (Trọng tâm)</span></td>
+        </tr>
+
+        <!-- UC-2.7 -->
+        <tr class="data-row sub-reader phase-1-row" data-phase="p1">
+          <td style="text-align: center; color: var(--text-light); font-weight: 600;">12</td>
+          <td><span class="uc-code">UC-2.7</span></td>
+          <td><b>Đánh dấu trang (Bookmark kèm Thumbnail & Chương)</b></td>
+          <td>
+            <span class="actor-primary">Độc giả</span>
+            <span class="actor-secondary">MMKV Cache / Liferay Object</span>
+          </td>
+          <td>Chạm vào biểu tượng Bookmark trên thanh công cụ phía trên</td>
+          <td>
+            <ol class="flow-list">
+              <li>Biểu tượng đổi màu sang màu nổi bật (Vàng/Xanh) kèm hoạt ảnh nảy nhẹ.</li>
+              <li>Hệ thống lưu bản ghi bookmark: Số trang, Tên chương, Ảnh thumbnail thu nhỏ, Thời gian tạo.</li>
+              <li>Khi mở tab "Bookmark": Hiển thị danh sách thẻ trực quan. Chạm thẻ để lật ngay tới trang đó; vuốt trái để xóa.</li>
+            </ol>
+          </td>
+          <td>
+            <div class="callout-box callout-green"><b>Tốc độ:</b> Lưu cục bộ &lt; 5ms; Hỗ trợ tối đa 500 bookmark/cuốn sách.</div>
+          </td>
+          <td style="text-align: center;"><span class="badge-phase p1">[GĐ1] & GĐ2</span></td>
+        </tr>
+
+        <!-- UC-2.8 -->
+        <tr class="data-row sub-reader phase-1-row" data-phase="p1">
+          <td style="text-align: center; color: var(--text-light); font-weight: 600;">13</td>
+          <td><span class="uc-code">UC-2.8</span></td>
+          <td><b>Tô sáng, Ghi chú & Bút vẽ hệ tọa độ Vector (Annotations)</b></td>
+          <td>
+            <span class="actor-primary">Độc giả</span>
+            <span class="actor-secondary">Skia / Canvas Vector Layer</span>
+          </td>
+          <td>Chọn công cụ: Bút Highlight, Bút vẽ tự do, hoặc Sticky Note</td>
+          <td>
+            <ol class="flow-list">
+              <li><b>Bút Highlight:</b> Chọn màu -> Kéo ngón tay đè lên dòng chữ -> Lớp màu bán trong suốt (35%) phủ lên vùng chữ.</li>
+              <li><b>Bút Vẽ Tự Do (Stylus):</b> Dùng ngón tay hoặc bút Apple Pencil/S-Pen vẽ, khoanh tròn tự do. Hệ thống lưu trữ các nét vẽ dưới dạng chuỗi điểm vector chuẩn hóa $(x, y) \in [0.0, 1.0]$, co dãn chuẩn xác trên mọi màn hình.</li>
+              <li><b>Sticky Note:</b> Đặt icon ghi chú -> Nhập văn bản nhận xét -> Lưu lại.</li>
+            </ol>
+          </td>
+          <td>
+            <div class="callout-box callout-green"><b>Ràng buộc:</b> Độ trễ nét vẽ &lt; 10ms; tọa độ độc lập độ phân giải; có công cụ tẩy nét vẽ.</div>
+          </td>
+          <td style="text-align: center;"><span class="badge-phase p1">[GĐ1] & GĐ2</span></td>
+        </tr>
+
+        <!-- UC-2.9 -->
+        <tr class="data-row sub-reader phase-1-row" data-phase="p1">
+          <td style="text-align: center; color: var(--text-light); font-weight: 600;">14</td>
+          <td><span class="uc-code">UC-2.9</span></td>
+          <td><b>Tự động lưu & Đồng bộ tiến trình đa thiết bị</b></td>
+          <td>
+            <span class="actor-primary">Độc giả</span>
+            <span class="actor-secondary">MMKV, Liferay ReadingProgress</span>
+          </td>
+          <td>Sự kiện lật trang hoàn tất hoặc khi ứng dụng chuyển chạy ngầm</td>
+          <td>
+            <ol class="flow-list">
+              <li>Mỗi khi lật trang: Vị trí trang lập tức được ghi vào bộ nhớ đệm máy (MMKV) trong &lt; 1ms.</li>
+              <li>Đồng bộ ngầm định kỳ 10 giây hoặc khi đóng app lên Liferay Server qua REST API.</li>
+              <li>Mở sách trên máy khác: So sánh timestamp và hỏi khôi phục tiến trình mới nhất từ máy chủ.</li>
+            </ol>
+          </td>
+          <td>
+            <div class="callout-box callout-amber"><b>Offline:</b> Mất mạng thì lưu cục bộ, khi có mạng tự động đồng bộ bù (Offline Queue).</div>
+          </td>
+          <td style="text-align: center;"><span class="badge-phase p1">[GĐ1] & GĐ2</span></td>
+        </tr>
+
+        <!-- UC-2.10 -->
+        <tr class="data-row sub-reader phase-1-row" data-phase="p1">
+          <td style="text-align: center; color: var(--text-light); font-weight: 600;">15</td>
+          <td><span class="uc-code">UC-2.10</span></td>
+          <td><b>Tùy chỉnh trải nghiệm (Night Mode, Âm thanh giấy, Độ sáng)</b></td>
+          <td>
+            <span class="actor-primary">Độc giả</span>
+            <span class="actor-secondary">Color Filter Shader, SoundFX</span>
+          </td>
+          <td>Chạm biểu tượng Cài đặt hiển thị (Aa / Bánh răng) trên thanh công cụ</td>
+          <td>
+            <ol class="flow-list">
+              <li><b>Chế độ màu nền:</b> Sáng (Light Mode - giấy trắng), Tối (Dark/Night Mode - nền đen thẫm chữ trắng dịu chống mỏi mắt), Vàng ấm (Sepia Mode).</li>
+              <li><b>Âm thanh lật giấy:</b> Bật/tắt hoặc điều chỉnh âm lượng tiếng sột soạt khi trang sách lật qua.</li>
+              <li><b>Thanh trượt độ sáng:</b> Tăng/giảm độ sáng màn hình độc lập ngay trong ứng dụng.</li>
+              <li><b>Tự động ẩn thanh công cụ:</b> Ẩn toàn bộ thanh tiêu đề sau 3 giây không chạm.</li>
+            </ol>
+          </td>
+          <td>
+            <div class="callout-box callout-green"><b>GPU Shader:</b> Đổi Dark Mode / Sepia tức thì trong 1 khung hình (16ms); không giật khung hình.</div>
+          </td>
+          <td style="text-align: center;"><span class="badge-phase p1">[GĐ1] (Trọng tâm)</span></td>
+        </tr>
+
+        <!-- ============================================================== -->
+        <!-- MERGED ROW: PHÂN HỆ 3: BẢO VỆ BẢN QUYỀN SỐ (DRM) -->
+ <!-- ============================================================== -->
+ <tr class="group-row" id="sec-drm" onclick="toggleSubsystem('drm')">
+ <td colspan="8">
+ <div class="group-header-wrap">
+ <div class="group-title-left">
+ <span class="group-collapse-icon" id="icon-drm">[v]</span>
+ <span> PHÂN HỆ 3: BẢO VỆ BẢN QUYỀN SỐ (DRM) & CHẾ BẢN TỰ ĐỘNG</span>
+ </div>
+ <span class="group-badge" style="background: var(--accent-purple-bg); color: var(--accent-purple-text); border: 1px solid var(--accent-purple-border);">
+ 5 Use Cases • Triển khai: Giai đoạn 2 (Chế bản) & Giai đoạn 3 (Bảo mật DRM)
+ </span>
+ </div>
+ </td>
+ </tr>
+
+ <!-- UC-3.1 -->
+ <tr class="data-row sub-drm" data-phase="p2">
+ <td style="text-align: center; color: var(--text-light); font-weight: 600;">16</td>
+ <td><span class="uc-code">UC-3.1</span></td>
+ <td><b>Chế bản tự động: Tách PDF Ảnh WebP đa tầng</b></td>
+ <td>
+ <span class="actor-primary">‍ Biên tập viên / System</span>
+ <span class="actor-secondary"> Ghostscript, ImageMagick, PDFBox</span>
+ </td>
+ <td>Upload file PDF giáo trình lên Liferay D&M</td>
+ <td>
+ <ol class="flow-list">
+ <li>Ghostscript tự động cắt từng trang PDF thành ảnh WebP 1080p sắc nét (giảm 70% dung lượng so với JPG).</li>
+ <li>Cắt ảnh Thumbnail siêu nhẹ cho thanh cuộn Scrubber.</li>
+ <li>PDFBox trích xuất cấu trúc Bookmark PDF thành cây mục lục TOC.</li>
+ <li>Tự động biên soạn tệp <code>manifest.json</code> phục vụ Mobile Client.</li>
+ </ol>
+ </td>
+ <td>
+ <div class="callout-box callout-green"><b>Tốc độ:</b> Xử lý giáo trình 300 trang &lt; 90 giây; chất lượng WebP đạt mức 85%.</div>
+ </td>
+ <td style="text-align: center;"><span class="badge-phase p2">Giai đoạn 2</span></td>
+ </tr>
+
+ <!-- UC-3.2 -->
+ <tr class="data-row sub-drm" data-phase="p3">
+ <td style="text-align: center; color: var(--text-light); font-weight: 600;">17</td>
+ <td><span class="uc-code">UC-3.2</span></td>
+ <td><b>Mã hóa dữ liệu tác phẩm & Giải mã In-Memory</b></td>
+ <td>
+ <span class="actor-primary"> DRM Engine, Core Reader</span>
+ <span class="actor-secondary"> Hardware Keystore / RAM</span>
+ </td>
+ <td>Sách lưu offline trong máy; Độc giả lật đến trang nào</td>
+ <td>
+ <ol class="flow-list">
+ <li>Tệp sách lưu trên đĩa máy được mã hóa từng trang bằng AES-256-GCM.</li>
+ <li>Lật đến trang nào, khối dữ liệu của đúng trang đó mới nạp vào RAM.</li>
+ <li>Reader Engine dùng khóa trong Keystore giải mã trực tiếp trong RAM thành đối tượng Texture đồ họa hiển thị lên màn hình.</li>
+ <li>Không ghi ảnh giải mã ra đĩa; lật qua trang khác là xóa ngay khỏi RAM.</li>
+ </ol>
+ </td>
+ <td>
+ <div class="callout-box callout-green"><b>Bảo vệ:</b> Giải mã RAM &lt; 10ms; duy trì 60 FPS; chống trích xuất file PDF hay ảnh lậu.</div>
+ </td>
+ <td style="text-align: center;"><span class="badge-phase p3">Giai đoạn 3</span></td>
+ </tr>
+
+ <!-- UC-3.3 -->
+ <tr class="data-row sub-drm" data-phase="p3">
+ <td style="text-align: center; color: var(--text-light); font-weight: 600;">18</td>
+ <td><span class="uc-code">UC-3.3</span></td>
+ <td><b>Nhúng thủy vân số động (Forensic Dynamic Watermark)</b></td>
+ <td>
+ <span class="actor-primary"> Core Reader Engine</span>
+ <span class="actor-secondary"> Graphics Overlay Layer</span>
+ </td>
+ <td>Render khung hình hiển thị trang sách 3D trên màn hình</td>
+ <td>
+ <ol class="flow-list">
+ <li>Tự động render đè lên mặt sách một lớp Watermark bán trong suốt (độ mờ 10% - 14%).</li>
+ <li>Watermark chạy nghiêng góc chéo 45° phủ toàn bộ mặt trang sách.</li>
+ <li>Nội dung: Họ tên độc giả, User ID, Mã đơn hàng, Thời gian truy cập.</li>
+ <li>Nếu ai đó dùng điện thoại khác chụp lại màn hình thì thông tin cá nhân sẽ hiện rõ mồn một.</li>
+ </ol>
+ </td>
+ <td>
+ <div class="callout-box callout-green"><b>GPU:</b> Vẽ trực tiếp bằng Canvas/Shader; chiếm &lt; 1% GPU; không thể tắt bằng DOM.</div>
+ </td>
+ <td style="text-align: center;"><span class="badge-phase p3">Giai đoạn 3</span></td>
+ </tr>
+
+ <!-- UC-3.4 -->
+ <tr class="data-row sub-drm" data-phase="p3">
+ <td style="text-align: center; color: var(--text-light); font-weight: 600;">19</td>
+ <td><span class="uc-code">UC-3.4</span></td>
+ <td><b>Ràng buộc thiết bị (2-3 máy) & Chặn quay chụp màn hình</b></td>
+ <td>
+ <span class="actor-primary"> Hệ điều hành (Android / iOS)</span>
+ <span class="actor-secondary"> MekoLicense Server</span>
+ </td>
+ <td>Mở màn hình Reader hoặc đăng nhập trên thiết bị mới</td>
+ <td>
+ <ol class="flow-list">
+ <li><b>Chặn chụp Android:</b> Bật cờ <code>FLAG_SECURE</code> (chụp màn hình chỉ ra ảnh đen hoàn toàn).</li>
+ <li><b>Chặn quay chụp iOS:</b> Bọc màn hình trong <code>SecureView Container</code> (ẩn hoặc chuyển màn hình sang đen khi quay phim màn hình hoặc chiếu AirPlay ra ngoài).</li>
+ <li><b>Giới hạn thiết bị:</b> Tối đa 2 đến 3 thiết bị/tài khoản; máy thứ 4 yêu cầu hủy bớt máy cũ.</li>
+ </ol>
+ </td>
+ <td>
+ <div class="callout-box callout-green"><b>Chống lậu:</b> Chặn đứng việc chia sẻ tài khoản cho cả lớp học dùng chung.</div>
+ </td>
+ <td style="text-align: center;"><span class="badge-phase p3">Giai đoạn 3</span></td>
+ </tr>
+
+ <!-- UC-3.5 -->
+ <tr class="data-row sub-drm" data-phase="p3">
+ <td style="text-align: center; color: var(--text-light); font-weight: 600;">20</td>
+ <td><span class="uc-code">UC-3.5</span></td>
+ <td><b>Tự động thu hồi bản quyền khi hết hạn học kỳ</b></td>
+ <td>
+ <span class="actor-primary"> MekoLicense Server</span>
+ <span class="actor-secondary"> Mekobook Mobile App</span>
+ </td>
+ <td>Thời gian hiện tại vượt quá mốc ngày hết hạn của License</td>
+ <td>
+ <ol class="flow-list">
+ <li>Nhắc nhở trước 5 ngày kèm ưu đãi gia hạn học kỳ mới.</li>
+ <li>Hết hạn 120 ngày: MekoLicense Server chuyển trạng thái giấy phép thành <code>EXPIRED</code>.</li>
+ <li>App tự động vô hiệu hóa khóa giải mã, xóa bỏ gói dữ liệu mã hóa offline để giải phóng dung lượng.</li>
+ <li>Nếu mở lại: Hiển thị modal thông báo hết hạn kèm nút "Gia hạn thêm".</li>
+ </ol>
+ </td>
+ <td>
+ <div class="callout-box callout-amber"><b>Chống gian lận:</b> Kiểm tra Monotonic Hardware Clock, phát hiện chỉnh lùi giờ máy.</div>
+ </td>
+ <td style="text-align: center;"><span class="badge-phase p3">Giai đoạn 3</span></td>
+ </tr>
+
+
+ <!-- ============================================================== -->
+ <!-- MERGED ROW: PHÂN HỆ 4: MEKO COMMERCE HUB -->
+ <!-- ============================================================== -->
+ <tr class="group-row" id="sec-commerce" onclick="toggleSubsystem('commerce')">
+ <td colspan="8">
+ <div class="group-header-wrap">
+ <div class="group-title-left">
+ <span class="group-collapse-icon" id="icon-commerce">[v]</span>
+ <span> PHÂN HỆ 4: MEKO COMMERCE HUB (MEKOPAY & MEKOLICENSE)</span>
+ </div>
+ <span class="group-badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a;">
+ 2 Use Cases • Triển khai: Giai đoạn 3
+ </span>
+ </div>
+ </td>
+ </tr>
+
+ <!-- UC-4.1 -->
+ <tr class="data-row sub-commerce" data-phase="p3">
+ <td style="text-align: center; color: var(--text-light); font-weight: 600;">21</td>
+ <td><span class="uc-code">UC-4.1</span></td>
+ <td><b>Thanh toán trực tuyến đa kênh qua MekoPay</b></td>
+ <td>
+ <span class="actor-primary"> Khách hàng, Độc giả</span>
+ <span class="actor-secondary"> Cổng MekoPay (VietQR / MoMo / VNPay)</span>
+ </td>
+ <td>Bấm "Thanh toán qua MekoPay"</td>
+ <td>
+ <ol class="flow-list">
+ <li>MekoPay sinh phiên giao dịch duy nhất kèm mã VietQR chuẩn NAPAS 247 hoặc Deep-link ví điện tử.</li>
+ <li>Khách hàng hoàn tất thanh toán thành công trên app ngân hàng / ví điện tử.</li>
+ <li>Ngân hàng phát tín hiệu IPN (Instant Payment Notification) về máy chủ MekoPay.</li>
+ <li>MekoPay đối soát chữ ký số, xác nhận đơn hàng thành công và phát sự kiện <code>ORDER_PAID</code>.</li>
+ </ol>
+ </td>
+ <td>
+ <div class="callout-box callout-green"><b>Bảo mật:</b> Chuẩn PCI-DSS, mã hóa HTTPS TLS 1.3, đối soát chữ ký HMAC-SHA256.</div>
+ </td>
+ <td style="text-align: center;"><span class="badge-phase p3">Giai đoạn 3</span></td>
+ </tr>
+
+ <!-- UC-4.2 -->
+ <tr class="data-row sub-commerce" data-phase="p3">
+ <td style="text-align: center; color: var(--text-light); font-weight: 600;">22</td>
+ <td><span class="uc-code">UC-4.2</span></td>
+ <td><b>Cấp MekoLicense & Mở khóa Tủ sách tự động (Zero-touch)</b></td>
+ <td>
+ <span class="actor-primary"> MekoLicense Server</span>
+ <span class="actor-secondary"> Mekobook Mobile App</span>
+ </td>
+ <td>MekoPay xác nhận thanh toán thành công (Sự kiện <code>ORDER_PAID</code>)</td>
+ <td>
+ <ol class="flow-list">
+ <li>MekoLicense tự động phát hành bản ghi giấy phép (tính ngày hết hạn và tạo cặp khóa mã hóa).</li>
+ <li>Gửi sự kiện tức thì (Zero-touch Event) qua WebSocket / Push Notification tới Mobile App.</li>
+ <li>Tủ sách cá nhân trên app tự động mở khóa cuốn sách, chuyển nút "Mua" thành "Mở đọc ngay" mà không cần thao tác duyệt tay.</li>
+ </ol>
+ </td>
+ <td>
+ <div class="callout-box callout-green"><b>Toàn trình:</b> Hoàn tất trong dưới 2 giây; xử lý Idempotency tránh cấp trùng lặp.</div>
+ </td>
+ <td style="text-align: center;"><span class="badge-phase p3">Giai đoạn 3</span></td>
+ </tr>
+
+ </tbody>
+ </table>
+ </div>
+
+ <!-- ========================================== -->
+ <!-- JAVASCRIPT: FILTER, SEARCH, COLLAPSE, THEME -->
+ <!-- ========================================== -->
+ <script>
+ const searchBox = document.getElementById('searchBox');
+ const table = document.getElementById('srsTable');
+ const dataRows = table.querySelectorAll('tbody tr.data-row');
+ const groupRows = table.querySelectorAll('tbody tr.group-row');
+
+ let currentPhase = 'all';
+ let allCollapsed = false;
+
+ // Filter by Phase & Search Input
+ function updateTable() {
+ const q = searchBox.value.toLowerCase().trim();
+
+ dataRows.forEach(row => {
+ const text = row.innerText.toLowerCase();
+ const rowPhase = row.getAttribute('data-phase');
+ const matchSearch = text.includes(q);
+ const matchPhase = (currentPhase === 'all' || rowPhase === currentPhase);
+
+ if (matchSearch && matchPhase) {
+ row.style.display = '';
+ } else {
+ row.style.display = 'none';
+ }
+ });
+
+ // Hide group row if all child rows are hidden
+ ['store', 'reader', 'drm', 'commerce'].forEach(sub => {
+ const groupRow = document.getElementById('sec-' + sub);
+ const childRows = table.querySelectorAll('.sub-' + sub);
+ const anyVisible = Array.from(childRows).some(r => r.style.display !== 'none');
+ if (groupRow) {
+ groupRow.style.display = anyVisible ? '' : 'none';
+ }
+ });
+ }
+
+ searchBox.addEventListener('input', updateTable);
+
+ function filterPhase(phase, event) {
+ currentPhase = phase;
+ document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+ if (event && event.target) {
+ event.target.classList.add('active');
+ }
+ updateTable();
+ }
+
+ // Smooth Scroll to Subsystem
+ function scrollToGroup(id) {
+ const el = document.getElementById(id);
+ if (el) {
+ el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+ // Expand if collapsed
+ const sub = id.replace('sec-', '');
+ const groupRow = document.getElementById(id);
+ if (groupRow.classList.contains('collapsed')) {
+ toggleSubsystem(sub);
+ }
+ }
+ }
+
+ // Toggle Collapse for a Subsystem
+ function toggleSubsystem(sub) {
+ const groupRow = document.getElementById('sec-' + sub);
+ const icon = document.getElementById('icon-' + sub);
+ const childRows = table.querySelectorAll('.sub-' + sub);
+ const isCollapsed = groupRow.classList.contains('collapsed');
+
+ if (isCollapsed) {
+ groupRow.classList.remove('collapsed');
+ icon.innerText = '[v]';
+ childRows.forEach(r => r.style.display = '');
+ } else {
+ groupRow.classList.add('collapsed');
+ icon.innerText = '[>]';
+ childRows.forEach(r => r.style.display = 'none');
+ }
+ }
+
+ // Toggle All Groups
+ function toggleAllGroups() {
+ allCollapsed = !allCollapsed;
+ const btn = document.getElementById('toggleAllBtn');
+ ['store', 'reader', 'drm', 'commerce'].forEach(sub => {
+ const groupRow = document.getElementById('sec-' + sub);
+ const icon = document.getElementById('icon-' + sub);
+ const childRows = table.querySelectorAll('.sub-' + sub);
+ if (allCollapsed) {
+ groupRow.classList.add('collapsed');
+ icon.innerText = '[>]';
+ childRows.forEach(r => r.style.display = 'none');
+ } else {
+ groupRow.classList.remove('collapsed');
+ icon.innerText = '[v]';
+ childRows.forEach(r => r.style.display = '');
+ }
+ });
+ btn.innerText = allCollapsed ? ' Mở rộng' : ' Thu gọn';
+ }
+
+ // Toggle Light / Dark Theme
+ function toggleTheme() {
+ const html = document.documentElement;
+ const current = html.getAttribute('data-theme');
+ const next = current === 'dark' ? 'light' : 'dark';
+ html.setAttribute('data-theme', next);
+ localStorage.setItem('mekobook_theme', next);
+ }
+
+ // Init theme preference if stored
+ const savedTheme = localStorage.getItem('mekobook_theme');
+ if (savedTheme) {
+ document.documentElement.setAttribute('data-theme', savedTheme);
+ }
+ </script>
+</body>
+</html>

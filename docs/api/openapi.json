@@ -1,0 +1,620 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Mekobook Headless Delivery & DRM REST API",
+    "description": "Chuẩn OpenAPI 3.0 cho hệ sinh thái đọc sách Flipbook 3D di động Mekobook kết nối Liferay 7.4 GA132 CE và bảo mật bản quyền Readium LCP.",
+    "version": "v1.0",
+    "contact": {
+      "name": "Mekosoft Engineering Team",
+      "email": "dev@mekosoft.vn"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/o",
+      "description": "Liferay 7.4 Local Development Server"
+    },
+    {
+      "url": "https://api.mekobook.mekosoft.vn/o",
+      "description": "Production Server"
+    }
+  ],
+  "paths": {
+    "/headless-delivery/v1.0/sites/{siteId}/document-folders": {
+      "get": {
+        "tags": ["Catalog - Document Folders"],
+        "summary": "Lấy danh sách thư mục / thể loại sách theo Site",
+        "description": "Sử dụng API chuẩn Liferay Headless Delivery để lấy danh mục sách phục vụ màn hình Thư viện trên Mobile.",
+        "operationId": "getSiteDocumentFoldersPage",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "description": "Liferay Site ID (e.g., 20121)",
+            "schema": { "type": "integer", "format": "int64" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Số thứ tự trang (mặc định: 1)",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "Số mục trên mỗi trang (mặc định: 20)",
+            "schema": { "type": "integer", "default": 20 }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Tiêu chí sắp xếp (ví dụ: name:asc)",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách các thư mục sách dạng Page<DocumentFolder>",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDocumentFolder"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/headless-delivery/v1.0/document-folders/{documentFolderId}/documents": {
+      "get": {
+        "tags": ["Catalog - Documents"],
+        "summary": "Lấy danh sách sách / tài liệu trong thư mục",
+        "description": "Lấy toàn bộ các đầu sách thuộc một thư mục trong Liferay Documents & Media.",
+        "operationId": "getDocumentFolderDocumentsPage",
+        "parameters": [
+          {
+            "name": "documentFolderId",
+            "in": "path",
+            "required": true,
+            "description": "ID của thư mục sách",
+            "schema": { "type": "integer", "format": "int64" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": { "type": "integer", "default": 20 }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "Biểu thức OData filter (ví dụ: fileExtension eq 'pdf')",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách sách dạng Page<Document>",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PageDocument" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/headless-delivery/v1.0/documents/{documentId}/document-renditions": {
+      "get": {
+        "tags": ["Flipbook - Renditions"],
+        "summary": "Lấy danh sách Renditions (ảnh Thumbnail, Web Preview) của cuốn sách",
+        "description": "Trích xuất các ảnh do Liferay Ghostscript/PDFBox tự động render từ tệp PDF gốc để nạp texture vào 3D Flipbook Viewer.",
+        "operationId": "getDocumentDocumentRenditionsPage",
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách Renditions có sẵn",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PageDocumentRendition" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mekobook/v1.0/books/{documentId}/manifest": {
+      "get": {
+        "tags": ["Flipbook - Publication Manifest"],
+        "summary": "Lấy W3C / Readium Publication Manifest của sách Flipbook",
+        "description": "Cung cấp toàn bộ thông số kỹ thuật trang sách (kích thước pixel, aspect ratio, thứ tự trang WebP, mục lục TOC, thuộc tính mã hóa DRM).",
+        "operationId": "getBookManifest",
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "W3C WebPub Manifest Document",
+            "content": {
+              "application/webpub+json": {
+                "schema": { "$ref": "#/components/schemas/PublicationManifest" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mekobook/v1.0/books/{documentId}/drm-license": {
+      "post": {
+        "tags": ["DRM - Readium LCP"],
+        "summary": "Cấp giấy phép bảo mật Readium LCP (License Document)",
+        "description": "Sinh License bảo mật theo chuẩn Readium LCP 1.0, cấp khóa giải mã AES-256 (được mã hóa với User Key) và ràng buộc thời gian/thiết bị.",
+        "operationId": "issueDrmLicense",
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Readium LCP License JSON Document",
+            "content": {
+              "application/vnd.readium.lcp.license.v1.0+json": {
+                "schema": { "$ref": "#/components/schemas/LcpLicense" }
+              }
+            }
+          },
+          "403": {
+            "description": "Người dùng không có quyền đọc tài liệu này theo Liferay Permissions"
+          }
+        }
+      }
+    },
+    "/mekobook/v1.0/drm/licenses/{licenseId}/register": {
+      "post": {
+        "tags": ["DRM - Readium LCP"],
+        "summary": "Đăng ký thiết bị di động với bản quyền sách",
+        "description": "Giới hạn tối đa số thiết bị (e.g., 3 thiết bị) được phép đọc cuốn sách này.",
+        "operationId": "registerDevice",
+        "parameters": [
+          {
+            "name": "licenseId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeviceRegistrationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đăng ký thiết bị thành công",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LcpStatusDocument" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/c/mekoreadingprogresses": {
+      "get": {
+        "tags": ["Sync - Reading Progress (Liferay Object)"],
+        "summary": "Lấy tiến trình đọc sách của người dùng",
+        "description": "Truy vấn tiến trình đọc từ Liferay Object MekoReadingProgress sử dụng OData filter.",
+        "operationId": "getReadingProgressesPage",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "description": "OData filter (e.g., documentId eq '42001' and r_user_id eq '35102')",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách tiến trình đọc",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageReadingProgress"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Sync - Reading Progress (Liferay Object)"],
+        "summary": "Tạo mới tiến trình đọc sách",
+        "operationId": "createReadingProgress",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReadingProgressPayload" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tạo tiến trình đọc thành công",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReadingProgress" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/c/mekoreadingprogresses/{progressId}": {
+      "put": {
+        "tags": ["Sync - Reading Progress (Liferay Object)"],
+        "summary": "Cập nhật tiến trình đọc khi lật trang hoặc đóng sách",
+        "operationId": "updateReadingProgress",
+        "parameters": [
+          {
+            "name": "progressId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReadingProgressPayload" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cập nhật thành công",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReadingProgress" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/c/mekobookmarks": {
+      "get": {
+        "tags": ["Sync - Bookmarks & Highlights (Liferay Object)"],
+        "summary": "Lấy danh sách đánh dấu trang và highlight của cuốn sách",
+        "operationId": "getBookmarksPage",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "e.g., documentId eq '42001'",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "e.g., pageNumber:asc",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách bookmarks",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PageBookmark" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Sync - Bookmarks & Highlights (Liferay Object)"],
+        "summary": "Tạo Bookmark / Highlight mới",
+        "operationId": "createBookmark",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BookmarkPayload" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bookmark tạo thành công",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Bookmark" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/c/mekobookmarks/{bookmarkId}": {
+      "delete": {
+        "tags": ["Sync - Bookmarks & Highlights (Liferay Object)"],
+        "summary": "Xóa Bookmark",
+        "operationId": "deleteBookmark",
+        "parameters": [
+          {
+            "name": "bookmarkId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Đã xóa Bookmark thành công"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "OAuth2": {
+        "type": "oauth2",
+        "description": "Liferay OAuth 2.0 PKCE / Password grant",
+        "flows": {
+          "password": {
+            "tokenUrl": "/o/oauth2/token",
+            "scopes": {
+              "everything": "Toàn quyền truy cập headless"
+            }
+          }
+        }
+      },
+      "BasicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      }
+    },
+    "schemas": {
+      "DocumentFolder": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "numberOfDocumentFolders": { "type": "integer" },
+          "numberOfDocuments": { "type": "integer" }
+        }
+      },
+      "PageDocumentFolder": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DocumentFolder" }
+          },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalCount": { "type": "integer" }
+        }
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "fileExtension": { "type": "string" },
+          "sizeInBytes": { "type": "integer", "format": "int64" },
+          "contentUrl": { "type": "string" },
+          "dateCreated": { "type": "string", "format": "date-time" },
+          "dateModified": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PageDocument": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Document" }
+          },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalCount": { "type": "integer" }
+        }
+      },
+      "DocumentRendition": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "mimeType": { "type": "string" },
+          "name": { "type": "string" },
+          "url": { "type": "string" }
+        }
+      },
+      "PageDocumentRendition": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DocumentRendition" }
+          }
+        }
+      },
+      "PublicationManifest": {
+        "type": "object",
+        "properties": {
+          "@context": { "type": "string" },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "identifier": { "type": "string" },
+              "title": { "type": "string" },
+              "numberOfPages": { "type": "integer" },
+              "readingProgression": { "type": "string", "enum": ["ltr", "rtl"] },
+              "encrypted": { "type": "boolean" }
+            }
+          },
+          "readingOrder": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pageIndex": { "type": "integer" },
+                "type": { "type": "string" },
+                "width": { "type": "integer" },
+                "height": { "type": "integer" },
+                "href": { "type": "string" },
+                "thumbnail": { "type": "string" }
+              }
+            }
+          },
+          "toc": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "LcpLicense": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "provider": { "type": "string" },
+          "issued": { "type": "string", "format": "date-time" },
+          "rights": {
+            "type": "object",
+            "properties": {
+              "print": { "type": "integer" },
+              "copy": { "type": "integer" },
+              "start": { "type": "string", "format": "date-time" },
+              "end": { "type": "string", "format": "date-time" }
+            }
+          },
+          "encryption": {
+            "type": "object",
+            "properties": {
+              "profile": { "type": "string" },
+              "content_key": { "type": "object" }
+            }
+          }
+        }
+      },
+      "DeviceRegistrationRequest": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string", "description": "Hardware UUID Hash" },
+          "name": { "type": "string", "description": "Tên thiết bị (e.g. iPhone 15 Pro)" }
+        }
+      },
+      "LcpStatusDocument": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "type": "string", "enum": ["ready", "active", "revoked", "returned"] },
+          "updated": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ReadingProgress": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "userId": { "type": "integer", "format": "int64" },
+          "documentId": { "type": "integer", "format": "int64" },
+          "currentPage": { "type": "integer" },
+          "totalPages": { "type": "integer" },
+          "percentage": { "type": "number", "format": "double" },
+          "lastReadTimestamp": { "type": "integer", "format": "int64" }
+        }
+      },
+      "ReadingProgressPayload": {
+        "type": "object",
+        "required": ["userId", "documentId", "currentPage", "totalPages"],
+        "properties": {
+          "userId": { "type": "integer", "format": "int64" },
+          "documentId": { "type": "integer", "format": "int64" },
+          "currentPage": { "type": "integer" },
+          "totalPages": { "type": "integer" },
+          "percentage": { "type": "number", "format": "double" },
+          "lastReadTimestamp": { "type": "integer", "format": "int64" }
+        }
+      },
+      "PageReadingProgress": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/ReadingProgress" } },
+          "totalCount": { "type": "integer" }
+        }
+      },
+      "Bookmark": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "userId": { "type": "integer", "format": "int64" },
+          "documentId": { "type": "integer", "format": "int64" },
+          "pageNumber": { "type": "integer" },
+          "note": { "type": "string" },
+          "colorTag": { "type": "string" }
+        }
+      },
+      "BookmarkPayload": {
+        "type": "object",
+        "required": ["userId", "documentId", "pageNumber"],
+        "properties": {
+          "userId": { "type": "integer", "format": "int64" },
+          "documentId": { "type": "integer", "format": "int64" },
+          "pageNumber": { "type": "integer" },
+          "note": { "type": "string" },
+          "colorTag": { "type": "string" }
+        }
+      },
+      "PageBookmark": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Bookmark" } },
+          "totalCount": { "type": "integer" }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Xác thực không hợp lệ hoặc thiếu Token"
+      },
+      "NotFound": {
+        "description": "Tài nguyên không tìm thấy trên Liferay"
+      }
+    }
+  },
+  "security": [
+    { "OAuth2": ["everything"] },
+    { "BasicAuth": [] }
+  ]
+}

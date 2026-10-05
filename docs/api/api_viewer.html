@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>[i] API - CTU Ebook Mobile App 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --bg-surface: #ffffff;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-light: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --pink: #db2777;
+      --pink-bg: #fdf2f8;
+      --badge-get: #0284c7;
+      --badge-get-bg: #e0f2fe;
+      --badge-post: #1d4ed8;
+      --badge-post-bg: #dbeafe;
+      --badge-patch: #15803d;
+      --badge-patch-bg: #dcfce7;
+      --badge-delete: #b91c1c;
+      --badge-delete-bg: #fee2e2;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-main);
+      padding: 20px 24px;
+      line-height: 1.5;
+    }
+
+    /* TOP ACTION BAR */
+    .top-action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .action-group {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+
+    .btn-docx {
+      background: #1d4ed8;
+      color: #ffffff;
+      border-color: #1e40af;
+    }
+    .btn-docx:hover {
+      background: #1e40af;
+    }
+
+    .btn-copy {
+      background: #f1f5f9;
+      color: #334155;
+      border-color: #cbd5e1;
+    }
+    .btn-copy:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    .btn-print {
+      background: #f8fafc;
+      color: #475569;
+      border-color: #cbd5e1;
+    }
+    .btn-print:hover {
+      background: #f1f5f9;
+    }
+
+    .search-input {
+      padding: 8px 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      width: 280px;
+      font-size: 0.85rem;
+      background: var(--bg-surface);
+    }
+
+    /* DOCUMENT HEADER BANNER */
+    .doc-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px 28px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      text-align: center;
+    }
+
+    .doc-main-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #1e3a8a;
+      letter-spacing: -0.3px;
+    }
+
+    .red-banner-title {
+      color: #dc2626;
+      font-size: 1.25rem;
+      font-weight: 800;
+      margin-top: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .doc-sub {
+      font-size: 0.86rem;
+      color: var(--text-light);
+      margin-top: 6px;
+    }
+
+    /* DOCUMENTS & MEDIA DIRECTORY */
+    .dm-summary {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+
+    .dm-summary h3 {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .dm-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      font-size: 0.82rem;
+    }
+
+    .dm-item {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+    }
+
+    .dm-item b {
+      color: #1e293b;
+    }
+
+    .dm-item code {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.78rem;
+      color: #2563eb;
+    }
+
+    /* 8-COLUMN TABLE - CLEAN GOOGLE DOCS STYLE */
+    .table-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      overflow-x: auto;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    table.api-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      text-align: left;
+    }
+
+    table.api-table th {
+      background: #f1f5f9;
+      color: #1e293b;
+      font-weight: 700;
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--border-strong);
+      border-right: 1px solid var(--border);
+      white-space: pre-line;
+      text-align: center;
+    }
+
+    table.api-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      vertical-align: top;
+      background: #ffffff;
+    }
+
+    table.api-table tr:hover td {
+      background: #fafafa;
+    }
+
+    /* COLUMN WIDTHS & STYLES */
+    .col-num {
+      width: 40px;
+      text-align: center;
+      font-weight: 700;
+      color: var(--text-light);
+    }
+
+    .col-screen {
+      width: 130px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .col-method {
+      width: 75px;
+      text-align: center;
+    }
+
+    .method-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-get {
+      background: var(--badge-get-bg);
+      color: var(--badge-get);
+      border: 1px solid #bae6fd;
+    }
+
+    .badge-post {
+      background: var(--badge-post-bg);
+      color: var(--badge-post);
+      border: 1px solid #bfdbfe;
+    }
+
+    .badge-patch {
+      background: var(--badge-patch-bg);
+      color: var(--badge-patch);
+      border: 1px solid #bbf7d0;
+    }
+
+    .badge-delete {
+      background: var(--badge-delete-bg);
+      color: var(--badge-delete);
+      border: 1px solid #fecaca;
+    }
+
+    .col-name {
+      width: 150px;
+      font-weight: 600;
+      color: var(--text-main);
+      line-height: 1.4;
+    }
+
+    .col-url {
+      width: 180px;
+      word-break: break-all;
+    }
+
+    .col-url code {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.76rem;
+      color: #2563eb;
+    }
+
+    .param-highlight, .param-pink {
+      color: var(--pink) !important;
+      font-weight: 700;
+    }
+
+    .col-param {
+      width: 220px;
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+
+    .param-hdr {
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 4px;
+      margin-bottom: 2px;
+      font-size: 0.76rem;
+    }
+    .param-hdr:first-child {
+      margin-top: 0;
+    }
+
+    .param-item {
+      color: #334155;
+      margin-left: 2px;
+    }
+
+    .param-url {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.72rem;
+      color: #64748b;
+      word-break: break-all;
+      background: #f1f5f9;
+      padding: 3px 6px;
+      border-radius: 4px;
+      margin-top: 2px;
+    }
+
+    .param-code {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.72rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 4px 6px;
+      border-radius: 4px;
+      margin-top: 2px;
+      white-space: pre-wrap;
+    }
+
+    /* JSON COLUMN - CLEAN LIGHT THEME (NO DARK TERMINAL BOX) */
+    .col-json {
+      width: 280px;
+      background: #fcfcfc !important;
+    }
+
+    .json-code {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.73rem;
+      background: #f8fafc;
+      color: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* EXPLAIN COLUMN */
+    .col-explain {
+      width: 220px;
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+
+    .explain-key {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.76rem;
+      margin-top: 4px;
+    }
+    .explain-key:first-child {
+      margin-top: 0;
+    }
+
+    .explain-hdr {
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 4px;
+    }
+
+    .explain-desc {
+      color: #475569;
+      margin-left: 4px;
+    }
+
+    /* NOTIFICATION TOAST */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #10b981;
+      color: #ffffff;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      display: none;
+      z-index: 1000;
+    }
+
+    /* PRINT LAYOUT */
+    @media print {
+      body {
+        padding: 0;
+        background: #ffffff;
+      }
+      .top-action-bar {
+        display: none;
+      }
+      .table-container {
+        border: none;
+        box-shadow: none;
+      }
+      table.api-table th {
+        background: #e2e8f0 !important;
+        -webkit-print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP ACTION BAR -->
+  <div class="top-action-bar">
+    <div class="action-group">
+      <a href="MEKOBOOK_API_DOCUMENTATION.docx" download class="btn btn-docx">
+        Tải file Word (.docx)
+      </a>
+      <button class="btn btn-copy" onclick="copyTableToClipboard()">
+        Sao chép toàn bộ bảng (Dán vào Word/Docs)
+      </button>
+      <button class="btn btn-print" onclick="window.print()">
+        In / Lưu PDF
+      </button>
+    </div>
+    <div>
+      <input type="text" id="apiSearch" class="search-input" placeholder="Tìm kiếm nhanh API..." onkeyup="filterApis()">
+    </div>
+  </div>
+
+  <!-- DOCUMENT HEADER -->
+  <div class="doc-card">
+    <h1 class="doc-main-title">[i] API - CTU Ebook Mobile App 2026</h1>
+    <h2 class="red-banner-title">Các API đều cần dùng cùng ACCESS TOKEN như trước giờ</h2>
+    <p class="doc-sub">Liferay 7.4 GA132 CE Headless REST APIs | Base URL: <code>http://localhost:8080</code> | Client ID: <code>mekobook-mobile-client</code> | Client Secret: <code>mekobook-mobile-secret</code></p>
+  </div>
+
+  <!-- DOCUMENTS & MEDIA DIRECTORY -->
+  <div class="dm-summary">
+    <h3>Quy hoạch kho tài liệu số Liferay Documents & Media (Site Guest ID: 20117)</h3>
+    <div class="dm-grid">
+      <div class="dm-item">
+        <b>Mekobook Library</b> (Root: <code>33050</code>)<br>
+        Thư mục gốc lưu trữ toàn bộ ấn phẩm số
+      </div>
+      <div class="dm-item">
+        <b>covers</b> (Folder ID: <code>33052</code>)<br>
+        Ảnh bìa sách chất lượng cao hiển thị Store
+      </div>
+      <div class="dm-item">
+        <b>flipbooks</b> (Folder ID: <code>33056</code>)<br>
+        Gói FlipBuilder tĩnh: <code>mobile/{page}.jpg</code> (1080p)
+      </div>
+      <div class="dm-item">
+        <b>samples</b> (Folder ID: <code>33058</code>)<br>
+        Bản đọc thử 15 trang miễn phí trước khi mua
+      </div>
+    </div>
+  </div>
+
+  <!-- 8-COLUMN TABLE -->
+  <div class="table-container">
+    <table class="api-table" id="apiMasterTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tên giao diện/<br>Chức năng</th>
+          <th>Method</th>
+          <th>Tên API</th>
+          <th>URL</th>
+          <th>Tham số<br>(Parameter)</th>
+          <th>Phản hồi<br>(JSON Thực Tế)</th>
+          <th>Diễn giải</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tr class="api-row" data-search="xác thực & phiên làm việc lấy oauth 2.0 access token (client credentials / password) /o/oauth2/token post">
+          <td class="col-num">1.</td>
+          <td class="col-screen"><b>Xác thực & Phiên làm việc</b></td>
+          <td class="col-method"><span class="method-badge badge-post">POST</span></td>
+          <td class="col-name">Lấy OAuth 2.0 Access Token (Client Credentials / Password)</td>
+          <td class="col-url"><code>/o/oauth2/token</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Content-Type: application/x-www-form-urlencoded</div><div class='param-hdr'>BODY (Form):</div><div class='param-item'>grant_type: client_credentials</div><div class='param-item param-pink'>client_id: mekobook-mobile-client</div><div class='param-item param-pink'>client_secret: mekobook-mobile-secret</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/oauth2/token</div></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "access_token": "9a38f4bc89e71234567890abcdef...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "scope": "everything.read everything.write"
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>access_token</div><div class='explain-desc'> - Kiểu: String (JWT)</div><div class='explain-desc'> - Mô tả: Mã Bearer gắn vào header Authorization: Bearer <token> cho mọi API sau.</div><div class='explain-key param-pink'>token_type</div><div class='explain-desc'> - Giá trị: Bearer</div><div class='explain-key param-pink'>expires_in</div><div class='explain-desc'> - Giá trị: 3600s (1 giờ)</div><div class='explain-key param-pink'>client_id / secret</div><div class='explain-desc'> - Định danh ứng dụng di động</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="hồ sơ độc giả lấy thông tin tài khoản người dùng đang đăng nhập /o/headless-admin-user/v1.0/my-user-account get">
+          <td class="col-num">2.</td>
+          <td class="col-screen"><b>Hồ sơ độc giả</b></td>
+          <td class="col-method"><span class="method-badge badge-get">GET</span></td>
+          <td class="col-name">Lấy thông tin tài khoản người dùng đang đăng nhập</td>
+          <td class="col-url"><code>/o/headless-admin-user/v1.0/my-user-account</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-item'>Accept: application/json</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/headless-admin-user/v1.0/my-user-account</div></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "id": 20123,
+  "emailAddress": "test@liferay.com",
+  "name": "Test Test",
+  "givenName": "Test",
+  "familyName": "Test",
+  "accountBriefs": []
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>id</div><div class='explain-desc'> - Kiểu: Long (ID: 20123)</div><div class='explain-desc'> - Bắt buộc: Có</div><div class='explain-key param-pink'>emailAddress</div><div class='explain-desc'> - Email tài khoản sinh viên/độc giả</div><div class='explain-key param-pink'>name</div><div class='explain-desc'> - Họ tên hiển thị trên app và nhúng Watermark chống chụp màn hình</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="thư viện sách (store) lấy danh mục sách & tài liệu giáo trình số /o/c/books get">
+          <td class="col-num">3.</td>
+          <td class="col-screen"><b>Thư viện sách (Store)</b></td>
+          <td class="col-method"><span class="method-badge badge-get">GET</span></td>
+          <td class="col-name">Lấy danh mục sách & tài liệu giáo trình số</td>
+          <td class="col-url"><code>/o/c/books</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETERS:</div><div class='param-item'>page: 1</div><div class='param-item'>pageSize: 20</div><div class='param-item'>sort: dateCreated:desc</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/books?page=1&pageSize=20</div></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "actions": {},
+  "facets": [],
+  "items": [
+    {
+      "id": 33048,
+      "title": "Giáo Trình Cấu Trúc Dữ Liệu & Giải Thuật (Flipbook 3D)",
+      "author": "TS. Nguyễn Triết - CTUPress",
+      "isbn": "978-604-919-890-1",
+      "coverUrl": "http://localhost:8080/documents/20117/33052/covers/ctupress-csdl-cover.jpg",
+      "flipbookBaseUrl": "http://localhost:8080/documents/20117/33056/flipbooks/giao-trinh-cau-truc-du-lieu-gt101/files/",
+      "screenPattern": "mobile/{page}.jpg",
+      "thumbPattern": "thumb/{page}.jpg",
+      "totalPages": 286,
+      "samplePagesLimit": 15,
+      "isFree": false,
+      "price": 85000.0,
+      "rating": 4.9
+    }
+  ],
+  "lastPage": 1,
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 3
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>items[].id</div><div class='explain-desc'> - Kiểu: Long (bookId)</div><div class='explain-key param-pink'>items[].coverUrl</div><div class='explain-desc'> - Ảnh bìa tài liệu hiển thị Store</div><div class='explain-key param-pink'>items[].isFree</div><div class='explain-desc'> - true nếu đọc miễn phí, false nếu cần cấp phép</div><div class='explain-key param-pink'>items[].samplePagesLimit</div><div class='explain-desc'> - Số trang đọc thử (15 trang)</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="chi tiết sách & core reader lấy chi tiết ấn phẩm số & manifest gói flipbuilder /o/c/books/{bookid} get">
+          <td class="col-num">4.</td>
+          <td class="col-screen"><b>Chi tiết sách & Core Reader</b></td>
+          <td class="col-method"><span class="method-badge badge-get">GET</span></td>
+          <td class="col-name">Lấy chi tiết ấn phẩm số & Manifest gói FlipBuilder</td>
+          <td class="col-url"><code>/o/c/books/<span class="param-highlight">{bookId}</span></code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>PARAMETER:</div><div class='param-item param-pink'>bookId</div><div class='param-item'> - Kiểu: Long (ví dụ: 33048)</div><div class='param-item'> - Bắt buộc: Có</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/books/33048</div></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "id": 33048,
+  "title": "Giáo Trình Cấu Trúc Dữ Liệu & Giải Thuật (Flipbook 3D)",
+  "author": "TS. Nguyễn Triết - CTUPress",
+  "publisher": "Nhà Xuất Bản Đại Học Cần Thơ",
+  "publicationYear": 2024,
+  "totalPages": 286,
+  "flipbookBaseUrl": "http://localhost:8080/documents/20117/33056/flipbooks/giao-trinh-cau-truc-du-lieu-gt101/files/",
+  "screenPattern": "mobile/{page}.jpg",
+  "thumbPattern": "thumb/{page}.jpg",
+  "samplePagesLimit": 15,
+  "description": "Tài liệu số hóa 3D Flipbook độc quyền từ CTUPress..."
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>bookId</div><div class='explain-desc'> - ID ấn phẩm số cần truy vấn</div><div class='explain-key param-pink'>flipbookBaseUrl</div><div class='explain-desc'> - Thư mục gốc chứa gói FlipBuilder trên Liferay D&M</div><div class='explain-key param-pink'>screenPattern</div><div class='explain-desc'> - Mẫu ảnh 1080p: mobile/{page}.jpg</div><div class='explain-key param-pink'>thumbPattern</div><div class='explain-desc'> - Mẫu ảnh thu nhỏ: thumb/{page}.jpg</div><div class='explain-key param-pink'>totalPages</div><div class='explain-desc'> - Tổng số trang phục vụ thuật toán Sliding Window Pre-caching</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="mục lục sách (toc) lấy danh sách cây mục lục phân cấp theo sách /o/c/chaptertocs get">
+          <td class="col-num">5.</td>
+          <td class="col-screen"><b>Mục lục sách (TOC)</b></td>
+          <td class="col-method"><span class="method-badge badge-get">GET</span></td>
+          <td class="col-name">Lấy danh sách cây mục lục phân cấp theo sách</td>
+          <td class="col-url"><code>/o/c/chaptertocs</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETERS:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-item'>sort: displayOrder:asc</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/chaptertocs?filter=bookId%20eq%2033048&sort=displayOrder:asc</div></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "items": [
+    {
+      "id": 33060,
+      "bookId": 33048,
+      "title": "Lời Nói Đầu",
+      "startPage": 1,
+      "level": 1,
+      "displayOrder": 1
+    },
+    {
+      "id": 33062,
+      "bookId": 33048,
+      "title": "Chương 1: Tổng Quan Về Giải Thuật",
+      "startPage": 5,
+      "level": 1,
+      "displayOrder": 2
+    },
+    {
+      "id": 33064,
+      "bookId": 33048,
+      "title": "1.1 Độ phức tạp thuật toán O(n)",
+      "startPage": 12,
+      "level": 2,
+      "displayOrder": 3
+    }
+  ],
+  "totalCount": 8
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>bookId</div><div class='explain-desc'> - ID sách dùng để lọc cây mục lục</div><div class='explain-key param-pink'>items[].startPage</div><div class='explain-desc'> - Trang bắt đầu chương để nhảy trực tiếp</div><div class='explain-key param-pink'>items[].level</div><div class='explain-desc'> - Cấp độ thụt lề (1: Phần, 2: Chương con)</div><div class='explain-key param-pink'>items[].displayOrder</div><div class='explain-desc'> - Thứ tự hiển thị</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="tủ sách cá nhân lấy danh sách kệ sách cá nhân do độc giả tự tạo /o/c/personalshelfs get">
+          <td class="col-num">6.</td>
+          <td class="col-screen"><b>Tủ sách cá nhân</b></td>
+          <td class="col-method"><span class="method-badge badge-get">GET</span></td>
+          <td class="col-name">Lấy danh sách kệ sách cá nhân do độc giả tự tạo</td>
+          <td class="col-url"><code>/o/c/personalshelfs</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item'>sort: displayOrder:asc</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/personalshelfs?sort=displayOrder:asc</div></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "items": [
+    {
+      "id": 33080,
+      "shelfName": "Môn Chuyên Ngành CNTT",
+      "colorTag": "#3B82F6",
+      "displayOrder": 1
+    },
+    {
+      "id": 33082,
+      "shelfName": "Sách Tham Khảo Học Kỳ 1",
+      "colorTag": "#10B981",
+      "displayOrder": 2
+    }
+  ],
+  "totalCount": 3
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>items[].id</div><div class='explain-desc'> - Mã kệ sách shelfId</div><div class='explain-key param-pink'>items[].shelfName</div><div class='explain-desc'> - Tên kệ sách do độc giả tự đặt</div><div class='explain-key param-pink'>items[].colorTag</div><div class='explain-desc'> - Mã màu nhãn dán hiển thị trên app</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="tủ sách cá nhân tạo kệ sách cá nhân mới /o/c/personalshelfs/ post">
+          <td class="col-num">7.</td>
+          <td class="col-screen"><b>Tủ sách cá nhân</b></td>
+          <td class="col-method"><span class="method-badge badge-post">POST</span></td>
+          <td class="col-name">Tạo kệ sách cá nhân mới</td>
+          <td class="col-url"><code>/o/c/personalshelfs/</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-item'>Content-Type: application/json</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/personalshelfs/</div><div class='param-hdr'>BODY (JSON):</div><pre class='param-code'><code>{
+  "shelfName": "Sách Nghiên Cứu AI",
+  "colorTag": "#EC4899",
+  "displayOrder": 4
+}</code></pre></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "id": 33120,
+  "shelfName": "Sách Nghiên Cứu AI",
+  "colorTag": "#EC4899",
+  "displayOrder": 4,
+  "dateCreated": "2026-10-04T17:55:00Z"
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>shelfName</div><div class='explain-desc'> - Kiểu: String, Bắt buộc</div><div class='explain-desc'> - Tên kệ sách mới</div><div class='explain-key param-pink'>colorTag</div><div class='explain-desc'> - Kiểu: String (HEX Color)</div><div class='explain-key param-pink'>displayOrder</div><div class='explain-desc'> - Thứ tự hiển thị trên danh sách kệ</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="tủ sách cá nhân cập nhật tên hoặc màu nhãn kệ sách cá nhân /o/c/personalshelfs/{shelfid} patch">
+          <td class="col-num">8.</td>
+          <td class="col-screen"><b>Tủ sách cá nhân</b></td>
+          <td class="col-method"><span class="method-badge badge-patch">PATCH</span></td>
+          <td class="col-name">Cập nhật tên hoặc màu nhãn kệ sách cá nhân</td>
+          <td class="col-url"><code>/o/c/personalshelfs/<span class="param-highlight">{shelfId}</span></code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-item'>Content-Type: application/json</div><div class='param-hdr'>PARAMETER:</div><div class='param-item param-pink'>shelfId</div><div class='param-item'> - Kiểu: Long (ví dụ: 33080)</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/personalshelfs/33080</div><div class='param-hdr'>BODY (JSON):</div><pre class='param-code'><code>{
+  "shelfName": "Kỹ Thuật Phần Mềm",
+  "colorTag": "#8B5CF6"
+}</code></pre></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "id": 33080,
+  "shelfName": "Kỹ Thuật Phần Mềm",
+  "colorTag": "#8B5CF6",
+  "dateModified": "2026-10-04T17:56:12Z"
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>shelfId</div><div class='explain-desc'> - ID của kệ sách cần cập nhật</div><div class='explain-key param-pink'>shelfName</div><div class='explain-desc'> - Tên mới của kệ sách</div><div class='explain-key param-pink'>colorTag</div><div class='explain-desc'> - Mã màu nhãn dán mới</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="tủ sách cá nhân gán sách vào kệ sách cá nhân (n:n) /o/c/shelfitems/ post">
+          <td class="col-num">9.</td>
+          <td class="col-screen"><b>Tủ sách cá nhân</b></td>
+          <td class="col-method"><span class="method-badge badge-post">POST</span></td>
+          <td class="col-name">Gán sách vào kệ sách cá nhân (N:N)</td>
+          <td class="col-url"><code>/o/c/shelfitems/</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-item'>Content-Type: application/json</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/shelfitems/</div><div class='param-hdr'>BODY (JSON):</div><pre class='param-code'><code>{
+  "shelfId": 33080,
+  "bookId": 33048
+}</code></pre></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "id": 33086,
+  "shelfId": 33080,
+  "bookId": 33048,
+  "dateCreated": "2026-10-04T17:52:10Z"
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>shelfId</div><div class='explain-desc'> - Kiểu: Long, Bắt buộc. ID kệ sách</div><div class='explain-key param-pink'>bookId</div><div class='explain-desc'> - Kiểu: Long, Bắt buộc. ID cuốn sách</div><div class='explain-hdr'>Lưu ý:</div><div class='explain-desc'> - Ánh xạ N:N: 1 sách có thể thuộc nhiều kệ. Xóa kệ không làm mất sách trong tủ.</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="core reader - tiện ích lấy cấu hình môi trường đọc của độc giả /o/c/userpreferences get">
+          <td class="col-num">10.</td>
+          <td class="col-screen"><b>Core Reader - Tiện ích</b></td>
+          <td class="col-method"><span class="method-badge badge-get">GET</span></td>
+          <td class="col-name">Lấy cấu hình môi trường đọc của độc giả</td>
+          <td class="col-url"><code>/o/c/userpreferences</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/userpreferences</div></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "items": [
+    {
+      "id": 33092,
+      "themeMode": "LIGHT",
+      "brightness": 0.85,
+      "pageTurnEffect": "CURL_3D",
+      "pageTurnSoundEnabled": true,
+      "dualPageMode": false
+    }
+  ],
+  "totalCount": 1
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>themeMode</div><div class='explain-desc'> - LIGHT, DARK, SEPIA, SYSTEM</div><div class='explain-key param-pink'>brightness</div><div class='explain-desc'> - Độ sáng màn hình đọc (0.1 - 1.0)</div><div class='explain-key param-pink'>pageTurnEffect</div><div class='explain-desc'> - CURL_3D (lật uốn 60fps), SLIDE, FADE</div><div class='explain-key param-pink'>pageTurnSoundEnabled</div><div class='explain-desc'> - true để phát âm thanh lật trang giấy</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="core reader - tiến độ lấy vị trí trang đang đọc dở (last read position) /o/c/readingprogresses get">
+          <td class="col-num">11.</td>
+          <td class="col-screen"><b>Core Reader - Tiến độ</b></td>
+          <td class="col-method"><span class="method-badge badge-get">GET</span></td>
+          <td class="col-name">Lấy vị trí trang đang đọc dở (Last Read Position)</td>
+          <td class="col-url"><code>/o/c/readingprogresses</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/readingprogresses?filter=bookId%20eq%2033048</div></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "items": [
+    {
+      "id": 33096,
+      "bookId": 33048,
+      "currentPage": 42,
+      "percentage": 14.68,
+      "lastReadTimestamp": 1728064320000
+    }
+  ],
+  "totalCount": 1
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>currentPage</div><div class='explain-desc'> - Trang sách độc giả đang đọc dở (trang 42)</div><div class='explain-key param-pink'>percentage</div><div class='explain-desc'> - Tỷ lệ phần trăm hoàn thành (14.68%)</div><div class='explain-key param-pink'>lastReadTimestamp</div><div class='explain-desc'> - Epoch ms thuật toán Last-Write-Wins phân xử xung đột đồng bộ giữa nhiều máy</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="core reader - bookmark lấy danh sách các trang đánh dấu ruy băng của sách /o/c/bookmarks get">
+          <td class="col-num">12.</td>
+          <td class="col-screen"><b>Core Reader - Bookmark</b></td>
+          <td class="col-method"><span class="method-badge badge-get">GET</span></td>
+          <td class="col-name">Lấy danh sách các trang đánh dấu ruy băng của sách</td>
+          <td class="col-url"><code>/o/c/bookmarks</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/bookmarks?filter=bookId%20eq%2033048</div></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "items": [
+    {
+      "id": 33100,
+      "bookId": 33048,
+      "pageNumber": 15,
+      "chapterTitle": "1.2 Giải thuật tìm kiếm nhị phân",
+      "colorTag": "#F59E0B"
+    }
+  ],
+  "totalCount": 2
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>pageNumber</div><div class='explain-desc'> - Số thứ tự trang được đánh dấu ruy băng</div><div class='explain-key param-pink'>chapterTitle</div><div class='explain-desc'> - Tên chương tại vị trí đánh dấu</div><div class='explain-key param-pink'>colorTag</div><div class='explain-desc'> - Mã màu ruy băng (ví dụ: #F59E0B)</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="core reader - annotation lấy danh sách nét vẽ vector & ghi chú trên trang sách /o/c/annotations get">
+          <td class="col-num">13.</td>
+          <td class="col-screen"><b>Core Reader - Annotation</b></td>
+          <td class="col-method"><span class="method-badge badge-get">GET</span></td>
+          <td class="col-name">Lấy danh sách nét vẽ vector & ghi chú trên trang sách</td>
+          <td class="col-url"><code>/o/c/annotations</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/annotations?filter=bookId%20eq%2033048</div></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "items": [
+    {
+      "id": 33104,
+      "bookId": 33048,
+      "pageNumber": 15,
+      "type": "HIGHLIGHT",
+      "coordinateData": "[{\"x\":0.12,\"y\":0.45},{\"x\":0.88,\"y\":0.49}]",
+      "color": "#FACC15",
+      "noteText": "Ôn tập kỹ phần này thi kết thúc học phần!"
+    }
+  ],
+  "totalCount": 2
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>type</div><div class='explain-desc'> - HIGHLIGHT (dạ quang), STICKY_NOTE, DRAWING_PEN</div><div class='explain-key param-pink'>coordinateData</div><div class='explain-desc'> - Tọa độ vector chuẩn hóa (x, y từ 0.0 đến 1.0) độc lập độ phân giải máy khách</div><div class='explain-key param-pink'>noteText</div><div class='explain-desc'> - Nội dung văn bản ghi chú</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="tủ sách & bản quyền drm kiểm tra giấy phép bản quyền & quyền sở hữu (my bookshelf) /o/c/drmlicenses get">
+          <td class="col-num">14.</td>
+          <td class="col-screen"><b>Tủ sách & Bản quyền DRM</b></td>
+          <td class="col-method"><span class="method-badge badge-get">GET</span></td>
+          <td class="col-name">Kiểm tra giấy phép bản quyền & Quyền sở hữu (My Bookshelf)</td>
+          <td class="col-url"><code>/o/c/drmlicenses</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/drmlicenses?filter=bookId%20eq%2033048</div></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "items": [
+    {
+      "id": 33108,
+      "bookId": 33048,
+      "licenseType": "PERPETUAL",
+      "status": "ACTIVE",
+      "encryptedContentKey": "k9Z2v8...AES256EncryptedKey...",
+      "maxDevices": 3,
+      "isFavorite": true
+    }
+  ],
+  "totalCount": 2
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>status</div><div class='explain-desc'> - ACTIVE (còn hiệu lực), EXPIRED (hết hạn)</div><div class='explain-key param-pink'>licenseType</div><div class='explain-desc'> - PERPETUAL (mua vĩnh viễn), RENTAL (thuê 120 ngày)</div><div class='explain-key param-pink'>encryptedContentKey</div><div class='explain-desc'> - Khóa AES-256 mã hóa nội dung tải offline</div><div class='explain-key param-pink'>maxDevices</div><div class='explain-desc'> - Giới hạn kích hoạt 2-3 thiết bị</div><div class='explain-key param-pink'>isFavorite</div><div class='explain-desc'> - true nếu độc giả yêu thích</div></td>
+        </tr>
+        
+
+        <tr class="api-row" data-search="bản quyền drm & thiết bị lấy danh sách thiết bị độc giả đã kích hoạt đọc sách /o/c/deviceregistrations get">
+          <td class="col-num">15.</td>
+          <td class="col-screen"><b>Bản quyền DRM & Thiết bị</b></td>
+          <td class="col-method"><span class="method-badge badge-get">GET</span></td>
+          <td class="col-name">Lấy danh sách thiết bị độc giả đã kích hoạt đọc sách</td>
+          <td class="col-url"><code>/o/c/deviceregistrations</code></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/deviceregistrations</div></td>
+          <td class="col-json">
+            <pre class="json-code"><code>{
+  "items": [
+    {
+      "id": 33112,
+      "deviceUuid": "d82f7c01-9a14-4e2b-8b29-1029384756af",
+      "deviceName": "iPhone 15 Pro Max",
+      "platform": "iOS",
+      "appVersion": "1.0.0",
+      "isActive": true
+    }
+  ],
+  "totalCount": 2
+}</code></pre>
+          </td>
+          <td class="col-explain"><div class='explain-key param-pink'>deviceUuid</div><div class='explain-desc'> - Mã UUID phần cứng duy nhất của thiết bị</div><div class='explain-key param-pink'>deviceName</div><div class='explain-desc'> - Tên thiết bị của người dùng</div><div class='explain-key param-pink'>platform</div><div class='explain-desc'> - iOS hoặc Android</div><div class='explain-key param-pink'>isActive</div><div class='explain-desc'> - true nếu máy đang được cấp quyền đọc</div></td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+
+  <div id="copyToast" class="toast">Đã sao chép toàn bộ bảng! Hãy nhấn Ctrl + V vào Microsoft Word hoặc Google Docs.</div>
+
+  <script>
+    function filterApis() {
+      const query = document.getElementById('apiSearch').value.toLowerCase();
+      const rows = document.querySelectorAll('.api-row');
+      rows.forEach(r => {
+        const searchVal = r.getAttribute('data-search');
+        if (!query || searchVal.includes(query)) {
+          r.style.display = '';
+        } else {
+          r.style.display = 'none';
+        }
+      });
+    }
+
+    function copyTableToClipboard() {
+      const table = document.getElementById('apiMasterTable');
+      const html = table.outerHTML;
+      const text = table.innerText;
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        const blobHtml = new Blob([html], { type: 'text/html' });
+        const blobText = new Blob([text], { type: 'text/plain' });
+        const data = [new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })];
+        navigator.clipboard.write(data).then(() => {
+          showToast();
+        }).catch(err => {
+          fallbackCopy();
+        });
+      } else {
+        fallbackCopy();
+      }
+    }
+
+    function fallbackCopy() {
+      const table = document.getElementById('apiMasterTable');
+      const range = document.createRange();
+      range.selectNode(table);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      try {
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges();
+        showToast();
+      } catch (err) {
+        alert('Vui lòng chọn thủ công toàn bộ bảng và bấm Ctrl + C');
+      }
+    }
+
+    function showToast() {
+      const toast = document.getElementById('copyToast');
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 3500);
+    }
+  </script>
+</body>
+</html>
