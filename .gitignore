@@ -31,3 +31,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Local API documents and test captures (may contain credentials/user data)
+/API docs.docx
+/mekobook-*.png
