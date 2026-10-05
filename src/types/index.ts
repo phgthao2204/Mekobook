@@ -12,6 +12,24 @@ export interface LiferayItemResponse<T> {
   totalCount: number;
 }
 
+export interface UserAccount {
+  id: number;
+  emailAddress: string;
+  name: string;
+  givenName?: string;
+  familyName?: string;
+  profileUnavailable?: boolean;
+  profileError?: string;
+}
+
+export interface AuthSession {
+  accessToken: string;
+  refreshToken?: string;
+  tokenType: string;
+  expiresAt: number;
+  user: UserAccount;
+}
+
 /** 1. Book - Sách điện tử & Giáo trình (/o/c/books) */
 export interface Book {
   id: number;
@@ -65,11 +83,16 @@ export interface ReadingProgress {
   id?: number;
   bookId: number;
   currentPage: number;
-  totalPages: number;
+  totalPages?: number;
   percentage: number;
-  readStatus: 'NOT_STARTED' | 'READING' | 'COMPLETED';
+  readStatus?: 'NOT_STARTED' | 'READING' | 'COMPLETED';
   readDurationSeconds?: number;
   lastReadTimestamp?: number;
+}
+
+/** Book enriched with the current reader's latest progress for library UI. */
+export interface LibraryBook extends Book {
+  readingProgress?: ReadingProgress;
 }
 
 /** 7. Bookmark - Đánh dấu ruy băng trang (/o/c/bookmarks) */

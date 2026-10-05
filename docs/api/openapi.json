@@ -11,7 +11,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:8080/o",
+      "url": "https://serrated-catacomb-vendor.ngrok-free.dev/o",
       "description": "Liferay 7.4 Local Development Server"
     },
     {

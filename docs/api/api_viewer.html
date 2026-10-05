@@ -450,7 +450,7 @@
   <div class="doc-card">
     <h1 class="doc-main-title">[i] API - CTU Ebook Mobile App 2026</h1>
     <h2 class="red-banner-title">Các API đều cần dùng cùng ACCESS TOKEN như trước giờ</h2>
-    <p class="doc-sub">Liferay 7.4 GA132 CE Headless REST APIs | Base URL: <code>http://localhost:8080</code> | Client ID: <code>mekobook-mobile-client</code> | Client Secret: <code>mekobook-mobile-secret</code></p>
+    <p class="doc-sub">Liferay 7.4 GA132 CE Headless REST APIs | Base URL: <code>https://serrated-catacomb-vendor.ngrok-free.dev</code> | Client ID: <code>mekobook-mobile-client</code> | Client Secret: <code>mekobook-mobile-secret</code></p>
   </div>
 
   <!-- DOCUMENTS & MEDIA DIRECTORY -->
@@ -499,7 +499,7 @@
           <td class="col-method"><span class="method-badge badge-post">POST</span></td>
           <td class="col-name">Lấy OAuth 2.0 Access Token (Client Credentials / Password)</td>
           <td class="col-url"><code>/o/oauth2/token</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Content-Type: application/x-www-form-urlencoded</div><div class='param-hdr'>BODY (Form):</div><div class='param-item'>grant_type: client_credentials</div><div class='param-item param-pink'>client_id: mekobook-mobile-client</div><div class='param-item param-pink'>client_secret: mekobook-mobile-secret</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/oauth2/token</div></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Content-Type: application/x-www-form-urlencoded</div><div class='param-hdr'>BODY (Form):</div><div class='param-item'>grant_type: client_credentials</div><div class='param-item param-pink'>client_id: mekobook-mobile-client</div><div class='param-item param-pink'>client_secret: mekobook-mobile-secret</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/oauth2/token</div></td>
           <td class="col-json">
             <pre class="json-code"><code>{
   "access_token": "9a38f4bc89e71234567890abcdef...",
@@ -518,7 +518,7 @@
           <td class="col-method"><span class="method-badge badge-get">GET</span></td>
           <td class="col-name">Lấy thông tin tài khoản người dùng đang đăng nhập</td>
           <td class="col-url"><code>/o/headless-admin-user/v1.0/my-user-account</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-item'>Accept: application/json</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/headless-admin-user/v1.0/my-user-account</div></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-item'>Accept: application/json</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/headless-admin-user/v1.0/my-user-account</div></td>
           <td class="col-json">
             <pre class="json-code"><code>{
   "id": 20123,
@@ -539,7 +539,7 @@
           <td class="col-method"><span class="method-badge badge-get">GET</span></td>
           <td class="col-name">Lấy danh mục sách & tài liệu giáo trình số</td>
           <td class="col-url"><code>/o/c/books</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETERS:</div><div class='param-item'>page: 1</div><div class='param-item'>pageSize: 20</div><div class='param-item'>sort: dateCreated:desc</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/books?page=1&pageSize=20</div></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETERS:</div><div class='param-item'>page: 1</div><div class='param-item'>pageSize: 20</div><div class='param-item'>sort: dateCreated:desc</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/books?page=1&pageSize=20</div></td>
           <td class="col-json">
             <pre class="json-code"><code>{
   "actions": {},
@@ -550,8 +550,8 @@
       "title": "Giáo Trình Cấu Trúc Dữ Liệu & Giải Thuật (Flipbook 3D)",
       "author": "TS. Nguyễn Triết - CTUPress",
       "isbn": "978-604-919-890-1",
-      "coverUrl": "http://localhost:8080/documents/20117/33052/covers/ctupress-csdl-cover.jpg",
-      "flipbookBaseUrl": "http://localhost:8080/documents/20117/33056/flipbooks/giao-trinh-cau-truc-du-lieu-gt101/files/",
+      "coverUrl": "https://serrated-catacomb-vendor.ngrok-free.dev/documents/20117/33052/covers/ctupress-csdl-cover.jpg",
+      "flipbookBaseUrl": "https://serrated-catacomb-vendor.ngrok-free.dev/documents/20117/33056/flipbooks/giao-trinh-cau-truc-du-lieu-gt101/files/",
       "screenPattern": "mobile/{page}.jpg",
       "thumbPattern": "thumb/{page}.jpg",
       "totalPages": 286,
@@ -577,7 +577,7 @@
           <td class="col-method"><span class="method-badge badge-get">GET</span></td>
           <td class="col-name">Lấy chi tiết ấn phẩm số & Manifest gói FlipBuilder</td>
           <td class="col-url"><code>/o/c/books/<span class="param-highlight">{bookId}</span></code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>PARAMETER:</div><div class='param-item param-pink'>bookId</div><div class='param-item'> - Kiểu: Long (ví dụ: 33048)</div><div class='param-item'> - Bắt buộc: Có</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/books/33048</div></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>PARAMETER:</div><div class='param-item param-pink'>bookId</div><div class='param-item'> - Kiểu: Long (ví dụ: 33048)</div><div class='param-item'> - Bắt buộc: Có</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/books/33048</div></td>
           <td class="col-json">
             <pre class="json-code"><code>{
   "id": 33048,
@@ -586,7 +586,7 @@
   "publisher": "Nhà Xuất Bản Đại Học Cần Thơ",
   "publicationYear": 2024,
   "totalPages": 286,
-  "flipbookBaseUrl": "http://localhost:8080/documents/20117/33056/flipbooks/giao-trinh-cau-truc-du-lieu-gt101/files/",
+  "flipbookBaseUrl": "https://serrated-catacomb-vendor.ngrok-free.dev/documents/20117/33056/flipbooks/giao-trinh-cau-truc-du-lieu-gt101/files/",
   "screenPattern": "mobile/{page}.jpg",
   "thumbPattern": "thumb/{page}.jpg",
   "samplePagesLimit": 15,
@@ -603,7 +603,7 @@
           <td class="col-method"><span class="method-badge badge-get">GET</span></td>
           <td class="col-name">Lấy danh sách cây mục lục phân cấp theo sách</td>
           <td class="col-url"><code>/o/c/chaptertocs</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETERS:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-item'>sort: displayOrder:asc</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/chaptertocs?filter=bookId%20eq%2033048&sort=displayOrder:asc</div></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETERS:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-item'>sort: displayOrder:asc</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/chaptertocs?filter=bookId%20eq%2033048&sort=displayOrder:asc</div></td>
           <td class="col-json">
             <pre class="json-code"><code>{
   "items": [
@@ -645,7 +645,7 @@
           <td class="col-method"><span class="method-badge badge-get">GET</span></td>
           <td class="col-name">Lấy danh sách kệ sách cá nhân do độc giả tự tạo</td>
           <td class="col-url"><code>/o/c/personalshelfs</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item'>sort: displayOrder:asc</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/personalshelfs?sort=displayOrder:asc</div></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item'>sort: displayOrder:asc</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/personalshelfs?sort=displayOrder:asc</div></td>
           <td class="col-json">
             <pre class="json-code"><code>{
   "items": [
@@ -675,7 +675,7 @@
           <td class="col-method"><span class="method-badge badge-post">POST</span></td>
           <td class="col-name">Tạo kệ sách cá nhân mới</td>
           <td class="col-url"><code>/o/c/personalshelfs/</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-item'>Content-Type: application/json</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/personalshelfs/</div><div class='param-hdr'>BODY (JSON):</div><pre class='param-code'><code>{
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-item'>Content-Type: application/json</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/personalshelfs/</div><div class='param-hdr'>BODY (JSON):</div><pre class='param-code'><code>{
   "shelfName": "Sách Nghiên Cứu AI",
   "colorTag": "#EC4899",
   "displayOrder": 4
@@ -699,7 +699,7 @@
           <td class="col-method"><span class="method-badge badge-patch">PATCH</span></td>
           <td class="col-name">Cập nhật tên hoặc màu nhãn kệ sách cá nhân</td>
           <td class="col-url"><code>/o/c/personalshelfs/<span class="param-highlight">{shelfId}</span></code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-item'>Content-Type: application/json</div><div class='param-hdr'>PARAMETER:</div><div class='param-item param-pink'>shelfId</div><div class='param-item'> - Kiểu: Long (ví dụ: 33080)</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/personalshelfs/33080</div><div class='param-hdr'>BODY (JSON):</div><pre class='param-code'><code>{
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-item'>Content-Type: application/json</div><div class='param-hdr'>PARAMETER:</div><div class='param-item param-pink'>shelfId</div><div class='param-item'> - Kiểu: Long (ví dụ: 33080)</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/personalshelfs/33080</div><div class='param-hdr'>BODY (JSON):</div><pre class='param-code'><code>{
   "shelfName": "Kỹ Thuật Phần Mềm",
   "colorTag": "#8B5CF6"
 }</code></pre></td>
@@ -721,7 +721,7 @@
           <td class="col-method"><span class="method-badge badge-post">POST</span></td>
           <td class="col-name">Gán sách vào kệ sách cá nhân (N:N)</td>
           <td class="col-url"><code>/o/c/shelfitems/</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-item'>Content-Type: application/json</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/shelfitems/</div><div class='param-hdr'>BODY (JSON):</div><pre class='param-code'><code>{
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-item'>Content-Type: application/json</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/shelfitems/</div><div class='param-hdr'>BODY (JSON):</div><pre class='param-code'><code>{
   "shelfId": 33080,
   "bookId": 33048
 }</code></pre></td>
@@ -743,7 +743,7 @@
           <td class="col-method"><span class="method-badge badge-get">GET</span></td>
           <td class="col-name">Lấy cấu hình môi trường đọc của độc giả</td>
           <td class="col-url"><code>/o/c/userpreferences</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/userpreferences</div></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/userpreferences</div></td>
           <td class="col-json">
             <pre class="json-code"><code>{
   "items": [
@@ -769,7 +769,7 @@
           <td class="col-method"><span class="method-badge badge-get">GET</span></td>
           <td class="col-name">Lấy vị trí trang đang đọc dở (Last Read Position)</td>
           <td class="col-url"><code>/o/c/readingprogresses</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/readingprogresses?filter=bookId%20eq%2033048</div></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/readingprogresses?filter=bookId%20eq%2033048</div></td>
           <td class="col-json">
             <pre class="json-code"><code>{
   "items": [
@@ -794,7 +794,7 @@
           <td class="col-method"><span class="method-badge badge-get">GET</span></td>
           <td class="col-name">Lấy danh sách các trang đánh dấu ruy băng của sách</td>
           <td class="col-url"><code>/o/c/bookmarks</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/bookmarks?filter=bookId%20eq%2033048</div></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/bookmarks?filter=bookId%20eq%2033048</div></td>
           <td class="col-json">
             <pre class="json-code"><code>{
   "items": [
@@ -819,7 +819,7 @@
           <td class="col-method"><span class="method-badge badge-get">GET</span></td>
           <td class="col-name">Lấy danh sách nét vẽ vector & ghi chú trên trang sách</td>
           <td class="col-url"><code>/o/c/annotations</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/annotations?filter=bookId%20eq%2033048</div></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/annotations?filter=bookId%20eq%2033048</div></td>
           <td class="col-json">
             <pre class="json-code"><code>{
   "items": [
@@ -846,7 +846,7 @@
           <td class="col-method"><span class="method-badge badge-get">GET</span></td>
           <td class="col-name">Kiểm tra giấy phép bản quyền & Quyền sở hữu (My Bookshelf)</td>
           <td class="col-url"><code>/o/c/drmlicenses</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/drmlicenses?filter=bookId%20eq%2033048</div></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>QUERY PARAMETER:</div><div class='param-item param-pink'>filter: bookId eq 33048</div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/drmlicenses?filter=bookId%20eq%2033048</div></td>
           <td class="col-json">
             <pre class="json-code"><code>{
   "items": [
@@ -873,7 +873,7 @@
           <td class="col-method"><span class="method-badge badge-get">GET</span></td>
           <td class="col-name">Lấy danh sách thiết bị độc giả đã kích hoạt đọc sách</td>
           <td class="col-url"><code>/o/c/deviceregistrations</code></td>
-          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>URL:</div><div class='param-url'>http://localhost:8080/o/c/deviceregistrations</div></td>
+          <td class="col-param"><div class='param-hdr'>HEADER:</div><div class='param-item'>Authorization: Bearer <access_token></div><div class='param-hdr'>URL:</div><div class='param-url'>https://serrated-catacomb-vendor.ngrok-free.dev/o/c/deviceregistrations</div></td>
           <td class="col-json">
             <pre class="json-code"><code>{
   "items": [

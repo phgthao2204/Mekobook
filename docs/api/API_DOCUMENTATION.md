@@ -31,13 +31,13 @@ Mekobook Library/ (Root Folder ID: 33050 - Site 20117)
 
 | # | Tên giao diện/ Chức năng | Method | Tên API | URL | Tham số (Parameter) | Phản hồi (JSON Thực Tế) | Diễn giải |
 |:---:|---|:---:|---|---|---|---|---|
-| **1.** | **Xác thực & Phiên làm việc** | `POST` | **Lấy OAuth 2.0 Access Token (Client Credentials / Password)** | `/o/oauth2/token` | **HEADER:**<br>Content-Type: application/x-www-form-urlencoded<br>**BODY (Form):**<br>grant_type: client_credentials<br>client_id: mekobook-mobile-client<br>client_secret: mekobook-mobile-secret<br>**URL:**<br>`http://localhost:8080/o/oauth2/token` | <pre><code>{
+| **1.** | **Xác thực & Phiên làm việc** | `POST` | **Lấy OAuth 2.0 Access Token (Client Credentials / Password)** | `/o/oauth2/token` | **HEADER:**<br>Content-Type: application/x-www-form-urlencoded<br>**BODY (Form):**<br>grant_type: client_credentials<br>client_id: mekobook-mobile-client<br>client_secret: mekobook-mobile-secret<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/oauth2/token` | <pre><code>{
   "access_token": "9a38f4bc89e71234567890abcdef...",
   "token_type": "Bearer",
   "expires_in": 3600,
   "scope": "everything.read everything.write"
 }</code></pre> | **`access_token`**<br> - Kiểu: String (JWT)<br> - Mô tả: Mã Bearer gắn vào header Authorization: Bearer <token> cho mọi API sau.<br>**`token_type`**<br> - Giá trị: Bearer<br>**`expires_in`**<br> - Giá trị: 3600s (1 giờ)<br>**`client_id / secret`**<br> - Định danh ứng dụng di động |
-| **2.** | **Hồ sơ độc giả** | `GET` | **Lấy thông tin tài khoản người dùng đang đăng nhập** | `/o/headless-admin-user/v1.0/my-user-account` | **HEADER:**<br>Authorization: Bearer <access_token><br>Accept: application/json<br>**URL:**<br>`http://localhost:8080/o/headless-admin-user/v1.0/my-user-account` | <pre><code>{
+| **2.** | **Hồ sơ độc giả** | `GET` | **Lấy thông tin tài khoản người dùng đang đăng nhập** | `/o/headless-admin-user/v1.0/my-user-account` | **HEADER:**<br>Authorization: Bearer <access_token><br>Accept: application/json<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/headless-admin-user/v1.0/my-user-account` | <pre><code>{
   "id": 20123,
   "emailAddress": "test@liferay.com",
   "name": "Test Test",
@@ -45,7 +45,7 @@ Mekobook Library/ (Root Folder ID: 33050 - Site 20117)
   "familyName": "Test",
   "accountBriefs": []
 }</code></pre> | **`id`**<br> - Kiểu: Long (ID: 20123)<br> - Bắt buộc: Có<br>**`emailAddress`**<br> - Email tài khoản sinh viên/độc giả<br>**`name`**<br> - Họ tên hiển thị trên app và nhúng Watermark chống chụp màn hình |
-| **3.** | **Thư viện sách (Store)** | `GET` | **Lấy danh mục sách & tài liệu giáo trình số** | `/o/c/books` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETERS:**<br>page: 1<br>pageSize: 20<br>sort: dateCreated:desc<br>**URL:**<br>`http://localhost:8080/o/c/books?page=1&pageSize=20` | <pre><code>{
+| **3.** | **Thư viện sách (Store)** | `GET` | **Lấy danh mục sách & tài liệu giáo trình số** | `/o/c/books` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETERS:**<br>page: 1<br>pageSize: 20<br>sort: dateCreated:desc<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/books?page=1&pageSize=20` | <pre><code>{
   "actions": {},
   "facets": [],
   "items": [
@@ -54,8 +54,8 @@ Mekobook Library/ (Root Folder ID: 33050 - Site 20117)
       "title": "Giáo Trình Cấu Trúc Dữ Liệu & Giải Thuật (Flipbook 3D)",
       "author": "TS. Nguyễn Triết - CTUPress",
       "isbn": "978-604-919-890-1",
-      "coverUrl": "http://localhost:8080/documents/20117/33052/covers/ctupress-csdl-cover.jpg",
-      "flipbookBaseUrl": "http://localhost:8080/documents/20117/33056/flipbooks/giao-trinh-cau-truc-du-lieu-gt101/files/",
+      "coverUrl": "https://serrated-catacomb-vendor.ngrok-free.dev/documents/20117/33052/covers/ctupress-csdl-cover.jpg",
+      "flipbookBaseUrl": "https://serrated-catacomb-vendor.ngrok-free.dev/documents/20117/33056/flipbooks/giao-trinh-cau-truc-du-lieu-gt101/files/",
       "screenPattern": "mobile/{page}.jpg",
       "thumbPattern": "thumb/{page}.jpg",
       "totalPages": 286,
@@ -70,20 +70,20 @@ Mekobook Library/ (Root Folder ID: 33050 - Site 20117)
   "pageSize": 20,
   "totalCount": 3
 }</code></pre> | **`items[].id`**<br> - Kiểu: Long (bookId)<br>**`items[].coverUrl`**<br> - Ảnh bìa tài liệu hiển thị Store<br>**`items[].isFree`**<br> - true nếu đọc miễn phí, false nếu cần cấp phép<br>**`items[].samplePagesLimit`**<br> - Số trang đọc thử (15 trang) |
-| **4.** | **Chi tiết sách & Core Reader** | `GET` | **Lấy chi tiết ấn phẩm số & Manifest gói FlipBuilder** | `/o/c/books/{bookId}` | **HEADER:**<br>Authorization: Bearer <access_token><br>**PARAMETER:**<br>bookId<br> - Kiểu: Long (ví dụ: 33048)<br> - Bắt buộc: Có<br>**URL:**<br>`http://localhost:8080/o/c/books/33048` | <pre><code>{
+| **4.** | **Chi tiết sách & Core Reader** | `GET` | **Lấy chi tiết ấn phẩm số & Manifest gói FlipBuilder** | `/o/c/books/{bookId}` | **HEADER:**<br>Authorization: Bearer <access_token><br>**PARAMETER:**<br>bookId<br> - Kiểu: Long (ví dụ: 33048)<br> - Bắt buộc: Có<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/books/33048` | <pre><code>{
   "id": 33048,
   "title": "Giáo Trình Cấu Trúc Dữ Liệu & Giải Thuật (Flipbook 3D)",
   "author": "TS. Nguyễn Triết - CTUPress",
   "publisher": "Nhà Xuất Bản Đại Học Cần Thơ",
   "publicationYear": 2024,
   "totalPages": 286,
-  "flipbookBaseUrl": "http://localhost:8080/documents/20117/33056/flipbooks/giao-trinh-cau-truc-du-lieu-gt101/files/",
+  "flipbookBaseUrl": "https://serrated-catacomb-vendor.ngrok-free.dev/documents/20117/33056/flipbooks/giao-trinh-cau-truc-du-lieu-gt101/files/",
   "screenPattern": "mobile/{page}.jpg",
   "thumbPattern": "thumb/{page}.jpg",
   "samplePagesLimit": 15,
   "description": "Tài liệu số hóa 3D Flipbook độc quyền từ CTUPress..."
 }</code></pre> | **`bookId`**<br> - ID ấn phẩm số cần truy vấn<br>**`flipbookBaseUrl`**<br> - Thư mục gốc chứa gói FlipBuilder trên Liferay D&M<br>**`screenPattern`**<br> - Mẫu ảnh 1080p: mobile/{page}.jpg<br>**`thumbPattern`**<br> - Mẫu ảnh thu nhỏ: thumb/{page}.jpg<br>**`totalPages`**<br> - Tổng số trang phục vụ thuật toán Sliding Window Pre-caching |
-| **5.** | **Mục lục sách (TOC)** | `GET` | **Lấy danh sách cây mục lục phân cấp theo sách** | `/o/c/chaptertocs` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETERS:**<br>filter: bookId eq 33048<br>sort: displayOrder:asc<br>**URL:**<br>`http://localhost:8080/o/c/chaptertocs?filter=bookId%20eq%2033048&sort=displayOrder:asc` | <pre><code>{
+| **5.** | **Mục lục sách (TOC)** | `GET` | **Lấy danh sách cây mục lục phân cấp theo sách** | `/o/c/chaptertocs` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETERS:**<br>filter: bookId eq 33048<br>sort: displayOrder:asc<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/chaptertocs?filter=bookId%20eq%2033048&sort=displayOrder:asc` | <pre><code>{
   "items": [
     {
       "id": 33060,
@@ -112,7 +112,7 @@ Mekobook Library/ (Root Folder ID: 33050 - Site 20117)
   ],
   "totalCount": 8
 }</code></pre> | **`bookId`**<br> - ID sách dùng để lọc cây mục lục<br>**`items[].startPage`**<br> - Trang bắt đầu chương để nhảy trực tiếp<br>**`items[].level`**<br> - Cấp độ thụt lề (1: Phần, 2: Chương con)<br>**`items[].displayOrder`**<br> - Thứ tự hiển thị |
-| **6.** | **Tủ sách cá nhân** | `GET` | **Lấy danh sách kệ sách cá nhân do độc giả tự tạo** | `/o/c/personalshelfs` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETER:**<br>sort: displayOrder:asc<br>**URL:**<br>`http://localhost:8080/o/c/personalshelfs?sort=displayOrder:asc` | <pre><code>{
+| **6.** | **Tủ sách cá nhân** | `GET` | **Lấy danh sách kệ sách cá nhân do độc giả tự tạo** | `/o/c/personalshelfs` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETER:**<br>sort: displayOrder:asc<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/personalshelfs?sort=displayOrder:asc` | <pre><code>{
   "items": [
     {
       "id": 33080,
@@ -129,26 +129,26 @@ Mekobook Library/ (Root Folder ID: 33050 - Site 20117)
   ],
   "totalCount": 3
 }</code></pre> | **`items[].id`**<br> - Mã kệ sách shelfId<br>**`items[].shelfName`**<br> - Tên kệ sách do độc giả tự đặt<br>**`items[].colorTag`**<br> - Mã màu nhãn dán hiển thị trên app |
-| **7.** | **Tủ sách cá nhân** | `POST` | **Tạo kệ sách cá nhân mới** | `/o/c/personalshelfs/` | **HEADER:**<br>Authorization: Bearer <access_token><br>Content-Type: application/json<br>**URL:**<br>`http://localhost:8080/o/c/personalshelfs/`<br>**BODY (JSON):**<br>`{   "shelfName": "Sách Nghiên Cứu AI",   "colorTag": "#EC4899",   "displayOrder": 4 }` | <pre><code>{
+| **7.** | **Tủ sách cá nhân** | `POST` | **Tạo kệ sách cá nhân mới** | `/o/c/personalshelfs/` | **HEADER:**<br>Authorization: Bearer <access_token><br>Content-Type: application/json<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/personalshelfs/`<br>**BODY (JSON):**<br>`{   "shelfName": "Sách Nghiên Cứu AI",   "colorTag": "#EC4899",   "displayOrder": 4 }` | <pre><code>{
   "id": 33120,
   "shelfName": "Sách Nghiên Cứu AI",
   "colorTag": "#EC4899",
   "displayOrder": 4,
   "dateCreated": "2026-10-04T17:55:00Z"
 }</code></pre> | **`shelfName`**<br> - Kiểu: String, Bắt buộc<br> - Tên kệ sách mới<br>**`colorTag`**<br> - Kiểu: String (HEX Color)<br>**`displayOrder`**<br> - Thứ tự hiển thị trên danh sách kệ |
-| **8.** | **Tủ sách cá nhân** | `PATCH` | **Cập nhật tên hoặc màu nhãn kệ sách cá nhân** | `/o/c/personalshelfs/{shelfId}` | **HEADER:**<br>Authorization: Bearer <access_token><br>Content-Type: application/json<br>**PARAMETER:**<br>shelfId<br> - Kiểu: Long (ví dụ: 33080)<br>**URL:**<br>`http://localhost:8080/o/c/personalshelfs/33080`<br>**BODY (JSON):**<br>`{   "shelfName": "Kỹ Thuật Phần Mềm",   "colorTag": "#8B5CF6" }` | <pre><code>{
+| **8.** | **Tủ sách cá nhân** | `PATCH` | **Cập nhật tên hoặc màu nhãn kệ sách cá nhân** | `/o/c/personalshelfs/{shelfId}` | **HEADER:**<br>Authorization: Bearer <access_token><br>Content-Type: application/json<br>**PARAMETER:**<br>shelfId<br> - Kiểu: Long (ví dụ: 33080)<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/personalshelfs/33080`<br>**BODY (JSON):**<br>`{   "shelfName": "Kỹ Thuật Phần Mềm",   "colorTag": "#8B5CF6" }` | <pre><code>{
   "id": 33080,
   "shelfName": "Kỹ Thuật Phần Mềm",
   "colorTag": "#8B5CF6",
   "dateModified": "2026-10-04T17:56:12Z"
 }</code></pre> | **`shelfId`**<br> - ID của kệ sách cần cập nhật<br>**`shelfName`**<br> - Tên mới của kệ sách<br>**`colorTag`**<br> - Mã màu nhãn dán mới |
-| **9.** | **Tủ sách cá nhân** | `POST` | **Gán sách vào kệ sách cá nhân (N:N)** | `/o/c/shelfitems/` | **HEADER:**<br>Authorization: Bearer <access_token><br>Content-Type: application/json<br>**URL:**<br>`http://localhost:8080/o/c/shelfitems/`<br>**BODY (JSON):**<br>`{   "shelfId": 33080,   "bookId": 33048 }` | <pre><code>{
+| **9.** | **Tủ sách cá nhân** | `POST` | **Gán sách vào kệ sách cá nhân (N:N)** | `/o/c/shelfitems/` | **HEADER:**<br>Authorization: Bearer <access_token><br>Content-Type: application/json<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/shelfitems/`<br>**BODY (JSON):**<br>`{   "shelfId": 33080,   "bookId": 33048 }` | <pre><code>{
   "id": 33086,
   "shelfId": 33080,
   "bookId": 33048,
   "dateCreated": "2026-10-04T17:52:10Z"
 }</code></pre> | **`shelfId`**<br> - Kiểu: Long, Bắt buộc. ID kệ sách<br>**`bookId`**<br> - Kiểu: Long, Bắt buộc. ID cuốn sách<br>**Lưu ý:**<br> - Ánh xạ N:N: 1 sách có thể thuộc nhiều kệ. Xóa kệ không làm mất sách trong tủ. |
-| **10.** | **Core Reader - Tiện ích** | `GET` | **Lấy cấu hình môi trường đọc của độc giả** | `/o/c/userpreferences` | **HEADER:**<br>Authorization: Bearer <access_token><br>**URL:**<br>`http://localhost:8080/o/c/userpreferences` | <pre><code>{
+| **10.** | **Core Reader - Tiện ích** | `GET` | **Lấy cấu hình môi trường đọc của độc giả** | `/o/c/userpreferences` | **HEADER:**<br>Authorization: Bearer <access_token><br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/userpreferences` | <pre><code>{
   "items": [
     {
       "id": 33092,
@@ -161,7 +161,7 @@ Mekobook Library/ (Root Folder ID: 33050 - Site 20117)
   ],
   "totalCount": 1
 }</code></pre> | **`themeMode`**<br> - LIGHT, DARK, SEPIA, SYSTEM<br>**`brightness`**<br> - Độ sáng màn hình đọc (0.1 - 1.0)<br>**`pageTurnEffect`**<br> - CURL_3D (lật uốn 60fps), SLIDE, FADE<br>**`pageTurnSoundEnabled`**<br> - true để phát âm thanh lật trang giấy |
-| **11.** | **Core Reader - Tiến độ** | `GET` | **Lấy vị trí trang đang đọc dở (Last Read Position)** | `/o/c/readingprogresses` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETER:**<br>filter: bookId eq 33048<br>**URL:**<br>`http://localhost:8080/o/c/readingprogresses?filter=bookId%20eq%2033048` | <pre><code>{
+| **11.** | **Core Reader - Tiến độ** | `GET` | **Lấy vị trí trang đang đọc dở (Last Read Position)** | `/o/c/readingprogresses` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETER:**<br>filter: bookId eq 33048<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/readingprogresses?filter=bookId%20eq%2033048` | <pre><code>{
   "items": [
     {
       "id": 33096,
@@ -173,7 +173,7 @@ Mekobook Library/ (Root Folder ID: 33050 - Site 20117)
   ],
   "totalCount": 1
 }</code></pre> | **`currentPage`**<br> - Trang sách độc giả đang đọc dở (trang 42)<br>**`percentage`**<br> - Tỷ lệ phần trăm hoàn thành (14.68%)<br>**`lastReadTimestamp`**<br> - Epoch ms thuật toán Last-Write-Wins phân xử xung đột đồng bộ giữa nhiều máy |
-| **12.** | **Core Reader - Bookmark** | `GET` | **Lấy danh sách các trang đánh dấu ruy băng của sách** | `/o/c/bookmarks` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETER:**<br>filter: bookId eq 33048<br>**URL:**<br>`http://localhost:8080/o/c/bookmarks?filter=bookId%20eq%2033048` | <pre><code>{
+| **12.** | **Core Reader - Bookmark** | `GET` | **Lấy danh sách các trang đánh dấu ruy băng của sách** | `/o/c/bookmarks` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETER:**<br>filter: bookId eq 33048<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/bookmarks?filter=bookId%20eq%2033048` | <pre><code>{
   "items": [
     {
       "id": 33100,
@@ -185,7 +185,7 @@ Mekobook Library/ (Root Folder ID: 33050 - Site 20117)
   ],
   "totalCount": 2
 }</code></pre> | **`pageNumber`**<br> - Số thứ tự trang được đánh dấu ruy băng<br>**`chapterTitle`**<br> - Tên chương tại vị trí đánh dấu<br>**`colorTag`**<br> - Mã màu ruy băng (ví dụ: #F59E0B) |
-| **13.** | **Core Reader - Annotation** | `GET` | **Lấy danh sách nét vẽ vector & ghi chú trên trang sách** | `/o/c/annotations` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETER:**<br>filter: bookId eq 33048<br>**URL:**<br>`http://localhost:8080/o/c/annotations?filter=bookId%20eq%2033048` | <pre><code>{
+| **13.** | **Core Reader - Annotation** | `GET` | **Lấy danh sách nét vẽ vector & ghi chú trên trang sách** | `/o/c/annotations` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETER:**<br>filter: bookId eq 33048<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/annotations?filter=bookId%20eq%2033048` | <pre><code>{
   "items": [
     {
       "id": 33104,
@@ -199,7 +199,7 @@ Mekobook Library/ (Root Folder ID: 33050 - Site 20117)
   ],
   "totalCount": 2
 }</code></pre> | **`type`**<br> - HIGHLIGHT (dạ quang), STICKY_NOTE, DRAWING_PEN<br>**`coordinateData`**<br> - Tọa độ vector chuẩn hóa (x, y từ 0.0 đến 1.0) độc lập độ phân giải máy khách<br>**`noteText`**<br> - Nội dung văn bản ghi chú |
-| **14.** | **Tủ sách & Bản quyền DRM** | `GET` | **Kiểm tra giấy phép bản quyền & Quyền sở hữu (My Bookshelf)** | `/o/c/drmlicenses` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETER:**<br>filter: bookId eq 33048<br>**URL:**<br>`http://localhost:8080/o/c/drmlicenses?filter=bookId%20eq%2033048` | <pre><code>{
+| **14.** | **Tủ sách & Bản quyền DRM** | `GET` | **Kiểm tra giấy phép bản quyền & Quyền sở hữu (My Bookshelf)** | `/o/c/drmlicenses` | **HEADER:**<br>Authorization: Bearer <access_token><br>**QUERY PARAMETER:**<br>filter: bookId eq 33048<br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/drmlicenses?filter=bookId%20eq%2033048` | <pre><code>{
   "items": [
     {
       "id": 33108,
@@ -213,7 +213,7 @@ Mekobook Library/ (Root Folder ID: 33050 - Site 20117)
   ],
   "totalCount": 2
 }</code></pre> | **`status`**<br> - ACTIVE (còn hiệu lực), EXPIRED (hết hạn)<br>**`licenseType`**<br> - PERPETUAL (mua vĩnh viễn), RENTAL (thuê 120 ngày)<br>**`encryptedContentKey`**<br> - Khóa AES-256 mã hóa nội dung tải offline<br>**`maxDevices`**<br> - Giới hạn kích hoạt 2-3 thiết bị<br>**`isFavorite`**<br> - true nếu độc giả yêu thích |
-| **15.** | **Bản quyền DRM & Thiết bị** | `GET` | **Lấy danh sách thiết bị độc giả đã kích hoạt đọc sách** | `/o/c/deviceregistrations` | **HEADER:**<br>Authorization: Bearer <access_token><br>**URL:**<br>`http://localhost:8080/o/c/deviceregistrations` | <pre><code>{
+| **15.** | **Bản quyền DRM & Thiết bị** | `GET` | **Lấy danh sách thiết bị độc giả đã kích hoạt đọc sách** | `/o/c/deviceregistrations` | **HEADER:**<br>Authorization: Bearer <access_token><br>**URL:**<br>`https://serrated-catacomb-vendor.ngrok-free.dev/o/c/deviceregistrations` | <pre><code>{
   "items": [
     {
       "id": 33112,
@@ -231,7 +231,7 @@ Mekobook Library/ (Root Folder ID: 33050 - Site 20117)
 
 ## 3. HƯỚNG DẪN CẤU HÌNH VÀ SỬ DỤNG OAUTH 2.0 TRÊN MOBILE APP
 
-- **Token Endpoint:** `http://localhost:8080/o/oauth2/token`
+- **Token Endpoint:** `https://serrated-catacomb-vendor.ngrok-free.dev/o/oauth2/token`
 - **Client ID:** `mekobook-mobile-client`
 - **Client Secret:** `mekobook-mobile-secret`
 - **Scope:** `everything.read everything.write`

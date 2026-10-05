@@ -1,186 +1,226 @@
-/**
- * Mekobook Mobile - BookCatalog Component
- * Clean Light Mode with Emerald Green Theme (#059669)
- * ZERO EMOJIS - USES PURE VECTOR ICONS (Ionicons)
- */
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  ActivityIndicator,
-  RefreshControl,
-  SafeAreaView,
-  StatusBar,
-  TextInput,
-  Platform,
+  ActivityIndicator, FlatList, Image, Modal, Platform, RefreshControl,
+  StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Book } from '../../types';
-import { getBooks } from '../../services/api';
-import { ENV } from '../../config/env';
+import { LibraryBook, ReadingProgress, UserAccount } from '../../types';
+import { getBooks, getMediaRequestHeaders, getReadingProgresses } from '../../services/api';
+
+type ViewMode = 'grid' | 'list';
 
 interface BookCatalogProps {
-  onSelectBook: (book: Book) => void;
+  user: UserAccount;
+  onSelectBook: (book: LibraryBook) => void;
+  onLogout: () => Promise<void>;
 }
 
-export const BookCatalog: React.FC<BookCatalogProps> = ({ onSelectBook }) => {
-  const [books, setBooks] = useState<Book[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+function latestProgress(items: ReadingProgress[]): Map<number, ReadingProgress> {
+  const result = new Map<number, ReadingProgress>();
+  items.forEach((item) => {
+    const old = result.get(item.bookId);
+    if (!old || (item.lastReadTimestamp || 0) > (old.lastReadTimestamp || 0)) {
+      result.set(item.bookId, item);
+    }
+  });
+  return result;
+}
 
-  const loadBooks = async () => {
+function readingState(book: LibraryBook) {
+  const progress = book.readingProgress;
+  if (!progress || progress.currentPage <= 1 || progress.readStatus === 'NOT_STARTED') {
+    return { label: 'Chưa đọc', color: '#64748B', background: '#F1F5F9' };
+  }
+  if (progress.readStatus === 'COMPLETED' || progress.percentage >= 100) {
+    return { label: 'Đã hoàn thành', color: '#047857', background: '#D1FAE5' };
+  }
+  return { label: 'Đang đọc', color: '#1D4ED8', background: '#DBEAFE' };
+}
+
+function formatDate(timestamp?: number): string {
+  return timestamp ? new Date(timestamp).toLocaleDateString('vi-VN') : '';
+}
+
+export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, onLogout }) => {
+  const [books, setBooks] = useState<LibraryBook[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [showAccount, setShowAccount] = useState(false);
+
+  const loadLibrary = async () => {
     try {
-      const data = await getBooks(30);
-      setBooks(data);
-    } catch (err) {
-      console.error('[Catalog] Error loading books:', err);
+      const [bookItems, progressItems] = await Promise.all([
+        getBooks(100), getReadingProgresses(200),
+      ]);
+      const progressByBook = latestProgress(progressItems);
+      setBooks(bookItems.map((book) => ({ ...book, readingProgress: progressByBook.get(book.id) })));
+    } catch (error) {
+      console.error('[Catalog] Error loading library:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    loadBooks();
-  }, []);
+  useEffect(() => { loadLibrary(); }, []);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadBooks();
+  const filteredBooks = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase('vi-VN');
+    if (!query) return books;
+    return books.filter((book) =>
+      book.title.toLocaleLowerCase('vi-VN').includes(query) ||
+      book.author.toLocaleLowerCase('vi-VN').includes(query)
+    );
+  }, [books, searchQuery]);
+
+  const renderProgress = (book: LibraryBook, compact: boolean) => {
+    const progress = book.readingProgress;
+    const state = readingState(book);
+    const percentage = Math.max(0, Math.min(100, Math.round(progress?.percentage || 0)));
+    return (
+      <View style={styles.progressSection}>
+        <View style={styles.progressHeader}>
+          <View style={[styles.stateBadge, { backgroundColor: state.background }]}>
+            <Text style={[styles.stateText, { color: state.color }]}>{state.label}</Text>
+          </View>
+          {progress && progress.currentPage > 1 ? (
+            <Text style={styles.pageProgress} numberOfLines={1}>
+              Trang {progress.currentPage}/{book.totalPages} · {percentage}%
+            </Text>
+          ) : null}
+        </View>
+        {progress && progress.currentPage > 1 ? (
+          <>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${percentage}%` }]} />
+            </View>
+            {!compact && progress.lastReadTimestamp ? (
+              <Text style={styles.lastRead}>Đọc gần nhất: {formatDate(progress.lastReadTimestamp)}</Text>
+            ) : null}
+          </>
+        ) : null}
+      </View>
+    );
   };
 
-  const filteredBooks = books.filter(
-    (b) =>
-      b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.author.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const renderBook = ({ item }: { item: LibraryBook }) => {
+    const grid = viewMode === 'grid';
+    return (
+      <TouchableOpacity
+        style={[styles.bookCard, grid ? styles.gridCard : styles.listCard]}
+        onPress={() => onSelectBook(item)} activeOpacity={0.85}
+      >
+        <View style={[styles.coverWrapper, grid ? styles.gridCover : styles.listCover]}>
+          <Image
+            source={{ uri: item.coverUrl, headers: getMediaRequestHeaders() }}
+            style={styles.coverImage}
+            resizeMode="cover"
+          />
+          <View style={styles.pageCountBadge}>
+            <Text style={styles.pageCountText}>{item.totalPages || 0} trang</Text>
+          </View>
+        </View>
+        <View style={[styles.infoWrapper, grid && styles.gridInfo]}>
+          <Text style={[styles.bookTitle, grid && styles.gridTitle]} numberOfLines={2}>{item.title}</Text>
+          <View style={styles.authorRow}>
+            <Ionicons name="person-outline" size={12} color="#059669" />
+            <Text style={styles.bookAuthor} numberOfLines={1}>{item.author}</Text>
+          </View>
+          {renderProgress(item, grid)}
+          <View style={styles.footerRow}>
+            <View style={[styles.accessBadge, item.isFree ? styles.freeBadge : styles.licensedBadge]}>
+              <Ionicons name={item.isFree ? 'lock-open-outline' : 'shield-checkmark-outline'} size={11} color={item.isFree ? '#047857' : '#B45309'} />
+              <Text style={[styles.accessText, item.isFree ? styles.freeText : styles.licensedText]}>
+                {item.isFree ? 'Miễn phí' : 'Bản quyền'}
+              </Text>
+            </View>
+            {!grid ? (
+              <View style={styles.readButton}>
+                <Ionicons name="book-outline" size={14} color="#FFFFFF" />
+                <Text style={styles.readButtonText}>
+                  {item.readingProgress && item.readingProgress.currentPage > 1 ? 'Đọc tiếp' : 'Đọc sách'}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
-      {/* HEADER */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerTitle}>
           <Text style={styles.appName}>MEKOBOOK</Text>
-          <Text style={styles.subTitle}>Hệ Thống Sách Điện Tử 3D Flipbook</Text>
+          <Text style={styles.subTitle}>Thư viện sách điện tử</Text>
         </View>
-        <View style={styles.userBadge}>
+        <TouchableOpacity style={styles.userBadge} onPress={() => setShowAccount(true)}>
           <View style={styles.userDot} />
-          <Text style={styles.userBadgeText}>{ENV.AUTH.USERNAME}</Text>
+          <Text style={styles.userBadgeText} numberOfLines={1}>{user.name}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={showAccount} transparent animationType="fade" onRequestClose={() => setShowAccount(false)}>
+        <View style={styles.modalBackdrop}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowAccount(false)} />
+          <View style={styles.accountCard}>
+            <View style={styles.accountIcon}><Ionicons name="person" size={28} color="#059669" /></View>
+            <Text style={styles.accountName}>{user.name}</Text>
+            <Text style={styles.accountEmail}>{user.emailAddress || 'Email chưa được API hồ sơ cung cấp'}</Text>
+            {user.profileUnavailable ? <Text style={styles.profileWarning}>Hồ sơ tạm thời chưa khả dụng.</Text> : null}
+            <TouchableOpacity style={styles.logoutButton} onPress={async () => { setShowAccount(false); await onLogout(); }}>
+              <Ionicons name="log-out-outline" size={18} color="#B91C1C" />
+              <Text style={styles.logoutText}>Đăng xuất</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.closeButton} onPress={() => setShowAccount(false)}>
+              <Text style={styles.closeButtonText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <View style={styles.toolsContainer}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={18} color="#059669" />
+          <TextInput
+            style={styles.searchInput} placeholder="Tìm theo tên sách hoặc tác giả"
+            placeholderTextColor="#94A3B8" value={searchQuery} onChangeText={setSearchQuery}
+            autoCorrect={false} returnKeyType="search"
+          />
+          {searchQuery.length > 0 ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Xóa từ khóa">
+              <Ionicons name="close-circle" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        <View style={styles.libraryToolbar}>
+          <Text style={styles.resultCount}>{filteredBooks.length} cuốn sách</Text>
+          <View style={styles.viewSwitcher}>
+            <TouchableOpacity style={[styles.viewButton, viewMode === 'grid' && styles.viewButtonActive]} onPress={() => setViewMode('grid')} accessibilityLabel="Dạng lưới">
+              <Ionicons name="grid-outline" size={18} color={viewMode === 'grid' ? '#FFFFFF' : '#64748B'} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.viewButton, viewMode === 'list' && styles.viewButtonActive]} onPress={() => setViewMode('list')} accessibilityLabel="Dạng danh sách">
+              <Ionicons name="list-outline" size={20} color={viewMode === 'list' ? '#FFFFFF' : '#64748B'} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
-      {/* SEARCH BAR */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={18} color="#059669" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Tìm kiếm sách, tài liệu giáo trình..."
-          placeholderTextColor="#94A3B8"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={18} color="#94A3B8" />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* CATALOG LIST */}
       {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#059669" />
-          <Text style={styles.loadingText}>Đang tải kho sách Liferay Staging...</Text>
-        </View>
+        <View style={styles.centerContainer}><ActivityIndicator size="large" color="#059669" /><Text style={styles.loadingText}>Đang tải thư viện sách...</Text></View>
       ) : (
         <FlatList
-          data={filteredBooks}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#059669" />
-          }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.bookCard}
-              onPress={() => onSelectBook(item)}
-              activeOpacity={0.85}
-            >
-              {/* Cover Image */}
-              <View style={styles.coverWrapper}>
-                <Image
-                  source={{ uri: item.coverUrl }}
-                  style={styles.coverImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.pageCountBadge}>
-                  <Text style={styles.pageCountText}>{item.totalPages || 0} trang</Text>
-                </View>
-              </View>
-
-              {/* Book Info */}
-              <View style={styles.infoWrapper}>
-                <View style={styles.titleRow}>
-                  <Text style={styles.bookTitle} numberOfLines={2}>
-                    {item.title}
-                  </Text>
-                </View>
-
-                <View style={styles.authorRow}>
-                  <Ionicons name="person-outline" size={13} color="#059669" style={styles.authorIcon} />
-                  <Text style={styles.bookAuthor} numberOfLines={1}>
-                    {item.author}
-                  </Text>
-                </View>
-
-                {item.description ? (
-                  <Text style={styles.bookDesc} numberOfLines={2}>
-                    {item.description}
-                  </Text>
-                ) : null}
-
-                <View style={styles.footerRow}>
-                  <View
-                    style={[
-                      styles.tagBadge,
-                      item.isFree ? styles.freeBadge : styles.licensedBadge,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.tagBadgeText,
-                        item.isFree ? styles.freeBadgeText : styles.licensedBadgeText,
-                      ]}
-                    >
-                      {item.isFree ? 'Miễn phí' : 'Bản quyền LCP'}
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.readButton}
-                    onPress={() => onSelectBook(item)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="book-outline" size={14} color="#FFFFFF" style={styles.readButtonIcon} />
-                    <Text style={styles.readButtonText}>Lật 3D</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
-          )}
-          ListEmptyComponent={
-            <View style={styles.centerContainer}>
-              <Text style={styles.emptyText}>Không tìm thấy tài liệu phù hợp</Text>
-            </View>
-          }
+          key={viewMode} data={filteredBooks} numColumns={viewMode === 'grid' ? 2 : 1}
+          columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
+          keyExtractor={(item) => String(item.id)} contentContainerStyle={styles.listContent}
+          renderItem={renderBook}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadLibrary(); }} tintColor="#059669" />}
+          ListEmptyComponent={<View style={styles.centerContainer}><Ionicons name="search-outline" size={36} color="#94A3B8" /><Text style={styles.emptyText}>Không tìm thấy sách phù hợp</Text></View>}
         />
       )}
     </SafeAreaView>
@@ -188,219 +228,62 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ onSelectBook }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 20 : 12,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  appName: {
-    color: '#059669',
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: 1.5,
-  },
-  subTitle: {
-    color: '#64748B',
-    fontSize: 12,
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  userBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  userDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#10B981',
-    marginRight: 6,
-  },
-  userBadgeText: {
-    color: '#065F46',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 18,
-    marginVertical: 14,
-    paddingHorizontal: 14,
-    height: 46,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#0F172A',
-    fontSize: 14,
-  },
-  listContent: {
-    paddingHorizontal: 18,
-    paddingBottom: 24,
-  },
-  bookCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 14,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  coverWrapper: {
-    width: 105,
-    height: 145,
-    position: 'relative',
-    backgroundColor: '#F1F5F9',
-    borderRightWidth: 1.5,
-    borderRightColor: '#A7F3D0',
-  },
-  coverImage: {
-    width: '100%',
-    height: '100%',
-  },
-  pageCountBadge: {
-    position: 'absolute',
-    bottom: 6,
-    left: 6,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  pageCountText: {
-    color: '#F8FAFC',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  infoWrapper: {
-    flex: 1,
-    padding: 12,
-    justifyContent: 'space-between',
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  bookTitle: {
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  authorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  authorIcon: {
-    marginRight: 4,
-  },
-  bookAuthor: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  bookDesc: {
-    color: '#64748B',
-    fontSize: 12,
-    marginTop: 4,
-    lineHeight: 16,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  tagBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  tagBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  freeBadge: {
-    backgroundColor: '#ECFDF5',
-  },
-  freeBadgeText: {
-    color: '#059669',
-  },
-  licensedBadge: {
-    backgroundColor: '#FEF3C7',
-  },
-  licensedBadgeText: {
-    color: '#D97706',
-  },
-  readButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#059669',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 8,
-    shadowColor: '#059669',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  readButtonIcon: {
-    marginRight: 5,
-  },
-  readButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    color: '#64748B',
-    fontSize: 13,
-    marginTop: 12,
-  },
-  emptyText: {
-    color: '#64748B',
-    fontSize: 14,
-  },
+  safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingTop: Platform.OS === 'android' ? 20 : 12, paddingBottom: 14, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
+  headerTitle: { flex: 1, marginRight: 12 },
+  appName: { color: '#059669', fontSize: 22, fontWeight: '900', letterSpacing: 1.5 },
+  subTitle: { color: '#64748B', fontSize: 12, marginTop: 2, fontWeight: '500' },
+  userBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF5', paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: '#A7F3D0' },
+  userDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#10B981', marginRight: 6 },
+  userBadgeText: { color: '#065F46', fontSize: 12, fontWeight: '700', maxWidth: 110 },
+  toolsContainer: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 10 },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', height: 46, backgroundColor: '#FFFFFF', paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+  searchInput: { flex: 1, color: '#0F172A', fontSize: 14, marginHorizontal: 8 },
+  libraryToolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+  resultCount: { color: '#475569', fontSize: 13, fontWeight: '600' },
+  viewSwitcher: { flexDirection: 'row', backgroundColor: '#E2E8F0', padding: 2, borderRadius: 9 },
+  viewButton: { width: 36, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 7 },
+  viewButtonActive: { backgroundColor: '#059669' },
+  listContent: { paddingHorizontal: 18, paddingBottom: 24 },
+  gridRow: { gap: 12 },
+  bookCard: { backgroundColor: '#FFFFFF', borderRadius: 15, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 13, elevation: 2, shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 },
+  listCard: { flexDirection: 'row', minHeight: 174 },
+  gridCard: { flex: 1, minWidth: 0 },
+  coverWrapper: { position: 'relative', backgroundColor: '#E2E8F0' },
+  listCover: { width: 118, minHeight: 174, borderRightWidth: 1, borderRightColor: '#D1FAE5' },
+  gridCover: { width: '100%', aspectRatio: 0.72 },
+  coverImage: { width: '100%', height: '100%' },
+  pageCountBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(15,23,42,0.78)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 5 },
+  pageCountText: { color: '#FFFFFF', fontSize: 9, fontWeight: '700' },
+  infoWrapper: { flex: 1, padding: 12 },
+  gridInfo: { padding: 10 },
+  bookTitle: { color: '#0F172A', fontSize: 15, fontWeight: '700', lineHeight: 20 },
+  gridTitle: { fontSize: 13, lineHeight: 18, minHeight: 36 },
+  authorRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5, gap: 4 },
+  bookAuthor: { flex: 1, color: '#475569', fontSize: 11, fontWeight: '500' },
+  progressSection: { marginTop: 9 },
+  progressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 5 },
+  stateBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  stateText: { fontSize: 10, fontWeight: '800' },
+  pageProgress: { flex: 1, color: '#64748B', textAlign: 'right', fontSize: 9, fontWeight: '600' },
+  progressTrack: { height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', marginTop: 6, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 2, backgroundColor: '#3B82F6' },
+  lastRead: { color: '#94A3B8', fontSize: 9, marginTop: 4 },
+  footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+  accessBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 6 },
+  freeBadge: { backgroundColor: '#ECFDF5' }, licensedBadge: { backgroundColor: '#FEF3C7' },
+  accessText: { fontSize: 10, fontWeight: '800' }, freeText: { color: '#047857' }, licensedText: { color: '#B45309' },
+  readButton: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#059669', paddingHorizontal: 11, paddingVertical: 7, borderRadius: 8 },
+  readButtonText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
+  centerContainer: { flex: 1, minHeight: 220, justifyContent: 'center', alignItems: 'center', paddingVertical: 50 },
+  loadingText: { color: '#64748B', fontSize: 13, marginTop: 12 }, emptyText: { color: '#64748B', fontSize: 14, marginTop: 10 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  accountCard: { width: '100%', maxWidth: 380, borderRadius: 20, backgroundColor: '#FFFFFF', padding: 24, alignItems: 'center' },
+  accountIcon: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  accountName: { color: '#0F172A', fontSize: 18, fontWeight: '800', textAlign: 'center' },
+  accountEmail: { color: '#64748B', fontSize: 13, marginTop: 5, marginBottom: 22 },
+  profileWarning: { color: '#B45309', backgroundColor: '#FFFBEB', borderRadius: 8, padding: 10, fontSize: 12, textAlign: 'center', marginBottom: 16 },
+  logoutButton: { width: '100%', height: 46, borderRadius: 10, backgroundColor: '#FEF2F2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  logoutText: { color: '#B91C1C', fontSize: 14, fontWeight: '700', marginLeft: 7 },
+  closeButton: { paddingTop: 16, paddingHorizontal: 20 }, closeButtonText: { color: '#64748B', fontSize: 13, fontWeight: '600' },
 });

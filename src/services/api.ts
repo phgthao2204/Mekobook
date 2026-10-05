@@ -1,26 +1,64 @@
 /**
  * Mekobook Mobile - Liferay Headless REST API Client
- * Uses hardcoded Basic Auth (phuongthao:admin) as requested for fast staging/dev
+ * Uses the OAuth Bearer token supplied by the authenticated app session.
  */
 
-import { ENV } from '../config/env';
+import { ENV, getApiUrl } from '../config/env';
 import { Book, ChapterTOC, LiferayItemResponse, ReadingProgress } from '../types';
 
-const defaultHeaders = {
-  'Authorization': ENV.AUTH.BASIC_AUTH_HEADER,
-  'Accept': 'application/json',
-  'Content-Type': 'application/json',
-};
+let accessToken: string | null = null;
+
+export function setApiAccessToken(token: string | null): void {
+  accessToken = token;
+}
+
+function getDefaultHeaders() {
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    // Required by free ngrok domains; otherwise GET requests may receive the
+    // browser warning HTML page instead of the Liferay JSON response.
+    'ngrok-skip-browser-warning': 'true',
+  };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  return headers;
+}
+
+/** Headers used by React Native Image for protected/ngrok-hosted media. */
+export function getMediaRequestHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'ngrok-skip-browser-warning': 'true',
+  };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  return headers;
+}
+
+function normalizeServerUrl(url?: string): string | undefined {
+  if (!url) return url;
+  const apiBase = ENV.API_BASE_URL.replace(/\/$/, '');
+  return url
+    .replace(/^http:\/\/localhost:8080/i, apiBase)
+    .replace(/^http:\/\/127\.0\.0\.1:8080/i, apiBase);
+}
+
+function normalizeBook(book: Book): Book {
+  return {
+    ...book,
+    coverUrl: normalizeServerUrl(book.coverUrl) || '',
+    documentUrl: normalizeServerUrl(book.documentUrl),
+    flipbookBaseUrl: normalizeServerUrl(book.flipbookBaseUrl) || '',
+  };
+}
 
 /**
  * Fetch catalog of books from Liferay Objects /o/c/books
  */
 export async function getBooks(pageSize: number = 20): Promise<Book[]> {
   try {
-    const url = `${ENV.API_BASE_URL}/o/c/books?pageSize=${pageSize}&sort=dateCreated:desc`;
+    const url = `${getApiUrl(ENV.API_PATHS.BOOKS)}?page=1&pageSize=${pageSize}&sort=dateCreated:desc`;
     const response = await fetch(url, {
       method: 'GET',
-      headers: defaultHeaders,
+      headers: getDefaultHeaders(),
     });
 
     if (!response.ok) {
@@ -28,7 +66,7 @@ export async function getBooks(pageSize: number = 20): Promise<Book[]> {
     }
 
     const data: LiferayItemResponse<Book> = await response.json();
-    return data.items || [];
+    return (data.items || []).map(normalizeBook);
   } catch (error) {
     console.warn('[API] Could not fetch books from Staging, falling back to local seed:', error);
     return getFallbackBooks();
@@ -40,17 +78,17 @@ export async function getBooks(pageSize: number = 20): Promise<Book[]> {
  */
 export async function getBookById(id: number): Promise<Book | null> {
   try {
-    const url = `${ENV.API_BASE_URL}/o/c/books/${id}`;
+    const url = `${getApiUrl(ENV.API_PATHS.BOOKS)}/${id}`;
     const response = await fetch(url, {
       method: 'GET',
-      headers: defaultHeaders,
+      headers: getDefaultHeaders(),
     });
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
     }
 
-    return await response.json();
+    return normalizeBook(await response.json());
   } catch (error) {
     console.warn(`[API] Error fetching book ${id}:`, error);
     const fallback = getFallbackBooks().find(b => b.id === id);
@@ -63,10 +101,11 @@ export async function getBookById(id: number): Promise<Book | null> {
  */
 export async function getBookTOC(bookId: number): Promise<ChapterTOC[]> {
   try {
-    const url = `${ENV.API_BASE_URL}/o/c/chaptertocs?filter=bookId%20eq%20${bookId}&sort=displayOrder:asc&pageSize=100`;
+    const query = `filter=${encodeURIComponent(`bookId eq ${bookId}`)}&sort=displayOrder:asc&pageSize=100`;
+    const url = `${getApiUrl(ENV.API_PATHS.CHAPTER_TOCS)}?${query}`;
     const response = await fetch(url, {
       method: 'GET',
-      headers: defaultHeaders,
+      headers: getDefaultHeaders(),
     });
 
     if (!response.ok) {
@@ -78,6 +117,23 @@ export async function getBookTOC(bookId: number): Promise<ChapterTOC[]> {
   } catch (error) {
     console.warn(`[API] Error fetching TOC for book ${bookId}:`, error);
     return generateFallbackTOC(bookId);
+  }
+}
+
+/** Fetch the authenticated reader's latest progress records. */
+export async function getReadingProgresses(pageSize: number = 200): Promise<ReadingProgress[]> {
+  try {
+    const url = `${getApiUrl(ENV.API_PATHS.READING_PROGRESSES)}?page=1&pageSize=${pageSize}&sort=lastReadTimestamp:desc`;
+    const response = await fetch(url, { method: 'GET', headers: getDefaultHeaders() });
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
+    }
+    const data: LiferayItemResponse<ReadingProgress> = await response.json();
+    return data.items || [];
+  } catch (error) {
+    // Progress is supplementary; an empty account must still see the catalog.
+    console.warn('[API] Could not fetch reading progress:', error);
+    return [];
   }
 }
 
@@ -102,9 +158,9 @@ export async function saveReadingProgress(
       lastReadTimestamp: Date.now(),
     };
 
-    await fetch(`${ENV.API_BASE_URL}/o/c/readingprogresses`, {
+    await fetch(getApiUrl(ENV.API_PATHS.READING_PROGRESSES), {
       method: 'POST',
-      headers: defaultHeaders,
+      headers: getDefaultHeaders(),
       body: JSON.stringify(payload),
     });
   } catch (err) {
@@ -138,6 +194,9 @@ export function getThumbnailUrl(book: Book, pageNumber: number): string {
  * Local fallback data in case Liferay LAN network is temporarily unreachable
  */
 function getFallbackBooks(): Book[] {
+  const staticBase = ENV.STATIC_FLIPBOOK_BASE_URL.endsWith('/')
+    ? ENV.STATIC_FLIPBOOK_BASE_URL
+    : `${ENV.STATIC_FLIPBOOK_BASE_URL}/`;
   return [
     {
       id: 32884,
@@ -146,8 +205,8 @@ function getFallbackBooks(): Book[] {
       publisher: 'Công Ty Cổ Phần Mekosoft',
       language: 'vi',
       description: 'Giáo trình kỹ thuật chuyên sâu về React Native, Reanimated và Shader lật trang 3D Flipbook tối ưu 60 FPS cho hệ thống Mekobook.',
-      coverUrl: 'http://192.168.1.254:8080/flipbooks/covers/lap-trinh-di-dong-react-native-3d.jpg',
-      flipbookBaseUrl: 'http://192.168.1.254:8080/flipbooks/lap-trinh-di-dong-react-native-3d/files/',
+      coverUrl: `${staticBase}covers/lap-trinh-di-dong-react-native-3d.jpg`,
+      flipbookBaseUrl: `${staticBase}lap-trinh-di-dong-react-native-3d/files/`,
       screenPattern: 'mobile/{page}.jpg',
       thumbPattern: 'thumb/{page}.jpg',
       totalPages: 65,
@@ -162,8 +221,8 @@ function getFallbackBooks(): Book[] {
       publisher: 'Công Ty Cổ Phần Mekosoft',
       language: 'vi',
       description: 'Cẩm nang thiết kế và tích hợp Liferay 7.4 CE Objects, REST APIs, OAuth 2.0 PKCE và phân quyền RBAC cho doanh nghiệp.',
-      coverUrl: 'http://192.168.1.254:8080/flipbooks/covers/kien-truc-liferay-headless-cms.jpg',
-      flipbookBaseUrl: 'http://192.168.1.254:8080/flipbooks/kien-truc-liferay-headless-cms/files/',
+      coverUrl: `${staticBase}covers/kien-truc-liferay-headless-cms.jpg`,
+      flipbookBaseUrl: `${staticBase}kien-truc-liferay-headless-cms/files/`,
       screenPattern: 'mobile/{page}.jpg',
       thumbPattern: 'thumb/{page}.jpg',
       totalPages: 80,

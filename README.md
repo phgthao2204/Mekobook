@@ -36,15 +36,12 @@ File cấu hình `.env` đóng vai trò định tuyến toàn bộ kết nối m
 
 | Tên biến | Mô tả | Giá trị mẫu / Mặc định |
 |---|---|---|
-| `API_BASE_URL` | Địa chỉ gốc của máy chủ Liferay Headless API | `http://<IP_MAY_CHU_LAN>:8080` |
-| `STATIC_FLIPBOOK_BASE_URL` | Thư mục chứa gói ảnh trang lật 3D tĩnh | `http://<IP_MAY_CHU_LAN>:8080/flipbooks/` |
-| `OAUTH_TOKEN_URL` | Đường dẫn lấy Access Token OAuth 2.0 | `/o/oauth2/token` |
-| `OAUTH_CLIENT_ID` | Client ID ứng dụng di động đăng ký trên Liferay | Nhận từ quản trị viên Liferay |
-| `OAUTH_CLIENT_SECRET` | Client Secret ứng dụng di động | Nhận từ quản trị viên Liferay |
-| `DEMO_USER_USERNAME` | Tên tài khoản test xác thực Basic Auth | Tài khoản thử nghiệm dev |
-| `DEMO_USER_PASSWORD` | Mật khẩu tài khoản test | Mật khẩu thử nghiệm dev |
-| `DEMO_USER_ID` | ID định danh người dùng trên Liferay | ID số nguyên (ví dụ: 32236) |
-| `LIFERAY_SITE_ID` | Site ID phân vùng dữ liệu Liferay | `20117` |
+| `EXPO_PUBLIC_API_BASE_URL` | Địa chỉ gốc của máy chủ Liferay Headless API | `https://<domain>.ngrok-free.dev` |
+| `EXPO_PUBLIC_STATIC_FLIPBOOK_BASE_URL` | Thư mục chứa gói ảnh trang lật 3D tĩnh | `https://<domain>.ngrok-free.dev/flipbooks/` |
+| `EXPO_PUBLIC_OAUTH_TOKEN_PATH` | Đường dẫn lấy Access Token OAuth 2.0 | `/o/oauth2/token` |
+| `EXPO_PUBLIC_OAUTH_CLIENT_ID` | Client ID ứng dụng di động đăng ký trên Liferay | Nhận từ quản trị viên Liferay |
+| `EXPO_PUBLIC_OAUTH_CLIENT_SECRET` | Client Secret ứng dụng di động | Nhận từ quản trị viên Liferay |
+| `EXPO_PUBLIC_LIFERAY_SITE_ID` | Site ID phân vùng dữ liệu Liferay | `20117` |
 | `CACHE_SLIDING_WINDOW_SIZE` | Số lượng trang nạp trước vào bộ nhớ đệm (Sliding Window) | `4` (tối ưu RAM dưới 40MB) |
 
 ---
@@ -79,7 +76,7 @@ File cấu hình `.env` đóng vai trò định tuyến toàn bộ kết nối m
 | **Giao tiếp React Native và WebView** | WebView gửi lên: `ENGINE_READY`, `PAGE_CHANGED`, `TAP_CENTER`. React Native gửi xuống bằng `injectJavaScript`: `TURN_NEXT`, `TURN_PREV`, `GO_TO_PAGE` |
 | **Lưu tiến độ đọc** | Mỗi lần đổi trang, app chờ 1.5 giây (Debounce). Nếu người đọc không lật tiếp thì mới gửi một `POST /o/c/readingprogresses`. Lật liên tục thì không gọi API để tránh làm nghẽn máy chủ |
 | **Giao diện** | Nền sáng (Light Mode), màu xanh lá chủ đạo `#059669`. Mỗi trang có khung viền xanh `2.5px` để tách biệt với nền. Không sử dụng emoji (dùng vector icons Ionicons), không watermark, không debug overlay |
-| **Xác thực** | Đang sử dụng Basic Auth `phuongthao` / `admin` để dev test nhanh. Dev tiếp theo sẽ chuyển sang OAuth 2.0 Client Credentials |
+| **Xác thực** | Sử dụng OAuth 2.0 Password Grant theo API công ty; access token và refresh token được lưu bằng Expo SecureStore, tự làm mới khi gần hết hạn |
 
 ---
 

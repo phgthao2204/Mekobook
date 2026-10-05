@@ -14,8 +14,8 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Book, ChapterTOC } from '../../types';
 import { getBookTOC } from '../../services/api';

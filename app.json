@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "vn.mekosoft.mekobook",
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
         "foregroundImage": "./assets/icon.png"
@@ -19,7 +20,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ]
     ]
   }
 }
