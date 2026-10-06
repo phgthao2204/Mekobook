@@ -1,11 +1,14 @@
-import * as SecureStore from 'expo-secure-store';
-import { ENV, getApiUrl } from '../config/env';
+import * as SecureStore from './sessionStorage';
+import { ENV, getApiUrl } from '../constants/env';
+import { SESSION_KEY } from '../constants/storage';
+import { authHttp, errorMessage } from './http';
 import { AuthSession, UserAccount } from '../types';
 import { setApiAccessToken } from './api';
 
-const SESSION_KEY = 'mekobook.auth.session';
 const REQUEST_TIMEOUT_MS = 15_000;
 const EXPIRY_SAFETY_WINDOW_MS = 30_000;
+let authEpoch = 0;
+let sessionWrites: Promise<void> = Promise.resolve();
 
 class AuthHttpError extends Error {
   constructor(
@@ -30,23 +33,25 @@ function formEncode(values: Record<string, string>): string {
     .join('&');
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+interface AuthResponse {
+  ok: boolean;
+  status: number;
+  json: () => Promise<any>;
+}
 
+async function requestAuth(url: string, init: RequestInit): Promise<AuthResponse> {
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    const response = await authHttp.request({ url, method: init.method || 'GET',
+      headers: init.headers as Record<string, string>, data: init.body, timeout: REQUEST_TIMEOUT_MS,
+      validateStatus: () => true });
+    return { ok: response.status >= 200 && response.status < 300, status: response.status,
+      json: async () => response.data };
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new AuthHttpError('Máy chủ phản hồi quá lâu. Vui lòng kiểm tra mạng và thử lại.');
-    }
-    throw new AuthHttpError('Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối Internet.');
-  } finally {
-    clearTimeout(timeout);
+    throw new AuthHttpError(errorMessage(error));
   }
 }
 
-async function readErrorMessage(response: Response): Promise<string> {
+async function readErrorMessage(response: AuthResponse): Promise<string> {
   try {
     const body = await response.json();
     return body.error_description || body.title || body.message || body.error || '';
@@ -57,7 +62,7 @@ async function readErrorMessage(response: Response): Promise<string> {
 
 async function requestToken(values: Record<string, string>): Promise<OAuthTokenResponse> {
   if (!ENV.OAUTH.CLIENT_ID || !ENV.OAUTH.CLIENT_SECRET) {
-    throw new Error('Thiếu EXPO_PUBLIC_OAUTH_CLIENT_ID hoặc EXPO_PUBLIC_OAUTH_CLIENT_SECRET.');
+    throw new Error('Chưa hoàn tất cấu hình OAuth. Cần xác nhận cơ chế đăng nhập an toàn hoặc cấu hình dev được phê duyệt.');
   }
 
   const oauthValues: Record<string, string> = {
@@ -71,7 +76,7 @@ async function requestToken(values: Record<string, string>): Promise<OAuthTokenR
     oauthValues.scope = ENV.OAUTH.SCOPE.trim();
   }
 
-  const response = await fetchWithTimeout(getApiUrl(ENV.API_PATHS.OAUTH_TOKEN), {
+  const response = await requestAuth(getApiUrl(ENV.API_PATHS.OAUTH_TOKEN), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -83,6 +88,10 @@ async function requestToken(values: Record<string, string>): Promise<OAuthTokenR
 
   if (!response.ok) {
     const details = await readErrorMessage(response);
+    const body = await response.json();
+    if (body?.error === 'invalid_client') {
+      throw new AuthHttpError('Máy chủ từ chối cấu hình OAuth client. Vui lòng kiểm tra với quản trị viên.', response.status);
+    }
     const invalidCredentials =
       response.status === 400 || response.status === 401 || response.status === 403;
     throw new AuthHttpError(
@@ -101,7 +110,7 @@ async function requestToken(values: Record<string, string>): Promise<OAuthTokenR
 }
 
 async function getCurrentUser(accessToken: string): Promise<UserAccount> {
-  const response = await fetchWithTimeout(
+  const response = await requestAuth(
     getApiUrl(ENV.API_PATHS.MY_USER_ACCOUNT),
     {
       headers: {
@@ -137,15 +146,22 @@ function createFallbackUser(username: string, reason: unknown): UserAccount {
   };
 }
 
-async function persistSession(session: AuthSession): Promise<AuthSession> {
-  await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(session), {
-    keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+async function persistSession(session: AuthSession, epoch = authEpoch): Promise<AuthSession> {
+  const write = sessionWrites.then(async () => {
+    if (epoch !== authEpoch) throw new Error('Phiên đăng nhập đã thay đổi.');
+    await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(session), {
+      keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+    });
+    if (epoch !== authEpoch) throw new Error('Phiên đăng nhập đã thay đổi.');
+    setApiAccessToken(session.accessToken);
   });
-  setApiAccessToken(session.accessToken);
+  sessionWrites = write.catch(() => {});
+  await write;
   return session;
 }
 
 export async function login(username: string, password: string): Promise<AuthSession> {
+  const epoch = ++authEpoch;
   const normalizedUsername = username.trim();
   if (!normalizedUsername || !password) {
     throw new Error('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.');
@@ -156,6 +172,7 @@ export async function login(username: string, password: string): Promise<AuthSes
     username: normalizedUsername,
     password,
   });
+  if (!token.refresh_token) throw new AuthHttpError('Máy chủ chưa cấp refresh token để duy trì phiên. Vui lòng kiểm tra cấu hình OAuth.');
   let user: UserAccount;
   try {
     user = await getCurrentUser(token.access_token);
@@ -174,10 +191,11 @@ export async function login(username: string, password: string): Promise<AuthSes
     tokenType: token.token_type || 'Bearer',
     expiresAt: Date.now() + (token.expires_in || 600) * 1000,
     user,
-  });
+  }, epoch);
 }
 
 export async function refreshSession(session: AuthSession): Promise<AuthSession> {
+  const epoch = authEpoch;
   if (!session.refreshToken) {
     throw new Error('Phiên đăng nhập không có refresh token.');
   }
@@ -204,12 +222,14 @@ export async function refreshSession(session: AuthSession): Promise<AuthSession>
     tokenType: token.token_type || 'Bearer',
     expiresAt: Date.now() + (token.expires_in || 600) * 1000,
     user,
-  });
+  }, epoch);
 }
 
 export async function restoreSession(): Promise<AuthSession | null> {
+  const epoch = authEpoch;
   try {
     const stored = await SecureStore.getItemAsync(SESSION_KEY);
+    if (epoch !== authEpoch) return null;
     if (!stored) return null;
 
     const session: AuthSession = JSON.parse(stored);
@@ -235,7 +255,7 @@ export async function restoreSession(): Promise<AuthSession | null> {
     if (session.user.profileUnavailable) {
       try {
         const user = await getCurrentUser(session.accessToken);
-        return await persistSession({ ...session, user });
+        return await persistSession({ ...session, user }, epoch);
       } catch (error) {
         if (error instanceof AuthHttpError && error.status === 401 && session.refreshToken) {
           return await refreshSession(session);
@@ -246,12 +266,15 @@ export async function restoreSession(): Promise<AuthSession | null> {
     return session;
   } catch (error) {
     console.warn('[Auth] Stored session could not be restored:', error);
-    await logout();
+    if (epoch === authEpoch) await logout();
     return null;
   }
 }
 
 export async function logout(): Promise<void> {
+  authEpoch++;
   setApiAccessToken(null);
-  await SecureStore.deleteItemAsync(SESSION_KEY);
+  const write = sessionWrites.then(() => SecureStore.deleteItemAsync(SESSION_KEY));
+  sessionWrites = write.catch(() => {});
+  await write;
 }
