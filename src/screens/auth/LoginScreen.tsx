@@ -1,3 +1,4 @@
+import { colors } from '../../constants/theme';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -47,7 +48,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.logoBadge}>
-          <Ionicons name="book" size={34} color="#FFFFFF" />
+          <Ionicons name="book" size={34} color={colors.surface} />
         </View>
         <Text style={styles.appName}>MEKOBOOK</Text>
         <Text style={styles.subtitle}>Đăng nhập để truy cập thư viện sách</Text>
@@ -55,7 +56,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         <View style={styles.form}>
           <Text style={styles.label}>Tên đăng nhập hoặc email</Text>
           <View style={styles.inputRow}>
-            <Ionicons name="person-outline" size={19} color="#64748B" />
+            <Ionicons name="person-outline" size={19} color={colors.muted} />
             <TextInput
               style={styles.input}
               value={username}
@@ -73,7 +74,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
           <Text style={styles.label}>Mật khẩu</Text>
           <View style={styles.inputRow}>
-            <Ionicons name="lock-closed-outline" size={19} color="#64748B" />
+            <Ionicons name="lock-closed-outline" size={19} color={colors.muted} />
             <TextInput
               style={styles.input}
               value={password}
@@ -92,7 +93,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               accessibilityRole="button"
               accessibilityLabel={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
             >
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#64748B" />
+              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.muted} />
             </TouchableOpacity>
           </View>
 
@@ -104,7 +105,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={colors.surface} />
             ) : (
               <Text style={styles.buttonText}>Đăng nhập</Text>
             )}
@@ -116,21 +117,21 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
+  safeArea: { flex: 1, backgroundColor: colors.background },
   container: { flex: 1, justifyContent: 'center', paddingHorizontal: 28 },
   logoBadge: {
     width: 68,
     height: 68,
     borderRadius: 22,
-    backgroundColor: '#059669',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
     marginBottom: 16,
   },
-  appName: { color: '#059669', fontSize: 28, fontWeight: '900', textAlign: 'center', letterSpacing: 2 },
-  subtitle: { color: '#64748B', fontSize: 14, textAlign: 'center', marginTop: 6, marginBottom: 32 },
-  form: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 20, borderWidth: 1, borderColor: '#E2E8F0' },
+  appName: { color: colors.primary, fontSize: 28, fontWeight: '900', textAlign: 'center', letterSpacing: 2 },
+  subtitle: { color: colors.muted, fontSize: 14, textAlign: 'center', marginTop: 6, marginBottom: 32 },
+  form: { backgroundColor: colors.surface, borderRadius: 18, padding: 20, borderWidth: 1, borderColor: colors.border },
   label: { color: '#334155', fontSize: 13, fontWeight: '700', marginBottom: 7, marginTop: 4 },
   inputRow: {
     height: 50,
@@ -142,9 +143,9 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     marginBottom: 16,
   },
-  input: { flex: 1, color: '#0F172A', fontSize: 14, marginHorizontal: 9 },
+  input: { flex: 1, color: colors.text, fontSize: 14, marginHorizontal: 9 },
   error: { color: '#DC2626', fontSize: 12, lineHeight: 17, marginBottom: 14 },
-  button: { height: 50, borderRadius: 11, backgroundColor: '#059669', alignItems: 'center', justifyContent: 'center' },
+  button: { height: 50, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   buttonDisabled: { opacity: 0.65 },
-  buttonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  buttonText: { color: colors.surface, fontSize: 15, fontWeight: '800' },
 });

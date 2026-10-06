@@ -4,6 +4,7 @@
  * ZERO EMOJIS - USES PURE VECTOR ICONS (Ionicons)
  */
 
+import { colors } from '../../constants/theme';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -17,8 +18,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Book, ChapterTOC } from '../../types';
+import { Book, ChapterTOC, UserPreference } from '../../types';
 import { getBookTOC } from '../../services/api';
+import { errorMessage } from '../../services/http';
 
 interface FlipbookControlsProps {
   book: Book;
@@ -29,6 +31,7 @@ interface FlipbookControlsProps {
   onPrevPage: () => void;
   onNextPage: () => void;
   onJumpToPage: (page: number) => void;
+  themeMode?: UserPreference['themeMode'];
 }
 
 export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
@@ -40,40 +43,48 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
   onPrevPage,
   onNextPage,
   onJumpToPage,
+  themeMode = 'LIGHT',
 }) => {
   const [showToc, setShowToc] = useState<boolean>(false);
   const [tocList, setTocList] = useState<ChapterTOC[]>([]);
   const [loadingToc, setLoadingToc] = useState<boolean>(false);
+  const [tocError, setTocError] = useState('');
 
   useEffect(() => {
+    let active = true;
     if (showToc && book.id) {
       setLoadingToc(true);
+      setTocError('');
       getBookTOC(book.id)
         .then((items) => {
-          setTocList(items);
+          if (active) setTocList(items);
         })
-        .finally(() => setLoadingToc(false));
+        .catch(error => { if (active) { setTocList([]); setTocError(errorMessage(error)); } })
+        .finally(() => { if (active) setLoadingToc(false); });
     }
+    return () => { active = false; };
   }, [showToc, book.id]);
 
   if (!visible) return null;
 
   const percentage = Math.round((currentPage / (totalPages || 1)) * 100);
   const pageLabel = currentPage === 1 && book.coverUrl ? 'Bìa sách' : `Trang ${currentPage}`;
+  const readingSurface = { backgroundColor: themeMode === 'DARK' ? '#18212F' : themeMode === 'SEPIA' ? '#EADFC8' : colors.surface };
+  const readingText = { color: themeMode === 'DARK' ? colors.surface : colors.text };
 
   return (
     <View style={styles.overlayContainer} pointerEvents="box-none">
       {/* TOP HEADER BAR */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, readingSurface]}>
         <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={22} color="#0F172A" />
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
 
         <View style={styles.titleContainer}>
-          <Text style={styles.bookTitle} numberOfLines={1}>
+          <Text style={[styles.bookTitle, readingText]} numberOfLines={1}>
             {book.title}
           </Text>
-          <Text style={styles.bookAuthor} numberOfLines={1}>
+          <Text style={[styles.bookAuthor, readingText]} numberOfLines={1}>
             {book.author}
           </Text>
         </View>
@@ -84,7 +95,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
           onPress={() => setShowToc(true)}
           activeOpacity={0.7}
         >
-          <Ionicons name="list" size={17} color="#059669" />
+          <Ionicons name="list" size={17} color={colors.primary} />
           <Text style={styles.tocButtonText}>Mục lục</Text>
         </TouchableOpacity>
 
@@ -96,7 +107,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
       </View>
 
       {/* BOTTOM NAVIGATION & PROGRESS BAR */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, readingSurface]}>
         <View style={styles.scrubberRow}>
           <TouchableOpacity
             style={[styles.navButton, currentPage <= 1 && styles.buttonDisabled]}
@@ -107,7 +118,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
             <Ionicons
               name="chevron-back"
               size={22}
-              color={currentPage <= 1 ? '#94A3B8' : '#FFFFFF'}
+              color={currentPage <= 1 ? '#94A3B8' : colors.surface}
             />
           </TouchableOpacity>
 
@@ -115,7 +126,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
             <View style={styles.progressBarBackground}>
               <View style={[styles.progressBarFill, { width: `${percentage}%` }]} />
             </View>
-            <Text style={styles.percentageText}>
+            <Text style={[styles.percentageText, readingText]}>
               {pageLabel} • {percentage}% hoàn thành
             </Text>
           </View>
@@ -129,7 +140,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
             <Ionicons
               name="chevron-forward"
               size={22}
-              color={currentPage >= totalPages ? '#94A3B8' : '#FFFFFF'}
+              color={currentPage >= totalPages ? '#94A3B8' : colors.surface}
             />
           </TouchableOpacity>
         </View>
@@ -153,7 +164,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
                 <View style={styles.modalHeaderIconBadge}>
-                  <Ionicons name="book" size={18} color="#059669" />
+                  <Ionicons name="book" size={18} color={colors.primary} />
                 </View>
                 <View>
                   <Text style={styles.modalTitle}>Mục Lục Cuốn Sách</Text>
@@ -167,14 +178,14 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
                 onPress={() => setShowToc(false)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close" size={20} color="#64748B" />
+                <Ionicons name="close" size={20} color={colors.muted} />
               </TouchableOpacity>
             </View>
 
             {/* Modal Content */}
             {loadingToc ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#059669" />
+                <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={styles.loadingText}>Đang tải mục lục Liferay Objects...</Text>
               </View>
             ) : (
@@ -238,7 +249,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
                 }}
                 ListEmptyComponent={
                   <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Chưa có mục lục cho tài liệu này</Text>
+                    <Text style={styles.loadingText}>{tocError || 'Chưa có mục lục cho tài liệu này'}</Text>
                   </View>
                 }
               />
@@ -265,7 +276,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.96)',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -285,12 +296,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   bookTitle: {
-    color: '#0F172A',
+    color: colors.text,
     fontSize: 13,
     fontWeight: '700',
   },
   bookAuthor: {
-    color: '#64748B',
+    color: colors.muted,
     fontSize: 11,
     marginTop: 2,
   },
@@ -306,7 +317,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   tocButtonText: {
-    color: '#059669',
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '700',
     marginLeft: 4,
@@ -317,7 +328,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.border,
   },
   pageBadgeText: {
     color: '#334155',
@@ -330,7 +341,7 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 34 : 16,
     paddingHorizontal: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,
@@ -346,17 +357,17 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#059669',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#059669',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 2,
   },
   buttonDisabled: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.border,
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -368,17 +379,17 @@ const styles = StyleSheet.create({
   progressBarBackground: {
     width: '100%',
     height: 6,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.border,
     borderRadius: 3,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#059669',
+    backgroundColor: colors.primary,
     borderRadius: 3,
   },
   percentageText: {
-    color: '#64748B',
+    color: colors.muted,
     fontSize: 11,
     marginTop: 4,
     fontWeight: '600',
@@ -392,7 +403,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalSheet: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
@@ -429,12 +440,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   modalTitle: {
-    color: '#0F172A',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '800',
   },
   modalSubtitle: {
-    color: '#64748B',
+    color: colors.muted,
     fontSize: 12,
     marginTop: 2,
     maxWidth: 240,
@@ -461,7 +472,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   tocItemLevel1: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.background,
     marginTop: 6,
   },
   tocItemLevel2: {
@@ -481,7 +492,7 @@ const styles = StyleSheet.create({
   level1Bar: {
     width: 3,
     height: 16,
-    backgroundColor: '#059669',
+    backgroundColor: colors.primary,
     borderRadius: 2,
     marginRight: 8,
   },
@@ -496,7 +507,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tocTextLevel1: {
-    color: '#0F172A',
+    color: colors.text,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -516,15 +527,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   tocPageBadgeActive: {
-    backgroundColor: '#059669',
+    backgroundColor: colors.primary,
   },
   tocPageText: {
-    color: '#64748B',
+    color: colors.muted,
     fontSize: 11,
     fontWeight: '600',
   },
   tocPageTextActive: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontWeight: '700',
   },
   loadingContainer: {
@@ -533,7 +544,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: '#64748B',
+    color: colors.muted,
     fontSize: 13,
     marginTop: 10,
   },

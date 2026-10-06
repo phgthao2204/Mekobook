@@ -5,8 +5,8 @@
 
 export const ENV = {
   // Liferay Staging Endpoints
-  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.1.254:8080',
-  STATIC_FLIPBOOK_BASE_URL: process.env.EXPO_PUBLIC_STATIC_FLIPBOOK_BASE_URL || 'http://192.168.1.254:8080/flipbooks/',
+  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || '',
+  STATIC_FLIPBOOK_BASE_URL: process.env.EXPO_PUBLIC_STATIC_FLIPBOOK_BASE_URL || '',
 
   OAUTH: {
     CLIENT_ID: process.env.EXPO_PUBLIC_OAUTH_CLIENT_ID || '',
@@ -53,6 +53,9 @@ export const ENV = {
 
 export function getApiUrl(path: string): string {
   const baseUrl = ENV.API_BASE_URL.replace(/\/$/, '');
+  if (!/^https?:\/\//.test(baseUrl) || /https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(baseUrl)) {
+    throw new Error('Cần cấu hình EXPO_PUBLIC_API_BASE_URL bằng domain máy chủ trong .env.');
+  }
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   return `${baseUrl}${normalizedPath}`;
 }

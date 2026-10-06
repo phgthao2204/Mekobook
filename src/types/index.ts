@@ -39,6 +39,7 @@ export interface Book {
   title: string;
   author: string;
   publisher?: string;
+  publicationYear?: number;
   language?: 'vi' | 'en';
   description?: string;
   coverUrl: string;
@@ -69,13 +70,32 @@ export interface ChapterTOC {
 /** 5. UserPreference - Cấu hình trải nghiệm đọc (/o/c/userpreferences) */
 export interface UserPreference {
   id?: number;
-  themeMode: 'LIGHT' | 'SEPIA' | 'DARK';
+  themeMode: 'LIGHT' | 'SEPIA' | 'DARK' | 'SYSTEM';
   brightness: number;
-  enablePageCurl3D: boolean;
-  pageCurlSpeed: number;
-  defaultViewMode: 'SINGLE' | 'DUAL' | 'AUTO';
-  keepScreenAwake: boolean;
-  fontSizeScale?: number;
+  pageTurnEffect: 'CURL_3D' | 'SLIDE' | 'FADE';
+  pageTurnSoundEnabled: boolean;
+  dualPageMode: boolean;
+}
+
+export interface DrmLicense {
+  id: number;
+  bookId: number;
+  licenseType: 'PERPETUAL' | 'RENTAL';
+  status: string;
+  /** Liferay workflow status is not a DRM entitlement status. */
+  workflowStatus?: string;
+  maxDevices: number;
+  isFavorite: boolean;
+}
+export interface BookAccess {
+  book: LibraryBook;
+  licenses: DrmLicense[];
+  canRead: boolean;
+}
+export interface PreparedReader {
+  book: LibraryBook;
+  initialPage: number;
+  preferences: UserPreference;
 }
 
 /** 6. ReadingProgress - Tiến độ đọc sách (/o/c/readingprogresses) */
@@ -112,6 +132,7 @@ export type FlipbookToReactNativeMessage =
   | { type: 'ERROR'; message: string };
 
 export type ReactNativeToFlipbookMessage =
+  | { type: 'ZOOM'; scale: number }
   | { type: 'TURN_NEXT' }
   | { type: 'TURN_PREV' }
   | { type: 'GO_TO_PAGE'; page: number };

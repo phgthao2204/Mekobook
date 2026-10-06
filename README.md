@@ -2,9 +2,13 @@
 
 Ứng dụng di động đọc sách 3D Flipbook tích hợp **Liferay Portal 7.4 GA132 CE** làm Headless CMS / Backend.
 
+> Luồng 1.1–2.4 đã được tổ chức lại trong `src/screens`, `src/navigation`, `src/component`, `src/hooks`, `src/constants`, `src/services`, `src/types`, `src/utils`. Xem [phạm vi và kiểm thử](docs/IMPLEMENTATION_1_1_TO_2_4.md). Không còn fallback sách mẫu khi API lỗi. OAuth secret đã cấu hình cục bộ cho bản dev sau khi người dùng chấp nhận rủi ro lộ trong bundle. Không commit `.env` hoặc phát hành bundle này như bản production.
+
 ---
 
 ## 1. Hướng Dẫn Khởi Chạy Nhanh Cho Developer (Quick Start)
+
+Để test bằng URL trên Chrome/Edge: `npx expo start --web --lan`, mở http://localhost:8081 trên máy tính hoặc địa chỉ HTTP LAN Expo hiển thị trên điện thoại cùng Wi-Fi. Trình đọc web dùng iframe StPageFlip; native vẫn dùng WebView. Phiên web dùng sessionStorage trong tab, không phải SecureStore; bản này chỉ phục vụ dev nội bộ, không deploy công khai với confidential OAuth secret.
 
 ### Yêu cầu tiên quyết:
 - Node.js >= 18 và npm >= 9
@@ -40,7 +44,7 @@ File cấu hình `.env` đóng vai trò định tuyến toàn bộ kết nối m
 | `EXPO_PUBLIC_STATIC_FLIPBOOK_BASE_URL` | Thư mục chứa gói ảnh trang lật 3D tĩnh | `https://<domain>.ngrok-free.dev/flipbooks/` |
 | `EXPO_PUBLIC_OAUTH_TOKEN_PATH` | Đường dẫn lấy Access Token OAuth 2.0 | `/o/oauth2/token` |
 | `EXPO_PUBLIC_OAUTH_CLIENT_ID` | Client ID ứng dụng di động đăng ký trên Liferay | Nhận từ quản trị viên Liferay |
-| `EXPO_PUBLIC_OAUTH_CLIENT_SECRET` | Client Secret ứng dụng di động | Nhận từ quản trị viên Liferay |
+| OAuth client secret | Không lưu confidential secret vào `EXPO_PUBLIC_`; cần thống nhất public client/proxy với backend | Chưa cấu hình trong `.env` |
 | `EXPO_PUBLIC_LIFERAY_SITE_ID` | Site ID phân vùng dữ liệu Liferay | `20117` |
 | `CACHE_SLIDING_WINDOW_SIZE` | Số lượng trang nạp trước vào bộ nhớ đệm (Sliding Window) | `4` (tối ưu RAM dưới 40MB) |
 
@@ -74,13 +78,15 @@ File cấu hình `.env` đóng vai trò định tuyến toàn bộ kết nối m
 | **Dữ liệu truyền về client** | Metadata sách là JSON, lấy từ Liferay `/o/c/books`. Nội dung sách là ảnh JPG từng trang (`mobile/{page}.jpg`, ~40KB/trang) lấy từ static server, không phải file zip hay PDF. Trang 1 là ảnh bìa (`coverUrl`), nội dung bắt đầu từ trang 2 |
 | **Cơ chế tải ảnh (Sliding Window)** | Mở sách chỉ tải các trang trong cửa sổ `[K-2 .. K+windowSize]`, không tải cả cuốn. Khi lật, cửa sổ dịch theo: trang mới được gán `src` để tải, trang xa bị gỡ `src` để giải phóng RAM. Ảnh đã tải nằm trong disk cache của WebView, nên lật lại không tải lại từ server |
 | **Giao tiếp React Native và WebView** | WebView gửi lên: `ENGINE_READY`, `PAGE_CHANGED`, `TAP_CENTER`. React Native gửi xuống bằng `injectJavaScript`: `TURN_NEXT`, `TURN_PREV`, `GO_TO_PAGE` |
-| **Lưu tiến độ đọc** | Mỗi lần đổi trang, app chờ 1.5 giây (Debounce). Nếu người đọc không lật tiếp thì mới gửi một `POST /o/c/readingprogresses`. Lật liên tục thì không gọi API để tránh làm nghẽn máy chủ |
+| **Tiến độ đọc** | Đọc tiến trình từ `GET /o/c/readingprogresses` để đọc tiếp. Không gửi POST lưu tiến trình khi chưa có hợp đồng API ghi được xác nhận |
 | **Giao diện** | Nền sáng (Light Mode), màu xanh lá chủ đạo `#059669`. Mỗi trang có khung viền xanh `2.5px` để tách biệt với nền. Không sử dụng emoji (dùng vector icons Ionicons), không watermark, không debug overlay |
 | **Xác thực** | Sử dụng OAuth 2.0 Password Grant theo API công ty; access token và refresh token được lưu bằng Expo SecureStore, tự làm mới khi gần hết hạn |
 
 ---
 
-## 4. Sơ Đồ Tuần Tự (Sequence Diagram - Mở Sách Đến Đóng Sách)
+## 4. Sơ đồ base trước khi chuyển sang đặc tả API mới
+
+Sơ đồ dưới đây mô tả base cũ, không phải hành vi bản hiện tại. Luồng hiện tại là thư viện → chi tiết → kiểm tra DRM/tiến trình/cấu hình → chờ ảnh trang → trình đọc. Phần POST lưu tiến trình trong sơ đồ đã được bỏ cho đến khi có hợp đồng API ghi. Xem tài liệu triển khai ở đầu README.
 
 ```mermaid
 sequenceDiagram

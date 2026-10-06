@@ -7,9 +7,9 @@
 import React, { useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
-import { Book, FlipbookToReactNativeMessage, ReactNativeToFlipbookMessage } from '../../types';
+import { Book, UserPreference, FlipbookToReactNativeMessage, ReactNativeToFlipbookMessage } from '../../types';
 import { generateFlipbookHtml } from './flipbookEngineHtml';
-import { ENV } from '../../config/env';
+import { ENV } from '../../constants/env';
 
 export interface FlipbookViewerProps {
   book: Book;
@@ -17,12 +17,15 @@ export interface FlipbookViewerProps {
   onPageChange?: (page: number, totalPages: number) => void;
   onToggleControls?: () => void;
   onReady?: (totalPages: number) => void;
+  onError?: (message: string) => void;
+  preferences: UserPreference;
 }
 
 export interface FlipbookViewerRef {
   flipNext: () => void;
   flipPrev: () => void;
   goToPage: (page: number) => void;
+  zoom: (scale: number) => void;
 }
 
 export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>(
@@ -33,6 +36,8 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
       onPageChange,
       onToggleControls,
       onReady,
+      onError,
+      preferences,
     },
     ref
   ) => {
@@ -44,7 +49,6 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
         (function() {
           var evt = new MessageEvent('message', { data: ${JSON.stringify(message)} });
           window.dispatchEvent(evt);
-          document.dispatchEvent(evt);
         })();
         true;
       `;
@@ -52,6 +56,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
     };
 
     useImperativeHandle(ref, () => ({
+      zoom: (scale) => postMessageToEngine({ type: 'ZOOM', scale }),
       flipNext: () => {
         postMessageToEngine({ type: 'TURN_NEXT' });
       },
@@ -68,8 +73,9 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
         book,
         initialPage,
         slidingWindowSize: ENV.FLIPBOOK.CACHE_SLIDING_WINDOW_SIZE,
+        preferences,
       });
-    }, [book, initialPage]);
+    }, [book, initialPage, preferences]);
 
     const handleMessage = (event: WebViewMessageEvent) => {
       try {
@@ -91,7 +97,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
             }
             break;
           case 'ERROR':
-            console.error('[FlipbookViewer] Engine error:', data.message);
+            onError?.(data.message);
             break;
         }
       } catch (err) {
@@ -107,6 +113,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
           source={{ html: htmlSource, baseUrl: ENV.API_BASE_URL }}
           style={styles.webView}
           onMessage={handleMessage}
+          onError={() => onError?.('Không thể khởi tạo trình đọc. Vui lòng thử lại.')}
           javaScriptEnabled={true}
           domStorageEnabled={true}
           allowFileAccess={true}

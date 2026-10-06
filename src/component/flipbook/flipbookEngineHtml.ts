@@ -8,7 +8,7 @@
  * - Real-time Debug telemetry bridge (Page, URL, Cached Window, Gestures)
  */
 
-import { Book } from '../../types';
+import { Book, UserPreference } from '../../types';
 import { getPageImageUrl } from '../../services/api';
 import { PAGE_FLIP_LIB_JS } from './pageFlipScript';
 
@@ -16,15 +16,17 @@ export interface FlipbookHtmlOptions {
   book: Book;
   initialPage?: number;
   slidingWindowSize?: number;
+  preferences: UserPreference;
 }
 
 export function generateFlipbookHtml({
   book,
   initialPage = 1,
   slidingWindowSize = 4,
+  preferences,
 }: FlipbookHtmlOptions): string {
-  const totalPages = book.totalPages || 35;
-  const hasCover = Boolean(book.coverUrl);
+  const totalPages = book.totalPages;
+  if (!Number.isInteger(totalPages) || totalPages < 1) throw new Error('Tổng số trang không hợp lệ.');
 
   // Exact 1:1 page mapping matching physical book & TOC numbering
   // Page 1 is Front Cover, Page 2..totalPages-1 are Content, Page totalPages is Back Cover
@@ -32,12 +34,7 @@ export function generateFlipbookHtml({
   for (let i = 1; i <= totalPages; i++) {
     const isFirst = i === 1;
     const isLast = i === totalPages;
-    let url = '';
-    if (isFirst && book.coverUrl) {
-      url = book.coverUrl.includes('?') ? book.coverUrl : `${book.coverUrl}?v=20261005_v4`;
-    } else {
-      url = getPageImageUrl(book, i);
-    }
+    const url = getPageImageUrl(book, i);
 
     pageUrls[i] = {
       url,
@@ -200,7 +197,7 @@ export function generateFlipbookHtml({
         return `
         <div class="page" data-page="${pageNum}">
           <div class="page-image-wrapper">
-            <img class="page-img" data-src="${pageInfo.url}" alt="${escapeHtml(pageInfo.label)}" />
+            <img class="page-img" data-src="${escapeHtml(pageInfo.url)}" alt="${escapeHtml(pageInfo.label)}" />
             <div class="page-spine-shadow"></div>
             <span class="page-number">${escapeHtml(pageInfo.label)}</span>
           </div>
@@ -223,9 +220,70 @@ export function generateFlipbookHtml({
       var initialPage = Math.max(1, Math.min(${initialPage}, totalPages));
       var windowSize = ${slidingWindowSize};
       var pageFlipInstance = null;
-      var hasCover = ${hasCover};
 
-      var pageUrlsMap = ${JSON.stringify(pageUrls)};
+      var preferences = ${JSON.stringify(preferences).replace(/</g, '\\u003c')};
+      var zoomScale = 1, panX = 0, panY = 0;
+      var changing = false;
+      bookEl.style.touchAction = 'none';
+      var background = preferences.themeMode === 'DARK' ? '#18212f' : preferences.themeMode === 'SEPIA' ? '#eadfc8' : '#F1F5F9';
+      document.body.style.backgroundColor = background;
+      document.getElementById('flipbook-container').style.backgroundColor = background;
+      bookEl.style.filter = 'brightness(' + preferences.brightness + ')' + (preferences.themeMode === 'SEPIA' ? ' sepia(0.35)' : '');
+      function applyZoom() {
+        var limitX = window.innerWidth * (zoomScale - 1) / 2;
+        var limitY = window.innerHeight * (zoomScale - 1) / 2;
+        panX = Math.max(-limitX, Math.min(limitX, panX));
+        panY = Math.max(-limitY, Math.min(limitY, panY));
+        bookEl.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + zoomScale + ')';
+      }
+      var audioContext = null;
+      function playPageSound() {
+        if (!preferences.pageTurnSoundEnabled) return;
+        try {
+          audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+          audioContext.resume();
+          var buffer = audioContext.createBuffer(1, Math.floor(audioContext.sampleRate * 0.12), audioContext.sampleRate);
+          var samples = buffer.getChannelData(0);
+          for (var i = 0; i < samples.length; i++) samples[i] = (Math.random() * 2 - 1) * 0.06 * (1 - i / samples.length);
+          var source = audioContext.createBufferSource(); source.buffer = buffer; source.connect(audioContext.destination); source.start();
+        } catch (_) {}
+      }
+      function waitForPage(page) {
+        updateSlidingWindow(page);
+        var pages = [page];
+        if (preferences.dualPageMode && page < totalPages) pages.push(page + 1);
+        return Promise.all(pages.map(function(p) {
+          var img = document.querySelector('[data-page="' + p + '"] .page-img');
+          if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+          return new Promise(function(resolve, reject) {
+            var timer = setTimeout(function() { cleanup(); reject(new Error('Không tải được ảnh trang ' + p)); }, 15000);
+            function cleanup() { clearTimeout(timer); img.removeEventListener('load', loaded); img.removeEventListener('error', failed); }
+            function loaded() { cleanup(); resolve(); }
+            function failed() { cleanup(); reject(new Error('Không tải được ảnh trang ' + p)); }
+            img.addEventListener('load', loaded); img.addEventListener('error', failed);
+          });
+        }));
+      }
+      function navigatePage(page, direction) {
+        if (changing || pageFlipInstance.getState() !== 'read') return;
+        var target = Math.max(1, Math.min(page, totalPages));
+        if (target === pageFlipInstance.getCurrentPageIndex() + 1) return;
+        changing = true;
+        waitForPage(target).then(function() {
+          if (preferences.pageTurnEffect === 'CURL_3D') {
+            if (direction === 1) pageFlipInstance.flipNext();
+            else if (direction === -1) pageFlipInstance.flipPrev();
+            else pageFlipInstance.flip(target - 1);
+          } else {
+            pageFlipInstance.turnToPage(target - 1);
+            bookEl.animate(preferences.pageTurnEffect === 'FADE' ? [{ opacity: 0.15 }, { opacity: 1 }]
+              : [{ transform: 'translateX(' + (direction < 0 ? '-8%' : '8%') + ')' }, { transform: 'translateX(0)' }], { duration: 260 });
+          }
+          playPageSound();
+          zoomScale = 1; panX = panY = 0; applyZoom();
+        }).catch(function(error) { postToRN({ type: 'ERROR', message: error.message }); })
+          .finally(function() { changing = false; });
+      }
 
       function postToRN(data) {
         if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
@@ -259,12 +317,11 @@ export function generateFlipbookHtml({
         });
       }
 
-      function initFlipbook() {
+      async function initFlipbook() {
         var containerWidth = window.innerWidth;
         var containerHeight = window.innerHeight;
 
-        var isWide = containerWidth >= 768;
-        var usePortrait = !isWide;
+        var usePortrait = !preferences.dualPageMode;
 
         var pageTargetWidth = usePortrait ? Math.floor(containerWidth * 0.94) : Math.floor((containerWidth * 0.95) / 2);
         var pageTargetHeight = Math.floor(containerHeight * 0.88);
@@ -272,13 +329,15 @@ export function generateFlipbookHtml({
         updateSlidingWindow(initialPage);
 
         try {
+          await waitForPage(initialPage);
+          bookEl.style.display = 'block';
           pageFlipInstance = new St.PageFlip(bookEl, {
             width: pageTargetWidth,
             height: pageTargetHeight,
             size: 'stretch',
-            minWidth: 260,
+            minWidth: preferences.dualPageMode ? 80 : 160,
             maxWidth: 1200,
-            minHeight: 360,
+            minHeight: 120,
             maxHeight: 1800,
             drawShadow: true,
             flippingTime: 550,
@@ -288,15 +347,15 @@ export function generateFlipbookHtml({
             mobileScrollSupport: false,
             swipeDistance: 15,
             showPageCorners: true,
-            useMouseEvents: true,
+            useMouseEvents: preferences.pageTurnEffect === 'CURL_3D',
             clickEventForward: true,
           });
-
-          pageFlipInstance.loadFromHTML(document.querySelectorAll('.page'));
 
           pageFlipInstance.on('flip', function(e) {
             var newPage = e.data + 1;
             updateSlidingWindow(newPage);
+            if (!changing) playPageSound();
+            waitForPage(newPage).catch(function(error) { postToRN({ type: 'ERROR', message: error.message }); });
             postToRN({
               type: 'PAGE_CHANGED',
               page: newPage,
@@ -313,8 +372,9 @@ export function generateFlipbookHtml({
             });
           });
 
+          pageFlipInstance.loadFromHTML(document.querySelectorAll('.page'));
         } catch (err) {
-          loadingEl.innerHTML = '<div style="color:#F87171;text-align:center;padding:20px;">Lỗi: ' + err.message + '</div>';
+          loadingEl.textContent = 'Không thể mở nội dung sách.';
           postToRN({ type: 'ERROR', message: err.message });
         }
       }
@@ -339,7 +399,11 @@ export function generateFlipbookHtml({
           var dt = Date.now() - touchStartTime;
 
           // Quick tap within center 40%
-          if (dx < 10 && dy < 10 && dt < 280) {
+          if (pageFlipInstance && zoomScale === 1 && preferences.pageTurnEffect !== 'CURL_3D' && dx > 40 && dy < 40) {
+            var dir = e.changedTouches[0].clientX < touchStartX ? 1 : -1;
+            navigatePage(pageFlipInstance.getCurrentPageIndex() + 1 + dir * (preferences.dualPageMode ? 2 : 1), dir);
+          }
+          if (zoomScale === 1 && dx < 10 && dy < 10 && dt < 280) {
             var x = e.changedTouches[0].clientX;
             var w = window.innerWidth;
             if (x > w * 0.3 && x < w * 0.7) {
@@ -349,22 +413,40 @@ export function generateFlipbookHtml({
         }
       }, { passive: true });
 
+      var drag = null;
+      bookEl.addEventListener('pointerdown', function(e) {
+        if (zoomScale <= 1) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        drag = { x: e.clientX, y: e.clientY, px: panX, py: panY };
+        bookEl.setPointerCapture(e.pointerId);
+      }, true);
+      bookEl.addEventListener('pointermove', function(e) {
+        if (!drag) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        panX = drag.px + e.clientX - drag.x; panY = drag.py + e.clientY - drag.y; applyZoom();
+      }, true);
+      bookEl.addEventListener('pointerup', function(e) { if (drag) { e.stopImmediatePropagation(); drag = null; } }, true);
+      bookEl.addEventListener('pointercancel', function() { drag = null; });
+      bookEl.addEventListener('touchstart', function(e) { if (zoomScale > 1) e.stopImmediatePropagation(); }, { capture: true, passive: true });
+      bookEl.addEventListener('touchmove', function(e) { if (zoomScale > 1) { e.preventDefault(); e.stopImmediatePropagation(); } }, { capture: true, passive: false });
       function handleRNCommand(rawData) {
         try {
           var msg = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
           if (!pageFlipInstance) return;
 
           switch(msg.type) {
+            case 'ZOOM':
+              zoomScale = Math.max(1, Math.min(3, Number(msg.scale) || 1));
+              panX = panY = 0; applyZoom(); break;
             case 'TURN_NEXT':
-              pageFlipInstance.flipNext();
+              navigatePage(pageFlipInstance.getCurrentPageIndex() + 1 + (preferences.dualPageMode ? 2 : 1), 1);
               break;
             case 'TURN_PREV':
-              pageFlipInstance.flipPrev();
+              navigatePage(pageFlipInstance.getCurrentPageIndex() + 1 - (preferences.dualPageMode ? 2 : 1), -1);
               break;
             case 'GO_TO_PAGE':
               var target = Math.max(0, Math.min(msg.page - 1, totalPages - 1));
-              updateSlidingWindow(msg.page);
-              pageFlipInstance.flip(target);
+              navigatePage(target + 1, 0);
               break;
           }
         } catch(e) {
@@ -381,6 +463,10 @@ export function generateFlipbookHtml({
         }
       });
 
+      window.addEventListener('pagehide', function() {
+        if (audioContext) audioContext.close();
+        if (pageFlipInstance) pageFlipInstance.destroy();
+      });
       window.onload = initFlipbook;
     })();
   </script>
