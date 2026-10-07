@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
-import { AuthSession } from '../types';
-import { login, logout, refreshSession, restoreSession } from '../services/auth';
+import { AuthSession, UserAccount } from '../types';
+import { login, logout, refreshSession, reloadUserProfile, restoreSession } from '../services/auth';
 import { setApiAccessToken, setSessionRenewal } from '../services/http';
 
 interface AuthContextValue {
@@ -9,6 +9,7 @@ interface AuthContextValue {
   restoring: boolean;
   signIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<UserAccount>;
 }
 const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -56,7 +57,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     return () => { clearTimeout(timer); listener.remove(); };
   }, [session]);
-  return <AuthContext.Provider value={{ session, restoring, signOut,
+  const refreshProfile = async (): Promise<UserAccount> => {
+    const current = sessionRef.current;
+    if (!current) throw new Error('Vui lòng đăng nhập lại.');
+    const version = generation.current;
+    const next = await reloadUserProfile(current);
+    if (version !== generation.current) throw new Error('Phiên đăng nhập đã đóng.');
+    update(next);
+    return next.user;
+  };
+  return <AuthContext.Provider value={{ session, restoring, signOut, refreshProfile,
     signIn: async (username, password) => {
       const version = ++generation.current;
       const next = await login(username, password);

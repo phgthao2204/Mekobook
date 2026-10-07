@@ -11,6 +11,7 @@ import { getMediaRequestHeaders } from '../../services/api';
 import { errorMessage } from '../../services/http';
 import { colors } from '../../constants/theme';
 import { LoadState } from '../../component/LoadState';
+import { clampPage, hasStartedReading } from '../../utils/reader';
 export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, 'BookDetail'>) {
   const [access, setAccess] = useState<BookAccess | null>(null);
   const [error, setError] = useState('');
@@ -24,7 +25,8 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
   }, [route.params.bookId, attempt]));
   if (!access) return <LoadState error={error} onRetry={() => setAttempt(x => x + 1)} onBack={navigation.goBack} />;
   const { book, licenses, canRead } = access;
-  const page = book.readingProgress?.currentPage || 1;
+  const page = clampPage(book.readingProgress?.currentPage || 1, book.totalPages);
+  const started = hasStartedReading(book.readingProgress);
   const open = (mode: 'start' | 'continue') => navigation.navigate('BookLoading', { bookId: book.id, mode });
   return <SafeAreaView style={styles.screen}>
     <TouchableOpacity accessibilityRole="button" accessibilityLabel="Quay lại thư viện" onPress={navigation.goBack} style={styles.back}>
@@ -38,18 +40,19 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
       <Text style={styles.text}>Năm xuất bản: {book.publicationYear || 'Chưa có thông tin'}</Text>
       <Text style={styles.text}>{book.totalPages} trang</Text>
       <Text style={styles.text}>{book.description || 'Chưa có mô tả'}</Text>
-      <Text style={styles.text}>Tiến trình: {book.readingProgress ? `Trang ${page} · ${book.readingProgress.percentage}%` : 'Chưa đọc'}</Text>
+      <Text style={styles.text}>Tiến trình: {access.progressUnavailable ? 'Chưa tải được tiến trình. Vui lòng thử lại.' : book.readingProgress ? `Trang ${page} · ${Math.max(0, Math.min(100, book.readingProgress.percentage || 0))}%` : 'Chưa đọc'}</Text>
+      {access.progressUnavailable && <TouchableOpacity accessibilityRole="button" onPress={() => setAttempt(x => x + 1)}><Text style={styles.muted}>Tải lại tiến trình</Text></TouchableOpacity>}
       <View style={styles.license}>
-        <Text style={styles.text}>Quyền đọc: {book.isFree ? 'Miễn phí' : canRead ? 'Giấy phép còn hiệu lực' : 'Chưa có giấy phép còn hiệu lực'}</Text>
+        <Text style={styles.text}>Quyền đọc: {book.isFree ? 'Miễn phí' : access.licensesUnavailable ? 'Chưa kiểm tra được giấy phép' : canRead ? 'Giấy phép còn hiệu lực' : 'Chưa xác nhận giấy phép còn hiệu lực'}</Text>
         {licenses.map(license => <Text key={license.id} style={styles.muted}>
           {license.licenseType} · {license.status === 'UNKNOWN' ? 'API chưa cung cấp trạng thái hiệu lực' : license.status} · Tối đa {license.maxDevices} thiết bị
         </Text>)}
       </View>
       <TouchableOpacity disabled={!canRead} accessibilityRole="button" style={[styles.button, !canRead && styles.disabled]}
-        onPress={() => open(page > 1 ? 'continue' : 'start')}>
-        <Text style={styles.buttonText}>{page > 1 ? `Đọc tiếp từ trang ${page}` : 'Bắt đầu đọc'}</Text>
+        onPress={() => open(started ? 'continue' : 'start')}>
+        <Text style={styles.buttonText}>{access.progressUnavailable ? 'Đọc từ đầu (chưa tải được tiến trình)' : started ? `Đọc tiếp từ trang ${page}` : 'Bắt đầu đọc'}</Text>
       </TouchableOpacity>
-      {page > 1 && <TouchableOpacity disabled={!canRead} style={styles.button} onPress={() => open('start')}>
+      {started && <TouchableOpacity disabled={!canRead} accessibilityRole="button" style={[styles.button, !canRead && styles.disabled]} onPress={() => open('start')}>
         <Text style={styles.buttonText}>Đọc lại từ đầu</Text>
       </TouchableOpacity>}
     </ScrollView>

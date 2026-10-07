@@ -8,10 +8,14 @@ let token: string | null = null;
 let renewSession: (() => Promise<string>) | null = null;
 let renewal: Promise<string> | null = null;
 function useWebDevProxy(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
-  if (typeof window !== 'undefined' && typeof __DEV__ !== 'undefined' && __DEV__) {
+  const browserOrigin =
+    typeof window !== 'undefined' && typeof window.location?.origin === 'string'
+      ? window.location.origin
+      : null;
+  if (browserOrigin && typeof __DEV__ !== 'undefined' && __DEV__) {
     const url = new URL(config.url || '', config.baseURL || ENV.API_BASE_URL);
     if (url.origin === new URL(ENV.API_BASE_URL).origin && url.pathname.startsWith('/o/')) {
-      config.baseURL = window.location.origin;
+      config.baseURL = browserOrigin;
       config.url = `/__mekobook_api${url.pathname}${url.search}`;
     }
   }

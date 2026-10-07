@@ -1,7 +1,7 @@
 import { colors } from '../../constants/theme';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
-  ActivityIndicator, FlatList, Image, Modal, Platform, RefreshControl,
+  ActivityIndicator, FlatList, Image, Platform, RefreshControl,
   StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,7 +15,7 @@ type ViewMode = 'grid' | 'list';
 interface BookCatalogProps {
   user: UserAccount;
   onSelectBook: (book: LibraryBook) => void;
-  onLogout: () => Promise<void>;
+  onOpenAccount: () => void;
 }
 
 function latestProgress(items: ReadingProgress[]): Map<number, ReadingProgress> {
@@ -30,6 +30,7 @@ function latestProgress(items: ReadingProgress[]): Map<number, ReadingProgress> 
 }
 
 function readingState(book: LibraryBook) {
+  if (book.progressUnavailable) return { label: 'Chưa tải tiến trình', color: colors.muted, background: '#F1F5F9' };
   const progress = book.readingProgress;
   if (!progress || progress.currentPage < 1 || (progress.readStatus === 'NOT_STARTED' && progress.percentage <= 0)) {
     return { label: 'Chưa đọc', color: colors.muted, background: '#F1F5F9' };
@@ -44,32 +45,35 @@ function formatDate(timestamp?: number): string {
   return timestamp ? new Date(timestamp).toLocaleDateString('vi-VN') : '';
 }
 
-export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, onLogout }) => {
+export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, onOpenAccount }) => {
   const [books, setBooks] = useState<LibraryBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [showAccount, setShowAccount] = useState(false);
   const [error, setError] = useState('');
+  const requestId = useRef(0);
 
   const loadLibrary = async () => {
+    const version = ++requestId.current;
     setError('');
     try {
-      const [bookItems, progressItems] = await Promise.all([
+      const [bookResult, progressResult] = await Promise.allSettled([
         getBooks(100), getReadingProgresses(200),
       ]);
-      const progressByBook = latestProgress(progressItems);
-      setBooks(bookItems.map((book) => ({ ...book, readingProgress: progressByBook.get(book.id) })));
+      if (version !== requestId.current) return;
+      if (bookResult.status === 'rejected') throw bookResult.reason;
+      const progressByBook = latestProgress(progressResult.status === 'fulfilled' ? progressResult.value : []);
+      setBooks(bookResult.value.map((book) => ({ ...book, progressUnavailable: progressResult.status === 'rejected', readingProgress: progressByBook.get(book.id) })));
+      if (progressResult.status === 'rejected') setError('Đã tải sách nhưng chưa tải được tiến trình đọc.');
     } catch (error) {
-      setError(errorMessage(error));
+      if (version === requestId.current) setError(errorMessage(error));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (version === requestId.current) { setLoading(false); setRefreshing(false); }
     }
   };
 
-  useEffect(() => { loadLibrary(); }, []);
+  useEffect(() => { loadLibrary(); return () => { requestId.current++; }; }, []);
 
   const filteredBooks = useMemo(() => {
     const query = searchQuery.trim().toLocaleLowerCase('vi-VN');
@@ -90,13 +94,13 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
           <View style={[styles.stateBadge, { backgroundColor: state.background }]}>
             <Text style={[styles.stateText, { color: state.color }]}>{state.label}</Text>
           </View>
-          {progress && progress.currentPage > 1 ? (
+          {progress && progress.currentPage >= 1 ? (
             <Text style={styles.pageProgress} numberOfLines={1}>
               Trang {progress.currentPage}/{book.totalPages} · {percentage}%
             </Text>
           ) : null}
         </View>
-        {progress && progress.currentPage > 1 ? (
+        {progress && progress.currentPage >= 1 ? (
           <>
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${percentage}%` }]} />
@@ -163,30 +167,11 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
           <Text style={styles.appName}>MEKOBOOK</Text>
           <Text style={styles.subTitle}>Thư viện sách điện tử</Text>
         </View>
-        <TouchableOpacity style={styles.userBadge} onPress={() => setShowAccount(true)}>
+        <TouchableOpacity style={styles.userBadge} onPress={onOpenAccount} accessibilityRole="button" accessibilityLabel="Mở thông tin tài khoản">
           <View style={styles.userDot} />
           <Text style={styles.userBadgeText} numberOfLines={1}>{user.name}</Text>
         </TouchableOpacity>
       </View>
-
-      <Modal visible={showAccount} transparent animationType="fade" onRequestClose={() => setShowAccount(false)}>
-        <View style={styles.modalBackdrop}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowAccount(false)} />
-          <View style={styles.accountCard}>
-            <View style={styles.accountIcon}><Ionicons name="person" size={28} color={colors.primary} /></View>
-            <Text style={styles.accountName}>{user.name}</Text>
-            <Text style={styles.accountEmail}>{user.emailAddress || 'Email chưa được API hồ sơ cung cấp'}</Text>
-            {user.profileUnavailable ? <Text style={styles.profileWarning}>Hồ sơ tạm thời chưa khả dụng.</Text> : null}
-            <TouchableOpacity style={styles.logoutButton} onPress={async () => { setShowAccount(false); await onLogout(); }}>
-              <Ionicons name="log-out-outline" size={18} color={colors.error} />
-              <Text style={styles.logoutText}>Đăng xuất</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.closeButton} onPress={() => setShowAccount(false)}>
-              <Text style={styles.closeButtonText}>Đóng</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       <View style={styles.toolsContainer}>
         {error ? <TouchableOpacity accessibilityRole="button" onPress={() => { setLoading(true); loadLibrary(); }}>
@@ -208,10 +193,10 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
         <View style={styles.libraryToolbar}>
           <Text style={styles.resultCount}>{filteredBooks.length} cuốn sách</Text>
           <View style={styles.viewSwitcher}>
-            <TouchableOpacity style={[styles.viewButton, viewMode === 'grid' && styles.viewButtonActive]} onPress={() => setViewMode('grid')} accessibilityLabel="Dạng lưới">
+            <TouchableOpacity style={[styles.viewButton, viewMode === 'grid' && styles.viewButtonActive]} onPress={() => setViewMode('grid')} accessibilityLabel="Dạng lưới" accessibilityState={{ selected: viewMode === 'grid' }}>
               <Ionicons name="grid-outline" size={18} color={viewMode === 'grid' ? colors.surface : colors.muted} />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.viewButton, viewMode === 'list' && styles.viewButtonActive]} onPress={() => setViewMode('list')} accessibilityLabel="Dạng danh sách">
+            <TouchableOpacity style={[styles.viewButton, viewMode === 'list' && styles.viewButtonActive]} onPress={() => setViewMode('list')} accessibilityLabel="Dạng danh sách" accessibilityState={{ selected: viewMode === 'list' }}>
               <Ionicons name="list-outline" size={20} color={viewMode === 'list' ? colors.surface : colors.muted} />
             </TouchableOpacity>
           </View>
@@ -252,12 +237,12 @@ const styles = StyleSheet.create({
   viewButton: { width: 36, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 7 },
   viewButtonActive: { backgroundColor: colors.primary },
   listContent: { paddingHorizontal: 18, paddingBottom: 24 },
-  gridRow: { gap: 12 },
+  gridRow: { justifyContent: 'space-between' },
   bookCard: { backgroundColor: colors.surface, borderRadius: 15, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, marginBottom: 13, elevation: 2, shadowColor: colors.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 },
-  listCard: { flexDirection: 'row', minHeight: 174 },
-  gridCard: { flex: 1, minWidth: 0 },
+  listCard: { flexDirection: 'row', height: 174 },
+  gridCard: { width: '48.5%' },
   coverWrapper: { position: 'relative', backgroundColor: colors.border },
-  listCover: { width: 118, minHeight: 174, borderRightWidth: 1, borderRightColor: '#D1FAE5' },
+  listCover: { width: 118, height: 174, borderRightWidth: 1, borderRightColor: '#D1FAE5' },
   gridCover: { width: '100%', aspectRatio: 0.72 },
   coverImage: { width: '100%', height: '100%' },
   pageCountBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(15,23,42,0.78)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 5 },
@@ -284,13 +269,4 @@ const styles = StyleSheet.create({
   readButtonText: { color: colors.surface, fontSize: 11, fontWeight: '800' },
   centerContainer: { flex: 1, minHeight: 220, justifyContent: 'center', alignItems: 'center', paddingVertical: 50 },
   loadingText: { color: colors.muted, fontSize: 13, marginTop: 12 }, emptyText: { color: colors.muted, fontSize: 14, marginTop: 10 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  accountCard: { width: '100%', maxWidth: 380, borderRadius: 20, backgroundColor: colors.surface, padding: 24, alignItems: 'center' },
-  accountIcon: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  accountName: { color: colors.text, fontSize: 18, fontWeight: '800', textAlign: 'center' },
-  accountEmail: { color: colors.muted, fontSize: 13, marginTop: 5, marginBottom: 22 },
-  profileWarning: { color: '#B45309', backgroundColor: '#FFFBEB', borderRadius: 8, padding: 10, fontSize: 12, textAlign: 'center', marginBottom: 16 },
-  logoutButton: { width: '100%', height: 46, borderRadius: 10, backgroundColor: '#FEF2F2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  logoutText: { color: colors.error, fontSize: 14, fontWeight: '700', marginLeft: 7 },
-  closeButton: { paddingTop: 16, paddingHorizontal: 20 }, closeButtonText: { color: colors.muted, fontSize: 13, fontWeight: '600' },
 });

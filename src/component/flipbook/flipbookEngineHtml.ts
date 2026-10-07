@@ -11,9 +11,11 @@
 import { Book, UserPreference } from '../../types';
 import { getPageImageUrl } from '../../services/api';
 import { PAGE_FLIP_LIB_JS } from './pageFlipScript';
+import { ENV } from '../../constants/env';
 
 export interface FlipbookHtmlOptions {
   book: Book;
+  accessToken?: string;
   initialPage?: number;
   slidingWindowSize?: number;
   preferences: UserPreference;
@@ -21,6 +23,7 @@ export interface FlipbookHtmlOptions {
 
 export function generateFlipbookHtml({
   book,
+  accessToken = '',
   initialPage = 1,
   slidingWindowSize = 4,
   preferences,
@@ -219,6 +222,8 @@ export function generateFlipbookHtml({
       var totalPages = ${totalPages};
       var initialPage = Math.max(1, Math.min(${initialPage}, totalPages));
       var windowSize = ${slidingWindowSize};
+      var accessToken = ${JSON.stringify(accessToken).replace(/</g, '\\u003c')};
+      var apiOrigin = ${JSON.stringify(new URL(ENV.API_BASE_URL).origin)};
       var pageFlipInstance = null;
 
       var preferences = ${JSON.stringify(preferences).replace(/</g, '\\u003c')};
@@ -291,6 +296,60 @@ export function generateFlipbookHtml({
         }
       }
 
+      function clearImage(img) {
+        if (img.loadController) { img.loadController.abort(); img.loadController = null; }
+        var objectUrl = img.getAttribute('data-object-url');
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        img.removeAttribute('data-object-url');
+        img.removeAttribute('data-loading-src');
+        img.removeAttribute('data-loaded-src');
+        img.removeAttribute('src');
+      }
+
+      function loadPageImage(img, targetSrc) {
+        if (img.getAttribute('data-loading-src') === targetSrc
+          || (img.getAttribute('data-loaded-src') === targetSrc && (!img.complete || img.naturalWidth > 0))) return;
+        img.setAttribute('data-loading-src', targetSrc);
+        var target;
+        try { target = new URL(targetSrc); } catch (_) { img.src = targetSrc; return; }
+        if (!accessToken || target.origin !== apiOrigin) {
+          img.src = targetSrc;
+          img.setAttribute('data-loaded-src', targetSrc);
+          img.removeAttribute('data-loading-src');
+          return;
+        }
+        var controller = new AbortController();
+        img.loadController = controller;
+        fetch(targetSrc, {
+          signal: controller.signal,
+          headers: {
+            'Authorization': 'Bearer ' + accessToken,
+            'ngrok-skip-browser-warning': 'true'
+          }
+        }).then(function(response) {
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          if (!/^image\\//i.test(response.headers.get('content-type') || '')) throw new Error('Máy chủ chưa trả ảnh hợp lệ.');
+          return response.blob();
+        }).then(function(blob) {
+          if (img.loadController !== controller || controller.signal.aborted) return;
+          img.loadController = null;
+          var oldObjectUrl = img.getAttribute('data-object-url');
+          if (oldObjectUrl) URL.revokeObjectURL(oldObjectUrl);
+          var objectUrl = URL.createObjectURL(blob);
+          img.setAttribute('data-object-url', objectUrl);
+          img.setAttribute('data-loaded-src', targetSrc);
+          img.removeAttribute('data-loading-src');
+          img.src = objectUrl;
+        }).catch(function(error) {
+          if (controller.signal.aborted || img.loadController !== controller) return;
+          img.loadController = null;
+          img.removeAttribute('data-loading-src');
+          // Only the active page's waitForPage reports errors. A failed
+          // neighbor preload must not close a page that is already readable.
+          img.dispatchEvent(new Event('error'));
+        });
+      }
+
       // SLIDING WINDOW PRE-CACHING
       function updateSlidingWindow(currentPage) {
         var minPage = Math.max(1, currentPage - 2);
@@ -305,14 +364,10 @@ export function generateFlipbookHtml({
 
           if (p >= minPage && p <= maxPage) {
             var targetSrc = img.getAttribute('data-src');
-            if (img.src !== targetSrc) {
-              img.src = targetSrc;
-            }
+            loadPageImage(img, targetSrc);
             loadedPages.push(p);
           } else {
-            if (img.src && img.src !== '') {
-              img.removeAttribute('src');
-            }
+            if (img.src || img.getAttribute('data-loading-src')) clearImage(img);
           }
         });
       }
@@ -432,6 +487,7 @@ export function generateFlipbookHtml({
       function handleRNCommand(rawData) {
         try {
           var msg = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+          if (msg.type === 'SET_ACCESS_TOKEN') { accessToken = typeof msg.token === 'string' ? msg.token : ''; return; }
           if (!pageFlipInstance) return;
 
           switch(msg.type) {
@@ -464,6 +520,7 @@ export function generateFlipbookHtml({
       });
 
       window.addEventListener('pagehide', function() {
+        document.querySelectorAll('.page-img').forEach(function(img) { clearImage(img); });
         if (audioContext) audioContext.close();
         if (pageFlipInstance) pageFlipInstance.destroy();
       });

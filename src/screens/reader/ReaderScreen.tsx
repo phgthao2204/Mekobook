@@ -6,12 +6,15 @@ import { FlipbookViewer, FlipbookViewerRef } from '../../component/flipbook/Flip
 import { FlipbookControls } from '../../component/flipbook/FlipbookControls';
 import { LoadState } from '../../component/LoadState';
 import { colors } from '../../constants/theme';
+import { useAuth } from '../../hooks/useAuth';
 export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, 'Reader'>) {
+  const { session } = useAuth();
   const { book, initialPage } = route.params;
   const [preferences] = useState(() => ({ ...route.params.preferences,
     themeMode: route.params.preferences.themeMode === 'SYSTEM'
       ? (Appearance.getColorScheme() === 'dark' ? 'DARK' : 'LIGHT') as 'DARK' | 'LIGHT' : route.params.preferences.themeMode }));
   const [page, setPage] = useState(initialPage);
+  const [openingPage, setOpeningPage] = useState(initialPage);
   const [visible, setVisible] = useState(true);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
@@ -25,22 +28,23 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
   }, [ready, error, attempt]);
   return <View style={styles.screen}>
     <StatusBar hidden={ready && !visible} barStyle={preferences.themeMode === 'DARK' ? 'light-content' : 'dark-content'} />
-    <FlipbookViewer key={attempt} ref={viewer} book={book} initialPage={initialPage} preferences={preferences}
+    <FlipbookViewer key={attempt} ref={viewer} book={book} accessToken={session?.accessToken}
+      initialPage={openingPage} preferences={preferences}
       onPageChange={next => { setPage(next); setZoom(1); }} onToggleControls={() => setVisible(x => !x)}
       onReady={() => { setReady(true); setError(''); }} onError={setError} />
     {(!ready || error) ? <View style={StyleSheet.absoluteFill}>
-      <LoadState message={`Đang mở ${book.title} — trang ${initialPage}...`} error={error} onBack={navigation.goBack}
-        onRetry={() => { setError(''); setReady(false); setZoom(1); setPage(initialPage); setAttempt(x => x + 1); }} />
+      <LoadState message={`Đang mở ${book.title} — trang ${openingPage}...`} error={error} onBack={navigation.goBack}
+        onRetry={() => { setError(''); setReady(false); setZoom(1); setOpeningPage(page); setAttempt(x => x + 1); }} />
     </View> : <>
       <FlipbookControls book={book} currentPage={page} totalPages={book.totalPages} visible={visible}
         themeMode={preferences.themeMode}
         onBack={navigation.goBack} onPrevPage={() => viewer.current?.flipPrev()} onNextPage={() => viewer.current?.flipNext()}
         onJumpToPage={target => viewer.current?.goToPage(target)} />
-      {visible && <View style={styles.zoom}>
+      {visible && <View style={[styles.zoom, { backgroundColor: preferences.themeMode === 'DARK' ? '#18212F' : preferences.themeMode === 'SEPIA' ? '#EADFC8' : colors.surface }]}>
         {[1, 1.5, 2, 3].map(scale => <TouchableOpacity key={scale} accessibilityRole="button"
           accessibilityLabel={`Phóng trang ${scale * 100}%`} style={styles.zoomButton}
           onPress={() => { setZoom(scale); viewer.current?.zoom(scale); }}>
-          <Text style={{ color: zoom === scale ? colors.primary : colors.muted }}>{scale * 100}%</Text>
+          <Text style={{ color: zoom === scale ? colors.primary : preferences.themeMode === 'DARK' ? '#CBD5E1' : colors.muted }}>{scale * 100}%</Text>
         </TouchableOpacity>)}
       </View>}
     </>}

@@ -18,6 +18,12 @@ export interface UserAccount {
   name: string;
   givenName?: string;
   familyName?: string;
+  alternateName?: string;
+  accountBriefs?: Array<{
+    id?: number;
+    name?: string;
+    role?: string;
+  }>;
   profileUnavailable?: boolean;
   profileError?: string;
 }
@@ -91,6 +97,8 @@ export interface BookAccess {
   book: LibraryBook;
   licenses: DrmLicense[];
   canRead: boolean;
+  progressUnavailable?: boolean;
+  licensesUnavailable?: boolean;
 }
 export interface PreparedReader {
   book: LibraryBook;
@@ -113,6 +121,7 @@ export interface ReadingProgress {
 /** Book enriched with the current reader's latest progress for library UI. */
 export interface LibraryBook extends Book {
   readingProgress?: ReadingProgress;
+  progressUnavailable?: boolean;
 }
 
 /** 7. Bookmark - Đánh dấu ruy băng trang (/o/c/bookmarks) */
@@ -132,6 +141,7 @@ export type FlipbookToReactNativeMessage =
   | { type: 'ERROR'; message: string };
 
 export type ReactNativeToFlipbookMessage =
+  | { type: 'SET_ACCESS_TOKEN'; token?: string }
   | { type: 'ZOOM'; scale: number }
   | { type: 'TURN_NEXT' }
   | { type: 'TURN_PREV' }
