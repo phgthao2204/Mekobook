@@ -6,7 +6,9 @@ import { FlipbookViewer, FlipbookViewerRef } from '../../component/flipbook/Flip
 import { FlipbookControls } from '../../component/flipbook/FlipbookControls';
 import { LoadState } from '../../component/LoadState';
 import { colors } from '../../constants/theme';
+import { useAuth } from '../../hooks/useAuth';
 export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, 'Reader'>) {
+  const { session } = useAuth();
   const { book, initialPage } = route.params;
   const [preferences] = useState(() => ({ ...route.params.preferences,
     themeMode: route.params.preferences.themeMode === 'SYSTEM'
@@ -25,7 +27,8 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
   }, [ready, error, attempt]);
   return <View style={styles.screen}>
     <StatusBar hidden={ready && !visible} barStyle={preferences.themeMode === 'DARK' ? 'light-content' : 'dark-content'} />
-    <FlipbookViewer key={attempt} ref={viewer} book={book} initialPage={initialPage} preferences={preferences}
+    <FlipbookViewer key={attempt} ref={viewer} book={book} accessToken={session?.accessToken}
+      initialPage={initialPage} preferences={preferences}
       onPageChange={next => { setPage(next); setZoom(1); }} onToggleControls={() => setVisible(x => !x)}
       onReady={() => { setReady(true); setError(''); }} onError={setError} />
     {(!ready || error) ? <View style={StyleSheet.absoluteFill}>

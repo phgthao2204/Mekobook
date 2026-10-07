@@ -18,6 +18,12 @@ export interface UserAccount {
   name: string;
   givenName?: string;
   familyName?: string;
+  alternateName?: string;
+  accountBriefs?: Array<{
+    id?: number;
+    name?: string;
+    role?: string;
+  }>;
   profileUnavailable?: boolean;
   profileError?: string;
 }

@@ -112,12 +112,32 @@ test('web dev images use absolute local proxy URLs; native/production/external i
     assert.equal(webDevMediaUrl('https://example.test/flipbooks/demo/files/'), 'https://example.test/flipbooks/demo/files/');
     global.__DEV__ = false;
     assert.equal(webDevMediaUrl('https://example.test/flipbooks/2.jpg'), 'https://example.test/flipbooks/2.jpg');
-    delete global.window;
+    global.window = {};
     global.__DEV__ = true;
+    assert.equal(webDevMediaUrl('https://example.test/flipbooks/2.jpg'), 'https://example.test/flipbooks/2.jpg');
+    delete global.window;
     assert.equal(webDevMediaUrl('https://example.test/flipbooks/2.jpg'), 'https://example.test/flipbooks/2.jpg');
   } finally {
     if (oldWindow === undefined) delete global.window; else global.window = oldWindow;
     if (oldDev === undefined) delete global.__DEV__; else global.__DEV__ = oldDev;
+  }
+});
+test('native-like window without location does not enable the web API proxy', async () => {
+  const originalWindow = global.window;
+  const originalDev = global.__DEV__;
+  global.window = {};
+  global.__DEV__ = true;
+  try {
+    const response = await authHttp.request({
+      url: 'https://example.test/o/oauth2/token',
+      method: 'POST',
+      adapter: async config => respond(config, { ok: true }),
+    });
+    assert.equal(response.config.url, 'https://example.test/o/oauth2/token');
+    assert.equal(response.config.baseURL, undefined);
+  } finally {
+    if (originalWindow === undefined) delete global.window; else global.window = originalWindow;
+    if (originalDev === undefined) delete global.__DEV__; else global.__DEV__ = originalDev;
   }
 });
 test('page clamp and access never grant expired/unknown licenses', () => {
@@ -217,7 +237,7 @@ test('concurrent 401 responses share one renewal and retry only once', async () 
 });
 test('generated engine scripts parse and wire preferences/zoom/load before ready safely', () => {
   for (const effect of ['CURL_3D', 'SLIDE', 'FADE']) {
-    const html = generateFlipbookHtml({ book: { ...book, title: '<script>alert(1)</script>' }, initialPage: 7,
+    const html = generateFlipbookHtml({ book: { ...book, title: '<script>alert(1)</script>' }, accessToken: 'reader-token', initialPage: 7,
       preferences: normalizePreferences({ pageTurnEffect: effect, dualPageMode: true }) });
     const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
     assert.equal(scripts.length, 2);
@@ -225,6 +245,9 @@ test('generated engine scripts parse and wire preferences/zoom/load before ready
     assert.ok(html.indexOf("pageFlipInstance.on('init'") < html.indexOf('pageFlipInstance.loadFromHTML'));
     assert.ok(html.includes('await waitForPage(initialPage)'));
     assert.ok(html.includes("case 'ZOOM'"));
+    assert.ok(html.includes("target.origin !== apiOrigin"));
+    assert.ok(html.includes("'Authorization': 'Bearer ' + accessToken"));
+    assert.ok(!html.includes('reader-token&'));
     assert.ok(!html.includes('<title><script>'));
   }
 });

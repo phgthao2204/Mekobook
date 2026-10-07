@@ -109,7 +109,7 @@ async function requestToken(values: Record<string, string>): Promise<OAuthTokenR
   return token;
 }
 
-async function getCurrentUser(accessToken: string): Promise<UserAccount> {
+export async function getCurrentUser(accessToken: string): Promise<UserAccount> {
   const response = await requestAuth(
     getApiUrl(ENV.API_PATHS.MY_USER_ACCOUNT),
     {
@@ -131,12 +131,16 @@ async function getCurrentUser(accessToken: string): Promise<UserAccount> {
     id: Number(account.id || 0),
     name: account.name || account.givenName || account.alternateName || 'Người đọc',
     emailAddress: account.emailAddress || '',
+    givenName: typeof account.givenName === 'string' ? account.givenName : '',
+    familyName: typeof account.familyName === 'string' ? account.familyName : '',
+    alternateName: typeof account.alternateName === 'string' ? account.alternateName : '',
+    accountBriefs: Array.isArray(account.accountBriefs) ? account.accountBriefs : [],
   };
 }
 
 function createFallbackUser(username: string, reason: unknown): UserAccount {
   const message = reason instanceof Error ? reason.message : 'API hồ sơ không khả dụng.';
-  console.warn('[Auth] OAuth succeeded but profile could not be loaded:', message);
+  console.info('[Auth] OAuth succeeded but profile could not be loaded:', message);
   return {
     id: 0,
     name: username.trim(),
@@ -223,6 +227,12 @@ export async function refreshSession(session: AuthSession): Promise<AuthSession>
     expiresAt: Date.now() + (token.expires_in || 600) * 1000,
     user,
   }, epoch);
+}
+
+export async function reloadUserProfile(session: AuthSession): Promise<AuthSession> {
+  const epoch = authEpoch;
+  const user = await getCurrentUser(session.accessToken);
+  return persistSession({ ...session, user }, epoch);
 }
 
 export async function restoreSession(): Promise<AuthSession | null> {

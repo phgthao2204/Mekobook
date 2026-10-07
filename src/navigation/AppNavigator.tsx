@@ -4,6 +4,7 @@ import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navig
 import { useAuth } from '../hooks/useAuth';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { BookCatalog } from '../screens/books/BookCatalog';
+import { AccountScreen } from '../screens/account/AccountScreen';
 import { BookDetailScreen } from '../screens/books/BookDetailScreen';
 import { BookLoadingScreen } from '../screens/reader/BookLoadingScreen';
 import { ReaderScreen } from '../screens/reader/ReaderScreen';
@@ -16,10 +17,16 @@ function LoginRoute() {
   return <LoginScreen onLogin={signIn} />;
 }
 function LibraryRoute({ navigation }: NativeStackScreenProps<RootStackParamList, 'Library'>) {
-  const { session, signOut } = useAuth();
+  const { session } = useAuth();
   if (!session) return null;
-  return <BookCatalog user={session.user} onLogout={signOut}
+  return <BookCatalog user={session.user} onOpenAccount={() => navigation.navigate('Account')}
     onSelectBook={book => navigation.navigate('BookDetail', { bookId: book.id })} />;
+}
+function AccountRoute({ navigation }: NativeStackScreenProps<RootStackParamList, 'Account'>) {
+  const { session, signOut, refreshProfile } = useAuth();
+  if (!session) return null;
+  return <AccountScreen user={session.user} onBack={() => navigation.goBack()}
+    onLogout={signOut} onRefreshProfile={refreshProfile} />;
 }
 export function AppNavigator() {
   const { session, restoring } = useAuth();
@@ -28,6 +35,7 @@ export function AppNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!session ? <Stack.Screen name="Login" component={LoginRoute} /> : <>
         <Stack.Screen name="Library" component={LibraryRoute} />
+        <Stack.Screen name="Account" component={AccountRoute} />
         <Stack.Screen name="BookDetail" component={BookDetailScreen} />
         <Stack.Screen name="BookLoading" component={BookLoadingScreen} />
         <Stack.Screen name="Reader" component={ReaderScreen} />

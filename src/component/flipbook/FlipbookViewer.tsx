@@ -13,6 +13,7 @@ import { ENV } from '../../constants/env';
 
 export interface FlipbookViewerProps {
   book: Book;
+  accessToken?: string;
   initialPage?: number;
   onPageChange?: (page: number, totalPages: number) => void;
   onToggleControls?: () => void;
@@ -32,6 +33,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
   (
     {
       book,
+      accessToken,
       initialPage = 1,
       onPageChange,
       onToggleControls,
@@ -71,11 +73,12 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
     const htmlSource = useMemo(() => {
       return generateFlipbookHtml({
         book,
+        accessToken,
         initialPage,
         slidingWindowSize: ENV.FLIPBOOK.CACHE_SLIDING_WINDOW_SIZE,
         preferences,
       });
-    }, [book, initialPage, preferences]);
+    }, [book, accessToken, initialPage, preferences]);
 
     const handleMessage = (event: WebViewMessageEvent) => {
       try {
