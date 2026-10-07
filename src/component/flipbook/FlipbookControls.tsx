@@ -77,7 +77,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
       {/* TOP HEADER BAR */}
       <View style={[styles.topBar, readingSurface]}>
         <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
+          <Ionicons name="arrow-back" size={22} color={readingText.color} />
         </TouchableOpacity>
 
         <View style={styles.titleContainer}>

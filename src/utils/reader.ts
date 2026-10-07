@@ -9,6 +9,10 @@ export function hasReadAccess(isFree: boolean | undefined, licenses: DrmLicense[
 export function latestProgress(items: ReadingProgress[]): ReadingProgress | undefined {
   return [...items].sort((a, b) => (b.lastReadTimestamp || 0) - (a.lastReadTimestamp || 0))[0];
 }
+export function hasStartedReading(progress?: ReadingProgress): boolean {
+  return !!progress && (progress.readStatus === 'READING' || progress.readStatus === 'COMPLETED'
+    || progress.currentPage > 1 || progress.percentage > 0);
+}
 export function normalizePreferences(value?: Partial<UserPreference>): UserPreference {
   return {
     ...defaultPreferences,

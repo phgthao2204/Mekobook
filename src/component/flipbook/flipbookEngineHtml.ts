@@ -297,6 +297,7 @@ export function generateFlipbookHtml({
       }
 
       function clearImage(img) {
+        if (img.loadController) { img.loadController.abort(); img.loadController = null; }
         var objectUrl = img.getAttribute('data-object-url');
         if (objectUrl) URL.revokeObjectURL(objectUrl);
         img.removeAttribute('data-object-url');
@@ -306,7 +307,8 @@ export function generateFlipbookHtml({
       }
 
       function loadPageImage(img, targetSrc) {
-        if (img.getAttribute('data-loading-src') === targetSrc || img.getAttribute('data-loaded-src') === targetSrc) return;
+        if (img.getAttribute('data-loading-src') === targetSrc
+          || (img.getAttribute('data-loaded-src') === targetSrc && (!img.complete || img.naturalWidth > 0))) return;
         img.setAttribute('data-loading-src', targetSrc);
         var target;
         try { target = new URL(targetSrc); } catch (_) { img.src = targetSrc; return; }
@@ -316,16 +318,21 @@ export function generateFlipbookHtml({
           img.removeAttribute('data-loading-src');
           return;
         }
+        var controller = new AbortController();
+        img.loadController = controller;
         fetch(targetSrc, {
+          signal: controller.signal,
           headers: {
             'Authorization': 'Bearer ' + accessToken,
             'ngrok-skip-browser-warning': 'true'
           }
         }).then(function(response) {
           if (!response.ok) throw new Error('HTTP ' + response.status);
+          if (!/^image\\//i.test(response.headers.get('content-type') || '')) throw new Error('Máy chủ chưa trả ảnh hợp lệ.');
           return response.blob();
         }).then(function(blob) {
-          if (img.getAttribute('data-loading-src') !== targetSrc) return;
+          if (img.loadController !== controller || controller.signal.aborted) return;
+          img.loadController = null;
           var oldObjectUrl = img.getAttribute('data-object-url');
           if (oldObjectUrl) URL.revokeObjectURL(oldObjectUrl);
           var objectUrl = URL.createObjectURL(blob);
@@ -334,8 +341,11 @@ export function generateFlipbookHtml({
           img.removeAttribute('data-loading-src');
           img.src = objectUrl;
         }).catch(function(error) {
+          if (controller.signal.aborted || img.loadController !== controller) return;
+          img.loadController = null;
           img.removeAttribute('data-loading-src');
-          postToRN({ type: 'ERROR', message: 'Không tải được ảnh trang: ' + error.message });
+          // Only the active page's waitForPage reports errors. A failed
+          // neighbor preload must not close a page that is already readable.
           img.dispatchEvent(new Event('error'));
         });
       }
@@ -357,7 +367,7 @@ export function generateFlipbookHtml({
             loadPageImage(img, targetSrc);
             loadedPages.push(p);
           } else {
-            if (img.src && img.src !== '') clearImage(img);
+            if (img.src || img.getAttribute('data-loading-src')) clearImage(img);
           }
         });
       }
@@ -477,6 +487,7 @@ export function generateFlipbookHtml({
       function handleRNCommand(rawData) {
         try {
           var msg = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+          if (msg.type === 'SET_ACCESS_TOKEN') { accessToken = typeof msg.token === 'string' ? msg.token : ''; return; }
           if (!pageFlipInstance) return;
 
           switch(msg.type) {

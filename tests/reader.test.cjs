@@ -11,10 +11,10 @@ require.extensions['.ts'] = (module, filename) => {
   }).outputText, filename);
 };
 process.env.EXPO_PUBLIC_API_BASE_URL = 'https://example.test';
-const { clampPage, hasReadAccess, normalizePreferences, latestProgress } = require('../src/utils/reader.ts');
+const { clampPage, hasReadAccess, normalizePreferences, latestProgress, hasStartedReading } = require('../src/utils/reader.ts');
 const { apiHttp, setApiAccessToken, setSessionRenewal, getMediaRequestHeaders } = require('../src/services/http.ts');
 const { getBooks, normalizeServerUrl, getPageImageUrl, normalizeDrmLicense } = require('../src/services/api.ts');
-const { prepareReader } = require('../src/services/reader.ts');
+const { prepareReader, getBookAccess } = require('../src/services/reader.ts');
 const { generateFlipbookHtml } = require('../src/component/flipbook/flipbookEngineHtml.ts');
 const { AxiosError } = require('axios');
 const { ENV } = require('../src/constants/env.ts');
@@ -221,6 +221,30 @@ test('reader rechecks DRM, restores progress and applies preferences; only GET e
   assert.equal((await prepareReader(1, 'start')).initialPage, 1);
   active = false; await assert.rejects(prepareReader(1, 'continue'), /giấy phép/);
 });
+test('resume/restart is available even when the saved reading page is 1', () => {
+  assert.equal(hasStartedReading({ currentPage: 1, percentage: 0, readStatus: 'READING' }), true);
+  assert.equal(hasStartedReading({ currentPage: 1, percentage: 100, readStatus: 'COMPLETED' }), true);
+  assert.equal(hasStartedReading({ currentPage: 1, percentage: 0, readStatus: 'NOT_STARTED' }), false);
+  assert.equal(hasStartedReading(undefined), false);
+});
+test('detail preserves metadata on secondary API errors; paid rights fail closed and resume never guesses page', async () => {
+  let free = true;
+  apiHttp.defaults.adapter = async config => {
+    if (config.url.endsWith('/books/1')) return respond(config, { ...book, isFree: free });
+    if (config.url.endsWith('/userpreferences')) return respond(config, { items: [] });
+    throw new AxiosError('Server failure', 'ERR_BAD_RESPONSE', config, null, { status: 500 });
+  };
+  const detail = await getBookAccess(1);
+  assert.equal(detail.book.title, book.title);
+  assert.equal(detail.progressUnavailable, true);
+  assert.equal(detail.licensesUnavailable, true);
+  assert.equal(detail.canRead, true);
+  assert.equal((await prepareReader(1, 'start')).initialPage, 1);
+  await assert.rejects(prepareReader(1, 'continue'), /tiến trình/);
+  free = false;
+  assert.equal((await getBookAccess(1)).canRead, false);
+  await assert.rejects(prepareReader(1, 'start'), /giấy phép/);
+});
 test('concurrent 401 responses share one renewal and retry only once', async () => {
   let renewals = 0;
   setApiAccessToken('old');
@@ -255,8 +279,12 @@ test('generated engine scripts parse and wire preferences/zoom/load before ready
 test('engine bridge initializes once, sends ready, zooms/pans and applies effects', async () => {
   for (const effect of ['CURL_3D', 'SLIDE', 'FADE']) {
     const messages = [], windowEvents = {}, bookEvents = {}, handlers = {};
-    const images = Array.from({ length: 10 }, () => ({ complete: true, naturalWidth: 100,
-      src: '', getAttribute: () => 'https://example.test/p.jpg', removeAttribute() {}, addEventListener() {}, removeEventListener() {} }));
+    const images = Array.from({ length: 10 }, () => {
+      const attrs = { 'data-src': 'https://example.test/p.jpg' };
+      return { complete: true, naturalWidth: 100, src: '',
+        getAttribute: key => attrs[key] || null, setAttribute: (key, value) => { attrs[key] = value; },
+        removeAttribute: key => { delete attrs[key]; }, addEventListener() {}, removeEventListener() {} };
+    });
     const bookEl = { style: {}, addEventListener: (name, handler) => { bookEvents[name] = handler; }, setPointerCapture() {}, animate() {} };
     const loadingEl = { style: {} }, container = { style: {} };
     const pages = images.map((image, i) => ({ getAttribute: () => String(i + 1), querySelector: () => image }));
@@ -282,7 +310,7 @@ test('engine bridge initializes once, sends ready, zooms/pans and applies effect
     }
     const html = generateFlipbookHtml({ book, initialPage: 7, preferences: normalizePreferences({ pageTurnEffect: effect, brightness: 0.5 }) });
     const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][1][1];
-    vm.runInNewContext(script, { window, document, St: { PageFlip }, setTimeout, clearTimeout, console });
+    vm.runInNewContext(script, { window, document, St: { PageFlip }, setTimeout, clearTimeout, console, URL });
     await window.onload();
     assert.equal(instances, 1); assert.equal(messages[0].type, 'ENGINE_READY');
     assert.ok(bookEl.style.filter.includes('brightness(0.5)'));
@@ -296,6 +324,82 @@ test('engine bridge initializes once, sends ready, zooms/pans and applies effect
     assert.equal(turns, 1); assert.equal(instances, 1);
     assert.ok(messages.some(message => message.type === 'PAGE_CHANGED' && message.page === 8));
   }
+});
+
+test('authenticated reader isolates failed neighbor preloads, aborts obsolete loads and refreshes token without reset', async () => {
+  const messages = [], requests = [], windowEvents = {}, handlers = {};
+  let deferred, instances = 0, current = 0, objectUrls = 0;
+  const images = Array.from({ length: 10 }, (_, i) => {
+    const attrs = { 'data-src': `https://example.test/pages/mobile/${i + 1}.jpg` }, events = {};
+    let src = '';
+    const img = { complete: false, naturalWidth: 0,
+      getAttribute: key => attrs[key] || null, setAttribute: (key, value) => { attrs[key] = value; },
+      removeAttribute: key => { delete attrs[key]; if (key === 'src') { src = ''; img.complete = false; img.naturalWidth = 0; } },
+      addEventListener: (key, handler) => { (events[key] ||= new Set()).add(handler); },
+      removeEventListener: (key, handler) => events[key]?.delete(handler),
+      dispatchEvent: event => { for (const fn of events[event.type] || []) fn(); },
+    };
+    Object.defineProperty(img, 'src', { get: () => src, set: value => {
+      src = value;
+      queueMicrotask(() => { img.complete = true; img.naturalWidth = 100; img.dispatchEvent({ type: 'load' }); });
+    }});
+    return img;
+  });
+  const pages = images.map((img, i) => ({ getAttribute: () => String(i + 1), querySelector: () => img }));
+  const bookEl = { style: {}, addEventListener() {}, animate() {}, setPointerCapture() {} };
+  const document = { body: { style: {} },
+    getElementById: id => id === 'book' ? bookEl : { style: {} },
+    querySelectorAll: selector => selector === '.page-img' ? images : pages,
+    querySelector: selector => images[Number(selector.match(/data-page="(\d+)"/)[1]) - 1], addEventListener() {},
+  };
+  const window = { innerWidth: 390, innerHeight: 800,
+    ReactNativeWebView: { postMessage: value => messages.push(JSON.parse(value)) },
+    addEventListener: (name, handler) => { windowEvents[name] = handler; } };
+  class PageFlip {
+    constructor() { instances++; }
+    on(name, handler) { handlers[name] = handler; }
+    loadFromHTML() { handlers.init(); }
+    getState() { return 'read'; }
+    getCurrentPageIndex() { return current; }
+    turnToPage(index) { current = index; handlers.flip({ data: index }); }
+    destroy() {}
+  }
+  class TestURL extends URL {}
+  TestURL.createObjectURL = () => `blob:synthetic-${++objectUrls}`;
+  TestURL.revokeObjectURL = () => {};
+  const fetch = (url, options) => {
+    requests.push({ url, ...options });
+    const response = { ok: !url.endsWith('/2.jpg'), status: url.endsWith('/2.jpg') ? 500 : 200,
+      headers: { get: () => 'image/jpeg' }, blob: async () => ({}) };
+    if (url.endsWith('/5.jpg') && !deferred) return new Promise(resolve => { deferred = () => resolve(response); });
+    return Promise.resolve(response);
+  };
+  const html = generateFlipbookHtml({ book, initialPage: 1, accessToken: 'synthetic-old',
+    preferences: normalizePreferences({ pageTurnEffect: 'FADE' }) });
+  const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][1][1];
+  vm.runInNewContext(script, { window, document, St: { PageFlip }, URL: TestURL, fetch, AbortController, Event,
+    setTimeout, clearTimeout, queueMicrotask, console });
+  await window.onload();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.ok(messages.some(value => value.type === 'ENGINE_READY'));
+  assert.equal(messages.some(value => value.type === 'ERROR'), false);
+  windowEvents.message({ data: { type: 'TURN_NEXT' } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.ok(messages.some(value => value.type === 'ERROR' && /trang 2/.test(value.message)));
+  messages.length = 0;
+  windowEvents.message({ data: { type: 'SET_ACCESS_TOKEN', token: 'synthetic-new' } });
+  windowEvents.message({ data: { type: 'GO_TO_PAGE', page: 8 } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(requests.find(value => value.url.endsWith('/5.jpg')).signal.aborted, true);
+  const allocated = objectUrls;
+  deferred();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(objectUrls, allocated);
+  assert.ok(requests.some(value => value.url.endsWith('/8.jpg') && value.headers.Authorization === 'Bearer synthetic-new'));
+  assert.equal(instances, 1);
+  assert.equal(current, 7);
+  assert.equal(messages.some(value => value.type === 'ERROR'), false);
+  windowEvents.pagehide();
 });
 
 function mockAuth() {

@@ -1,5 +1,5 @@
 import { colors } from '../../constants/theme';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator, FlatList, Image, Platform, RefreshControl,
   StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View,
@@ -30,6 +30,7 @@ function latestProgress(items: ReadingProgress[]): Map<number, ReadingProgress> 
 }
 
 function readingState(book: LibraryBook) {
+  if (book.progressUnavailable) return { label: 'Chưa tải tiến trình', color: colors.muted, background: '#F1F5F9' };
   const progress = book.readingProgress;
   if (!progress || progress.currentPage < 1 || (progress.readStatus === 'NOT_STARTED' && progress.percentage <= 0)) {
     return { label: 'Chưa đọc', color: colors.muted, background: '#F1F5F9' };
@@ -51,24 +52,28 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [error, setError] = useState('');
+  const requestId = useRef(0);
 
   const loadLibrary = async () => {
+    const version = ++requestId.current;
     setError('');
     try {
-      const [bookItems, progressItems] = await Promise.all([
+      const [bookResult, progressResult] = await Promise.allSettled([
         getBooks(100), getReadingProgresses(200),
       ]);
-      const progressByBook = latestProgress(progressItems);
-      setBooks(bookItems.map((book) => ({ ...book, readingProgress: progressByBook.get(book.id) })));
+      if (version !== requestId.current) return;
+      if (bookResult.status === 'rejected') throw bookResult.reason;
+      const progressByBook = latestProgress(progressResult.status === 'fulfilled' ? progressResult.value : []);
+      setBooks(bookResult.value.map((book) => ({ ...book, progressUnavailable: progressResult.status === 'rejected', readingProgress: progressByBook.get(book.id) })));
+      if (progressResult.status === 'rejected') setError('Đã tải sách nhưng chưa tải được tiến trình đọc.');
     } catch (error) {
-      setError(errorMessage(error));
+      if (version === requestId.current) setError(errorMessage(error));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (version === requestId.current) { setLoading(false); setRefreshing(false); }
     }
   };
 
-  useEffect(() => { loadLibrary(); }, []);
+  useEffect(() => { loadLibrary(); return () => { requestId.current++; }; }, []);
 
   const filteredBooks = useMemo(() => {
     const query = searchQuery.trim().toLocaleLowerCase('vi-VN');
@@ -89,13 +94,13 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
           <View style={[styles.stateBadge, { backgroundColor: state.background }]}>
             <Text style={[styles.stateText, { color: state.color }]}>{state.label}</Text>
           </View>
-          {progress && progress.currentPage > 1 ? (
+          {progress && progress.currentPage >= 1 ? (
             <Text style={styles.pageProgress} numberOfLines={1}>
               Trang {progress.currentPage}/{book.totalPages} · {percentage}%
             </Text>
           ) : null}
         </View>
-        {progress && progress.currentPage > 1 ? (
+        {progress && progress.currentPage >= 1 ? (
           <>
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${percentage}%` }]} />

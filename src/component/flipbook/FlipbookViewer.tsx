@@ -4,7 +4,7 @@
  * Focuses purely on 60 FPS 3D page curl, gestures, and sliding-window caching
  */
 
-import React, { useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
+import React, { useRef, useImperativeHandle, forwardRef, useMemo, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { Book, UserPreference, FlipbookToReactNativeMessage, ReactNativeToFlipbookMessage } from '../../types';
@@ -44,6 +44,8 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
     ref
   ) => {
     const webViewRef = useRef<WebView>(null);
+    const currentToken = useRef(accessToken);
+    currentToken.current = accessToken;
 
     const postMessageToEngine = (message: ReactNativeToFlipbookMessage) => {
       if (!webViewRef.current) return;
@@ -73,12 +75,14 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
     const htmlSource = useMemo(() => {
       return generateFlipbookHtml({
         book,
-        accessToken,
+        accessToken: currentToken.current,
         initialPage,
         slidingWindowSize: ENV.FLIPBOOK.CACHE_SLIDING_WINDOW_SIZE,
         preferences,
       });
-    }, [book, accessToken, initialPage, preferences]);
+    }, [book, initialPage, preferences]);
+    const source = useMemo(() => ({ html: htmlSource, baseUrl: ENV.API_BASE_URL }), [htmlSource]);
+    useEffect(() => { postMessageToEngine({ type: 'SET_ACCESS_TOKEN', token: accessToken }); }, [accessToken]);
 
     const handleMessage = (event: WebViewMessageEvent) => {
       try {
@@ -95,6 +99,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
             }
             break;
           case 'ENGINE_READY':
+            postMessageToEngine({ type: 'SET_ACCESS_TOKEN', token: currentToken.current });
             if (onReady) {
               onReady(data.totalPages);
             }
@@ -113,7 +118,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
         <WebView
           ref={webViewRef}
           originWhitelist={['*']}
-          source={{ html: htmlSource, baseUrl: ENV.API_BASE_URL }}
+          source={source}
           style={styles.webView}
           onMessage={handleMessage}
           onError={() => onError?.('Không thể khởi tạo trình đọc. Vui lòng thử lại.')}
