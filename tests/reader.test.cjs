@@ -268,12 +268,23 @@ test('generated engine scripts parse and wire preferences/zoom/load before ready
     scripts.forEach(([, source]) => new vm.Script(source));
     assert.ok(html.indexOf("pageFlipInstance.on('init'") < html.indexOf('pageFlipInstance.loadFromHTML'));
     assert.ok(html.includes('await waitForPage(initialPage)'));
+    assert.ok(html.includes('if (isPageVisible(newPage))'));
     assert.ok(html.includes("case 'ZOOM'"));
+    assert.ok(html.includes("msg.type === 'UPDATE_PREFERENCES'"));
+    assert.ok(html.includes('pinchStartScale * touchDistance'));
     assert.ok(html.includes("target.origin !== apiOrigin"));
     assert.ok(html.includes("'Authorization': 'Bearer ' + accessToken"));
     assert.ok(!html.includes('reader-token&'));
     assert.ok(!html.includes('<title><script>'));
   }
+});
+
+test('dual-page layout preserves source page aspect ratio instead of filling phone height', () => {
+  const html = generateFlipbookHtml({ book, initialPage: 1,
+    preferences: normalizePreferences({ dualPageMode: true }) });
+  assert.ok(html.includes('initialImage.naturalWidth / initialImage.naturalHeight'));
+  assert.ok(html.includes('Math.floor(pageTargetWidth / imageAspect)'));
+  assert.ok(html.includes('Math.floor(containerHeight * 0.78)'));
 });
 
 test('engine bridge initializes once, sends ready, zooms/pans and applies effects', async () => {
@@ -288,7 +299,7 @@ test('engine bridge initializes once, sends ready, zooms/pans and applies effect
     const bookEl = { style: {}, addEventListener: (name, handler) => { bookEvents[name] = handler; }, setPointerCapture() {}, animate() {} };
     const loadingEl = { style: {} }, container = { style: {} };
     const pages = images.map((image, i) => ({ getAttribute: () => String(i + 1), querySelector: () => image }));
-    let instances = 0, turns = 0, current = 6;
+    let instances = 0, turns = 0, current = 6, receivedSettings;
     const document = {
       body: { style: {} }, getElementById: id => ({ book: bookEl, 'loading-indicator': loadingEl, 'flipbook-container': container })[id],
       querySelectorAll: () => pages, querySelector: query => images[Number(query.match(/data-page="(\d+)"/)[1]) - 1], addEventListener() {},
@@ -297,7 +308,7 @@ test('engine bridge initializes once, sends ready, zooms/pans and applies effect
       ReactNativeWebView: { postMessage: value => messages.push(JSON.parse(value)) },
       addEventListener: (name, handler) => { windowEvents[name] = handler; } };
     class PageFlip {
-      constructor() { instances++; }
+      constructor(_element, settings) { instances++; receivedSettings = settings; }
       on(name, handler) { handlers[name] = handler; }
       loadFromHTML() { handlers.init(); }
       getCurrentPageIndex() { return current; }
@@ -313,12 +324,21 @@ test('engine bridge initializes once, sends ready, zooms/pans and applies effect
     vm.runInNewContext(script, { window, document, St: { PageFlip }, setTimeout, clearTimeout, console, URL });
     await window.onload();
     assert.equal(instances, 1); assert.equal(messages[0].type, 'ENGINE_READY');
+    assert.equal(receivedSettings.usePortrait, true);
+    assert.ok(receivedSettings.minWidth > window.innerWidth / 2);
     assert.ok(bookEl.style.filter.includes('brightness(0.5)'));
     windowEvents.message({ data: { type: 'ZOOM', scale: 2 } });
     assert.ok(bookEl.style.transform.includes('scale(2)'));
+    bookEvents.touchstart({ touches: [{ clientX: 0, clientY: 0 }, { clientX: 100, clientY: 0 }], preventDefault() {}, stopImmediatePropagation() {} });
+    bookEvents.touchmove({ touches: [{ clientX: 0, clientY: 0 }, { clientX: 200, clientY: 0 }], preventDefault() {}, stopImmediatePropagation() {} });
+    assert.ok(bookEl.style.transform.includes('scale(3)'));
+    windowEvents.message({ data: { type: 'UPDATE_PREFERENCES', preferences: { brightness: 0.4, themeMode: 'SEPIA' } } });
+    assert.ok(bookEl.style.filter.includes('brightness(0.4)'));
+    assert.ok(bookEl.style.filter.includes('sepia'));
     bookEvents.pointerdown({ clientX: 10, clientY: 10, pointerId: 1, preventDefault() {}, stopImmediatePropagation() {} });
     bookEvents.pointermove({ clientX: 45, clientY: 70, preventDefault() {}, stopImmediatePropagation() {} });
     assert.ok(bookEl.style.transform.includes('translate(35px,60px)'));
+    windowEvents.message({ data: { type: 'TURN_NEXT' } });
     windowEvents.message({ data: { type: 'TURN_NEXT' } });
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(turns, 1); assert.equal(instances, 1);
@@ -384,7 +404,9 @@ test('authenticated reader isolates failed neighbor preloads, aborts obsolete lo
   assert.ok(messages.some(value => value.type === 'ENGINE_READY'));
   assert.equal(messages.some(value => value.type === 'ERROR'), false);
   windowEvents.message({ data: { type: 'TURN_NEXT' } });
-  await new Promise(resolve => setImmediate(resolve));
+  // The reader retries transient image failures before surfacing the error.
+  await new Promise(resolve => setTimeout(resolve, 1700));
+  assert.equal(requests.filter(value => value.url.endsWith('/2.jpg')).length, 3);
   assert.ok(messages.some(value => value.type === 'ERROR' && /trang 2/.test(value.message)));
   messages.length = 0;
   windowEvents.message({ data: { type: 'SET_ACCESS_TOKEN', token: 'synthetic-new' } });

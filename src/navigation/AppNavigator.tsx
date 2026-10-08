@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../hooks/useAuth';
@@ -8,7 +8,7 @@ import { AccountScreen } from '../screens/account/AccountScreen';
 import { BookDetailScreen } from '../screens/books/BookDetailScreen';
 import { BookLoadingScreen } from '../screens/reader/BookLoadingScreen';
 import { ReaderScreen } from '../screens/reader/ReaderScreen';
-import { LoadState } from '../component/LoadState';
+import { SplashScreen } from '../screens/splash/SplashScreen';
 import { navigationTheme } from '../constants/theme';
 import { RootStackParamList } from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -30,15 +30,20 @@ function AccountRoute({ navigation }: NativeStackScreenProps<RootStackParamList,
 }
 export function AppNavigator() {
   const { session, restoring } = useAuth();
-  if (restoring) return <LoadState message="Đang khôi phục phiên đăng nhập..." />;
+  const [splashFinished, setSplashFinished] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSplashFinished(true), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+  if (restoring || !splashFinished) return <SplashScreen />;
   return <NavigationContainer theme={navigationTheme}>
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!session ? <Stack.Screen name="Login" component={LoginRoute} /> : <>
         <Stack.Screen name="Library" component={LibraryRoute} />
         <Stack.Screen name="Account" component={AccountRoute} />
         <Stack.Screen name="BookDetail" component={BookDetailScreen} />
-        <Stack.Screen name="BookLoading" component={BookLoadingScreen} />
-        <Stack.Screen name="Reader" component={ReaderScreen} />
+        <Stack.Screen name="BookLoading" component={BookLoadingScreen} options={{ animation: 'fade' }} />
+        <Stack.Screen name="Reader" component={ReaderScreen} options={{ animation: 'fade' }} />
       </>}
     </Stack.Navigator>
   </NavigationContainer>;

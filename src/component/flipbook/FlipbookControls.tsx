@@ -11,12 +11,12 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Platform,
   Modal,
   FlatList,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Book, ChapterTOC, UserPreference } from '../../types';
 import { getBookTOC } from '../../services/api';
@@ -31,6 +31,7 @@ interface FlipbookControlsProps {
   onPrevPage: () => void;
   onNextPage: () => void;
   onJumpToPage: (page: number) => void;
+  onOpenSettings: () => void;
   themeMode?: UserPreference['themeMode'];
 }
 
@@ -43,8 +44,12 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
   onPrevPage,
   onNextPage,
   onJumpToPage,
+  onOpenSettings,
   themeMode = 'LIGHT',
 }) => {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const compact = width < 430;
   const [showToc, setShowToc] = useState<boolean>(false);
   const [tocList, setTocList] = useState<ChapterTOC[]>([]);
   const [loadingToc, setLoadingToc] = useState<boolean>(false);
@@ -75,7 +80,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
   return (
     <View style={styles.overlayContainer} pointerEvents="box-none">
       {/* TOP HEADER BAR */}
-      <View style={[styles.topBar, readingSurface]}>
+      <View style={[styles.topBar, readingSurface, { paddingTop: Math.max(insets.top + 8, 16) }]}>
         <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={22} color={readingText.color} />
         </TouchableOpacity>
@@ -84,9 +89,9 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
           <Text style={[styles.bookTitle, readingText]} numberOfLines={1}>
             {book.title}
           </Text>
-          <Text style={[styles.bookAuthor, readingText]} numberOfLines={1}>
+          {!compact && <Text style={[styles.bookAuthor, readingText]} numberOfLines={1}>
             {book.author}
-          </Text>
+          </Text>}
         </View>
 
         {/* TOC TRIGGER BUTTON */}
@@ -96,18 +101,28 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
           activeOpacity={0.7}
         >
           <Ionicons name="list" size={17} color={colors.primary} />
-          <Text style={styles.tocButtonText}>Mục lục</Text>
+          {!compact && <Text style={styles.tocButtonText}>Mục lục</Text>}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={onOpenSettings}
+          accessibilityRole="button"
+          accessibilityLabel="Mở tùy chọn đọc"
+          activeOpacity={0.7}
+        >
+          <Ionicons name="settings-outline" size={19} color={colors.primary} />
         </TouchableOpacity>
 
         <View style={styles.pageBadge}>
           <Text style={styles.pageBadgeText}>
-            {pageLabel} ({currentPage}/{totalPages})
+            {compact ? `${currentPage}/${totalPages}` : `${pageLabel} (${currentPage}/${totalPages})`}
           </Text>
         </View>
       </View>
 
       {/* BOTTOM NAVIGATION & PROGRESS BAR */}
-      <View style={[styles.bottomBar, readingSurface]}>
+      <View style={[styles.bottomBar, readingSurface, { paddingBottom: Math.max(insets.bottom + 10, 16) }]}>
         <View style={styles.scrubberRow}>
           <TouchableOpacity
             style={[styles.navButton, currentPage <= 1 && styles.buttonDisabled]}
@@ -271,7 +286,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 52 : 36,
+    paddingTop: 16,
     paddingBottom: 12,
     paddingHorizontal: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.96)',
@@ -322,6 +337,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginLeft: 4,
   },
+  settingsButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    marginRight: 8,
+  },
   pageBadge: {
     backgroundColor: '#F1F5F9',
     paddingHorizontal: 8,
@@ -338,7 +364,7 @@ const styles = StyleSheet.create({
   bottomBar: {
     backgroundColor: 'rgba(255, 255, 255, 0.96)',
     paddingTop: 10,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    paddingBottom: 16,
     paddingHorizontal: 20,
     borderTopWidth: 1,
     borderTopColor: colors.border,

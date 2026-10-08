@@ -1,9 +1,11 @@
 import { colors } from '../../constants/theme';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -23,6 +25,24 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollView = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, event => {
+      setKeyboardVisible(true);
+      setKeyboardHeight(event.endCoordinates.height);
+      setTimeout(() => scrollView.current?.scrollToEnd({ animated: true }), 180);
+    });
+    const hide = Keyboard.addListener(hideEvent, () => {
+      setKeyboardVisible(false);
+      setKeyboardHeight(0);
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   const submit = async () => {
     if (!username.trim() || !password) {
@@ -47,11 +67,28 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.logoBadge}>
-          <Ionicons name="book" size={34} color={colors.surface} />
-        </View>
-        <Text style={styles.appName}>MEKOBOOK</Text>
-        <Text style={styles.subtitle}>Đăng nhập để truy cập thư viện sách</Text>
+        <ScrollView
+          ref={scrollView}
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.content,
+            keyboardVisible && styles.contentWithKeyboard,
+            keyboardVisible && { paddingBottom: keyboardHeight + 24 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+          onContentSizeChange={() => {
+            if (keyboardVisible) scrollView.current?.scrollToEnd({ animated: true });
+          }}
+        >
+        {!keyboardVisible && <>
+          <View style={styles.logoBadge}>
+            <Ionicons name="book" size={34} color={colors.surface} />
+          </View>
+          <Text style={styles.appName}>MEKOBOOK</Text>
+          <Text style={styles.subtitle}>Đăng nhập để truy cập thư viện sách</Text>
+        </>}
 
         <View style={styles.form}>
           <Text style={styles.label}>Tên đăng nhập hoặc email</Text>
@@ -85,6 +122,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               editable={!loading}
               placeholder="Nhập mật khẩu"
               placeholderTextColor="#94A3B8"
+              onFocus={() => setTimeout(() => scrollView.current?.scrollToEnd({ animated: true }), 180)}
               onSubmitEditing={submit}
               returnKeyType="done"
             />
@@ -111,6 +149,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             )}
           </TouchableOpacity>
         </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -118,7 +157,10 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  container: { flex: 1, justifyContent: 'center', paddingHorizontal: 28 },
+  container: { flex: 1 },
+  scroll: { flex: 1 },
+  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 24 },
+  contentWithKeyboard: { justifyContent: 'center', paddingTop: 24 },
   logoBadge: {
     width: 68,
     height: 68,

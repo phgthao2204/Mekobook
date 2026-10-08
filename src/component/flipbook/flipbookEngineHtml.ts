@@ -230,10 +230,13 @@ export function generateFlipbookHtml({
       var zoomScale = 1, panX = 0, panY = 0;
       var changing = false;
       bookEl.style.touchAction = 'none';
-      var background = preferences.themeMode === 'DARK' ? '#18212f' : preferences.themeMode === 'SEPIA' ? '#eadfc8' : '#F1F5F9';
-      document.body.style.backgroundColor = background;
-      document.getElementById('flipbook-container').style.backgroundColor = background;
-      bookEl.style.filter = 'brightness(' + preferences.brightness + ')' + (preferences.themeMode === 'SEPIA' ? ' sepia(0.35)' : '');
+      function applyAppearance() {
+        var background = preferences.themeMode === 'DARK' ? '#18212f' : preferences.themeMode === 'SEPIA' ? '#eadfc8' : '#F1F5F9';
+        document.body.style.backgroundColor = background;
+        document.getElementById('flipbook-container').style.backgroundColor = background;
+        bookEl.style.filter = 'brightness(' + preferences.brightness + ')' + (preferences.themeMode === 'SEPIA' ? ' sepia(0.35)' : '');
+      }
+      applyAppearance();
       function applyZoom() {
         var limitX = window.innerWidth * (zoomScale - 1) / 2;
         var limitY = window.innerHeight * (zoomScale - 1) / 2;
@@ -269,6 +272,11 @@ export function generateFlipbookHtml({
           });
         }));
       }
+      function isPageVisible(page) {
+        if (!pageFlipInstance) return page === initialPage;
+        var visiblePage = pageFlipInstance.getCurrentPageIndex() + 1;
+        return page === visiblePage || (preferences.dualPageMode && page === visiblePage + 1);
+      }
       function navigatePage(page, direction) {
         if (changing || pageFlipInstance.getState() !== 'read') return;
         var target = Math.max(1, Math.min(page, totalPages));
@@ -286,8 +294,15 @@ export function generateFlipbookHtml({
           }
           playPageSound();
           zoomScale = 1; panX = panY = 0; applyZoom();
-        }).catch(function(error) { postToRN({ type: 'ERROR', message: error.message }); })
-          .finally(function() { changing = false; });
+          if (preferences.pageTurnEffect === 'CURL_3D') {
+            setTimeout(function() { changing = false; }, 600);
+          } else {
+            changing = false;
+          }
+        }).catch(function(error) {
+          changing = false;
+          postToRN({ type: 'ERROR', message: error.message });
+        });
       }
 
       function postToRN(data) {
@@ -320,17 +335,25 @@ export function generateFlipbookHtml({
         }
         var controller = new AbortController();
         img.loadController = controller;
-        fetch(targetSrc, {
-          signal: controller.signal,
-          headers: {
-            'Authorization': 'Bearer ' + accessToken,
-            'ngrok-skip-browser-warning': 'true'
-          }
-        }).then(function(response) {
-          if (!response.ok) throw new Error('HTTP ' + response.status);
-          if (!/^image\\//i.test(response.headers.get('content-type') || '')) throw new Error('Máy chủ chưa trả ảnh hợp lệ.');
-          return response.blob();
-        }).then(function(blob) {
+        function fetchImage(attempt) {
+          return fetch(targetSrc, {
+            signal: controller.signal,
+            headers: {
+              'Authorization': 'Bearer ' + accessToken,
+              'ngrok-skip-browser-warning': 'true'
+            }
+          }).then(function(response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            if (!/^image\\//i.test(response.headers.get('content-type') || '')) throw new Error('Máy chủ chưa trả ảnh hợp lệ.');
+            return response.blob();
+          }).catch(function(error) {
+            if (controller.signal.aborted || attempt >= 3) throw error;
+            return new Promise(function(resolve) {
+              setTimeout(resolve, attempt * 500);
+            }).then(function() { return fetchImage(attempt + 1); });
+          });
+        }
+        fetchImage(1).then(function(blob) {
           if (img.loadController !== controller || controller.signal.aborted) return;
           img.loadController = null;
           var oldObjectUrl = img.getAttribute('data-object-url');
@@ -378,19 +401,38 @@ export function generateFlipbookHtml({
 
         var usePortrait = !preferences.dualPageMode;
 
-        var pageTargetWidth = usePortrait ? Math.floor(containerWidth * 0.94) : Math.floor((containerWidth * 0.95) / 2);
-        var pageTargetHeight = Math.floor(containerHeight * 0.88);
-
         updateSlidingWindow(initialPage);
 
         try {
           await waitForPage(initialPage);
+          var initialImage = document.querySelector('[data-page="' + initialPage + '"] .page-img');
+          var imageAspect = initialImage && initialImage.naturalWidth > 0 && initialImage.naturalHeight > 0
+            ? initialImage.naturalWidth / initialImage.naturalHeight : 0.7;
+          // Avoid malformed image metadata producing an unusable book frame.
+          imageAspect = Math.max(0.45, Math.min(1.2, imageAspect));
+          var pageTargetWidth = usePortrait
+            ? Math.floor(containerWidth * 0.94)
+            : Math.floor((containerWidth * 0.95) / 2);
+          // A dual spread must preserve the real page ratio. Using 88% of the
+          // viewport height here made each half-page extremely tall and left
+          // large blank bands above and below the source image on phones.
+          // Reserve space for the native top and bottom controls so page
+          // content is not hidden behind either toolbar.
+          var availableHeight = Math.max(320, containerHeight - 190);
+          var pageTargetHeight = usePortrait
+            ? Math.min(availableHeight, Math.floor(pageTargetWidth / imageAspect))
+            : Math.min(Math.floor(containerHeight * 0.78), Math.floor(pageTargetWidth / imageAspect));
           bookEl.style.display = 'block';
           pageFlipInstance = new St.PageFlip(bookEl, {
             width: pageTargetWidth,
             height: pageTargetHeight,
             size: 'stretch',
-            minWidth: preferences.dualPageMode ? 80 : 160,
+            // StPageFlip decides portrait mode from: containerWidth < 2 * minWidth.
+            // A fixed 160px threshold lets common phones (~360-430px wide) fall
+            // back to a two-page landscape spread even when the user selected
+            // one page. Keep the single-page threshold above half the viewport;
+            // dual-page mode disables portrait and keeps the smaller minimum.
+            minWidth: preferences.dualPageMode ? 80 : Math.max(160, Math.floor(containerWidth * 0.6)),
             maxWidth: 1200,
             minHeight: 120,
             maxHeight: 1800,
@@ -410,7 +452,11 @@ export function generateFlipbookHtml({
             var newPage = e.data + 1;
             updateSlidingWindow(newPage);
             if (!changing) playPageSound();
-            waitForPage(newPage).catch(function(error) { postToRN({ type: 'ERROR', message: error.message }); });
+            waitForPage(newPage).catch(function(error) {
+              // A user can turn several pages before an older image request
+              // times out. Never replace the current page with that stale error.
+              if (isPageVisible(newPage)) postToRN({ type: 'ERROR', message: error.message });
+            });
             postToRN({
               type: 'PAGE_CHANGED',
               page: newPage,
@@ -469,6 +515,20 @@ export function generateFlipbookHtml({
       }, { passive: true });
 
       var drag = null;
+      var pinchDistance = 0;
+      var pinchStartScale = 1;
+      var lastZoomNotification = 0;
+      function notifyZoom(force) {
+        var now = Date.now();
+        if (!force && now - lastZoomNotification < 80) return;
+        lastZoomNotification = now;
+        postToRN({ type: 'ZOOM_CHANGED', scale: zoomScale });
+      }
+      function touchDistance(touches) {
+        var dx = touches[0].clientX - touches[1].clientX;
+        var dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
       bookEl.addEventListener('pointerdown', function(e) {
         if (zoomScale <= 1) return;
         e.preventDefault(); e.stopImmediatePropagation();
@@ -482,12 +542,40 @@ export function generateFlipbookHtml({
       }, true);
       bookEl.addEventListener('pointerup', function(e) { if (drag) { e.stopImmediatePropagation(); drag = null; } }, true);
       bookEl.addEventListener('pointercancel', function() { drag = null; });
-      bookEl.addEventListener('touchstart', function(e) { if (zoomScale > 1) e.stopImmediatePropagation(); }, { capture: true, passive: true });
-      bookEl.addEventListener('touchmove', function(e) { if (zoomScale > 1) { e.preventDefault(); e.stopImmediatePropagation(); } }, { capture: true, passive: false });
+      bookEl.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 2) {
+          pinchDistance = touchDistance(e.touches);
+          pinchStartScale = zoomScale;
+          e.preventDefault(); e.stopImmediatePropagation();
+        } else if (zoomScale > 1) {
+          e.stopImmediatePropagation();
+        }
+      }, { capture: true, passive: false });
+      bookEl.addEventListener('touchmove', function(e) {
+        if (e.touches.length === 2 && pinchDistance > 0) {
+          zoomScale = Math.max(1, Math.min(3, pinchStartScale * touchDistance(e.touches) / pinchDistance));
+          applyZoom();
+          notifyZoom(false);
+          e.preventDefault(); e.stopImmediatePropagation();
+        } else if (zoomScale > 1) {
+          e.preventDefault(); e.stopImmediatePropagation();
+        }
+      }, { capture: true, passive: false });
+      bookEl.addEventListener('touchend', function(e) {
+        if (e.touches.length < 2 && pinchDistance > 0) {
+          pinchDistance = 0;
+          notifyZoom(true);
+        }
+      }, { capture: true, passive: true });
       function handleRNCommand(rawData) {
         try {
           var msg = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
           if (msg.type === 'SET_ACCESS_TOKEN') { accessToken = typeof msg.token === 'string' ? msg.token : ''; return; }
+          if (msg.type === 'UPDATE_PREFERENCES') {
+            preferences = Object.assign({}, preferences, msg.preferences || {});
+            applyAppearance();
+            return;
+          }
           if (!pageFlipInstance) return;
 
           switch(msg.type) {

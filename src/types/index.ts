@@ -137,11 +137,13 @@ export interface Bookmark {
 export type FlipbookToReactNativeMessage =
   | { type: 'ENGINE_READY'; totalPages: number }
   | { type: 'PAGE_CHANGED'; page: number; totalPages: number }
+  | { type: 'ZOOM_CHANGED'; scale: number }
   | { type: 'TAP_CENTER' }
   | { type: 'ERROR'; message: string };
 
 export type ReactNativeToFlipbookMessage =
   | { type: 'SET_ACCESS_TOKEN'; token?: string }
+  | { type: 'UPDATE_PREFERENCES'; preferences: UserPreference }
   | { type: 'ZOOM'; scale: number }
   | { type: 'TURN_NEXT' }
   | { type: 'TURN_PREV' }

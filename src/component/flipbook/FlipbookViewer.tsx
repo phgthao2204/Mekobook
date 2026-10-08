@@ -19,6 +19,7 @@ export interface FlipbookViewerProps {
   onToggleControls?: () => void;
   onReady?: (totalPages: number) => void;
   onError?: (message: string) => void;
+  onZoomChange?: (scale: number) => void;
   preferences: UserPreference;
 }
 
@@ -39,6 +40,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
       onToggleControls,
       onReady,
       onError,
+      onZoomChange,
       preferences,
     },
     ref
@@ -80,9 +82,10 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
         slidingWindowSize: ENV.FLIPBOOK.CACHE_SLIDING_WINDOW_SIZE,
         preferences,
       });
-    }, [book, initialPage, preferences]);
+    }, [book, initialPage]);
     const source = useMemo(() => ({ html: htmlSource, baseUrl: ENV.API_BASE_URL }), [htmlSource]);
     useEffect(() => { postMessageToEngine({ type: 'SET_ACCESS_TOKEN', token: accessToken }); }, [accessToken]);
+    useEffect(() => { postMessageToEngine({ type: 'UPDATE_PREFERENCES', preferences }); }, [preferences]);
 
     const handleMessage = (event: WebViewMessageEvent) => {
       try {
@@ -103,6 +106,9 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
             if (onReady) {
               onReady(data.totalPages);
             }
+            break;
+          case 'ZOOM_CHANGED':
+            onZoomChange?.(Math.max(1, Math.min(3, data.scale)));
             break;
           case 'ERROR':
             onError?.(data.message);

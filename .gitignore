@@ -11,6 +11,7 @@ dist-acceptance/
 web-build/
 
 # Native builds
+/android/
 *.orig.*
 *.jks
 *.p8
@@ -24,6 +25,7 @@ web-build/
 .env.*.local
 
 # OS Files
+/.tmp/
 .DS_Store
 Thumbs.db
 

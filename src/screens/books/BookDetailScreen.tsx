@@ -27,7 +27,11 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
   const { book, licenses, canRead } = access;
   const page = clampPage(book.readingProgress?.currentPage || 1, book.totalPages);
   const started = hasStartedReading(book.readingProgress);
-  const open = (mode: 'start' | 'continue') => navigation.navigate('BookLoading', { bookId: book.id, mode });
+  const open = (mode: 'start' | 'continue') => navigation.navigate('BookLoading', {
+    bookId: book.id,
+    mode,
+    preview: { title: book.title, author: book.author, coverUrl: book.coverUrl },
+  });
   return <SafeAreaView style={styles.screen}>
     <TouchableOpacity accessibilityRole="button" accessibilityLabel="Quay lại thư viện" onPress={navigation.goBack} style={styles.back}>
       <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -44,9 +48,15 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
       {access.progressUnavailable && <TouchableOpacity accessibilityRole="button" onPress={() => setAttempt(x => x + 1)}><Text style={styles.muted}>Tải lại tiến trình</Text></TouchableOpacity>}
       <View style={styles.license}>
         <Text style={styles.text}>Quyền đọc: {book.isFree ? 'Miễn phí' : access.licensesUnavailable ? 'Chưa kiểm tra được giấy phép' : canRead ? 'Giấy phép còn hiệu lực' : 'Chưa xác nhận giấy phép còn hiệu lực'}</Text>
-        {licenses.map(license => <Text key={license.id} style={styles.muted}>
-          {license.licenseType} · {license.status === 'UNKNOWN' ? 'API chưa cung cấp trạng thái hiệu lực' : license.status} · Tối đa {license.maxDevices} thiết bị
-        </Text>)}
+        {!book.isFree && licenses.map(license => {
+          const details = [
+            license.status === 'EXPIRED' ? 'Đã hết hạn' : null,
+            Number.isFinite(license.maxDevices) && license.maxDevices > 0
+              ? `Tối đa ${license.maxDevices} thiết bị`
+              : null,
+          ].filter(Boolean);
+          return details.length ? <Text key={license.id} style={styles.muted}>{details.join(' · ')}</Text> : null;
+        })}
       </View>
       <TouchableOpacity disabled={!canRead} accessibilityRole="button" style={[styles.button, !canRead && styles.disabled]}
         onPress={() => open(started ? 'continue' : 'start')}>
