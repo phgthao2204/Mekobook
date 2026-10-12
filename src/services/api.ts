@@ -1,5 +1,5 @@
 import { ENV, getApiUrl } from '../constants/env';
-import { Book, ChapterTOC, DrmLicense, LiferayItemResponse, ReadingProgress, UserPreference } from '../types';
+import { Annotation, Book, Bookmark, ChapterTOC, DrmLicense, LiferayItemResponse, ReadingProgress, UserPreference } from '../types';
 import { apiHttp } from './http';
 import { webDevMediaUrl } from '../utils/media';
 export { setApiAccessToken, getMediaRequestHeaders } from './http';
@@ -45,6 +45,14 @@ export async function getBookById(id: number): Promise<Book> {
 }
 export function getBookTOC(bookId: number): Promise<ChapterTOC[]> {
   return getItems(ENV.API_PATHS.CHAPTER_TOCS, { filter: `bookId eq ${bookId}`, sort: 'displayOrder:asc' });
+}
+export async function getBookBookmarks(bookId: number): Promise<Bookmark[]> {
+  const bookmarks = await getItems<Bookmark>(ENV.API_PATHS.BOOKMARKS, { filter: `bookId eq ${bookId}` });
+  return bookmarks.filter(item => Number.isInteger(item.pageNumber)).sort((a, b) => a.pageNumber - b.pageNumber);
+}
+export async function getBookAnnotations(bookId: number): Promise<Annotation[]> {
+  const annotations = await getItems<Annotation>(ENV.API_PATHS.ANNOTATIONS, { filter: `bookId eq ${bookId}` });
+  return annotations.filter(item => Number.isInteger(item.pageNumber)).sort((a, b) => a.pageNumber - b.pageNumber);
 }
 export function getReadingProgresses(_pageSize = 100, bookId?: number): Promise<ReadingProgress[]> {
   return getItems(ENV.API_PATHS.READING_PROGRESSES, bookId ? { filter: `bookId eq ${bookId}` } : {});

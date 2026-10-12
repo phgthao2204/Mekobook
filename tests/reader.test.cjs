@@ -13,7 +13,7 @@ require.extensions['.ts'] = (module, filename) => {
 process.env.EXPO_PUBLIC_API_BASE_URL = 'https://example.test';
 const { clampPage, hasReadAccess, normalizePreferences, latestProgress, hasStartedReading } = require('../src/utils/reader.ts');
 const { apiHttp, setApiAccessToken, setSessionRenewal, getMediaRequestHeaders } = require('../src/services/http.ts');
-const { getBooks, normalizeServerUrl, getPageImageUrl, normalizeDrmLicense } = require('../src/services/api.ts');
+const { getBooks, normalizeServerUrl, getPageImageUrl, getThumbnailUrl, getBookBookmarks, getBookAnnotations, normalizeDrmLicense } = require('../src/services/api.ts');
 const { prepareReader, getBookAccess } = require('../src/services/reader.ts');
 const { generateFlipbookHtml } = require('../src/component/flipbook/flipbookEngineHtml.ts');
 const { AxiosError } = require('axios');
@@ -40,6 +40,8 @@ test('web dev proxy only permits documented reads and OAuth grants', () => {
   const { allowedRequest } = require('../scripts/dev-api-proxy.cjs');
   assert.equal(allowedRequest('GET', '/o/c/books'), true);
   assert.equal(allowedRequest('GET', '/o/c/books/32884'), true);
+  assert.equal(allowedRequest('GET', '/o/c/bookmarks'), true);
+  assert.equal(allowedRequest('GET', '/o/c/annotations'), true);
   assert.equal(allowedRequest('POST', '/o/oauth2/token'), true);
   assert.equal(allowedRequest('POST', '/o/c/readingprogresses'), false);
   assert.equal(allowedRequest('DELETE', '/o/c/books/32884'), false);
@@ -64,6 +66,7 @@ test('dev proxy forwards Connect next so Metro fallback routes do not crash', ()
 test('media proxy is restricted to public flipbook images and never arbitrary destinations/writes', () => {
   const { allowedMediaRequest } = require('../scripts/dev-api-proxy.cjs');
   assert.equal(allowedMediaRequest('GET', '/flipbooks/demo/files/mobile/2.jpg'), true);
+  assert.equal(allowedMediaRequest('GET', '/documents/20117/33056/flipbooks/demo/files/mobile/2.jpg'), true);
   assert.equal(allowedMediaRequest('HEAD', '/flipbooks/covers/demo.png'), true);
   assert.equal(allowedMediaRequest('POST', '/flipbooks/demo/files/mobile/2.jpg'), false);
   assert.equal(allowedMediaRequest('GET', '/o/oauth2/token'), false);
@@ -108,6 +111,7 @@ test('web dev images use absolute local proxy URLs; native/production/external i
     global.window = { location: { origin: 'http://localhost:8081' } };
     global.__DEV__ = true;
     assert.equal(webDevMediaUrl('https://example.test/flipbooks/demo/mobile/2.jpg'), 'http://localhost:8081/__mekobook_media/flipbooks/demo/mobile/2.jpg');
+    assert.equal(webDevMediaUrl('https://example.test/documents/20117/33056/flipbooks/demo/files/thumb/2.jpg'), 'http://localhost:8081/__mekobook_media/documents/20117/33056/flipbooks/demo/files/thumb/2.jpg');
     assert.equal(webDevMediaUrl('https://outside.test/flipbooks/2.jpg'), 'https://outside.test/flipbooks/2.jpg');
     assert.equal(webDevMediaUrl('https://example.test/flipbooks/demo/files/'), 'https://example.test/flipbooks/demo/files/');
     global.__DEV__ = false;
@@ -189,6 +193,33 @@ test('localhost URLs are normalized; unsafe schemes rejected; page numbering pre
   assert.equal(normalizeServerUrl('http://192.168.1.99:8080/a.jpg'), 'http://192.168.1.99:8080/a.jpg');
   assert.throws(() => normalizeServerUrl('javascript:alert(1)'));
   assert.equal(getPageImageUrl(book, 1), 'https://example.test/pages/mobile/1.jpg');
+  assert.equal(getThumbnailUrl(book, 2), 'https://example.test/pages/thumb/2.jpg');
+});
+test('bookmarks and annotations use documented book filters and return page order', async () => {
+  const requests = [];
+  apiHttp.defaults.adapter = async config => {
+    requests.push(config);
+    if (config.url.endsWith('/bookmarks')) return respond(config, { items: [
+      { id: 2, bookId: 1, pageNumber: 9, chapterTitle: 'Chương 2', colorTag: '#F59E0B' },
+      { id: 1, bookId: 1, pageNumber: 3, chapterTitle: 'Chương 1' },
+      { id: 3, bookId: 1, pageNumber: null },
+    ], lastPage: 1 });
+    if (config.url.endsWith('/annotations')) return respond(config, { items: [
+      { id: 4, bookId: 1, pageNumber: 7, type: 'STICKY_NOTE', coordinateData: '[{"x":0.2,"y":0.4}]', noteText: 'Ghi chú' },
+    ], lastPage: 1 });
+    throw new Error(`Unexpected request ${config.url}`);
+  };
+  const bookmarks = await getBookBookmarks(1);
+  const annotations = await getBookAnnotations(1);
+  assert.deepEqual(bookmarks.map(item => item.pageNumber), [3, 9]);
+  assert.equal(bookmarks[1].chapterTitle, 'Chương 2');
+  assert.equal(annotations[0].type, 'STICKY_NOTE');
+  assert.equal(annotations[0].noteText, 'Ghi chú');
+  assert.equal(requests.length, 2);
+  for (const request of requests) {
+    assert.equal(request.method, 'get');
+    assert.equal(request.params.filter, 'bookId eq 1');
+  }
 });
 test('media does not leak access token to a different content origin', () => {
   setApiAccessToken('test-token');
@@ -271,6 +302,8 @@ test('generated engine scripts parse and wire preferences/zoom/load before ready
     assert.ok(html.includes('if (isPageVisible(newPage))'));
     assert.ok(html.includes("case 'ZOOM'"));
     assert.ok(html.includes("msg.type === 'UPDATE_PREFERENCES'"));
+    assert.ok(html.includes("msg.type === 'SET_ANNOTATIONS'"));
+    assert.ok(html.includes('reader-annotation-layer'));
     assert.ok(html.includes('pinchStartScale * touchDistance'));
     assert.ok(html.includes("target.origin !== apiOrigin"));
     assert.ok(html.includes("'Authorization': 'Bearer ' + accessToken"));

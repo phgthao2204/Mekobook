@@ -9,6 +9,9 @@ import { ReaderSettingsModal } from '../../component/flipbook/ReaderSettingsModa
 import { LoadState } from '../../component/LoadState';
 import { colors } from '../../constants/theme';
 import { useAuth } from '../../hooks/useAuth';
+import { getBookAnnotations, getBookBookmarks } from '../../services/api';
+import { errorMessage } from '../../services/http';
+import { Annotation, Bookmark } from '../../types';
 export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, 'Reader'>) {
   const { session } = useAuth();
   const insets = useSafeAreaInsets();
@@ -29,6 +32,13 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
   const [zoomRailVisible, setZoomRailVisible] = useState(false);
   const [zoomExpanded, setZoomExpanded] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [bookmarksLoading, setBookmarksLoading] = useState(true);
+  const [annotationsLoading, setAnnotationsLoading] = useState(true);
+  const [bookmarksError, setBookmarksError] = useState('');
+  const [annotationsError, setAnnotationsError] = useState('');
+  const [marksReload, setMarksReload] = useState(0);
   const viewer = useRef<FlipbookViewerRef>(null);
   const readerOpacity = useRef(new Animated.Value(0)).current;
   const zoomRailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,6 +56,23 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
     if (zoomRailTimer.current) clearTimeout(zoomRailTimer.current);
   }, []);
   useEffect(() => {
+    let active = true;
+    setBookmarksLoading(true);
+    setAnnotationsLoading(true);
+    setBookmarksError('');
+    setAnnotationsError('');
+    Promise.allSettled([getBookBookmarks(book.id), getBookAnnotations(book.id)]).then(([bookmarkResult, annotationResult]) => {
+      if (!active) return;
+      if (bookmarkResult.status === 'fulfilled') setBookmarks(bookmarkResult.value);
+      else { setBookmarks([]); setBookmarksError(errorMessage(bookmarkResult.reason)); }
+      if (annotationResult.status === 'fulfilled') setAnnotations(annotationResult.value);
+      else { setAnnotations([]); setAnnotationsError(errorMessage(annotationResult.reason)); }
+      setBookmarksLoading(false);
+      setAnnotationsLoading(false);
+    });
+    return () => { active = false; };
+  }, [book.id, marksReload]);
+  useEffect(() => {
     if (ready || error) return;
     const timer = setTimeout(() => setError('Nội dung sách phản hồi quá lâu. Vui lòng thử lại.'), 20000);
     return () => clearTimeout(timer);
@@ -53,7 +80,7 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
   return <View style={styles.screen}>
     <StatusBar hidden={ready && !visible} barStyle={resolvedPreferences.themeMode === 'DARK' ? 'light-content' : 'dark-content'} />
     <Animated.View style={[styles.viewer, { opacity: readerOpacity }]}>
-      <FlipbookViewer key={attempt} ref={viewer} book={book} accessToken={session?.accessToken}
+      <FlipbookViewer key={attempt} ref={viewer} book={book} accessToken={session?.accessToken} annotations={annotations}
         initialPage={openingPage} preferences={resolvedPreferences}
         onPageChange={next => { setPage(next); setZoom(1); }} onToggleControls={() => setVisible(x => !x)}
         onZoomChange={revealZoomRail}
@@ -70,7 +97,10 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
       <FlipbookControls book={book} currentPage={page} totalPages={book.totalPages} visible={visible}
         themeMode={resolvedPreferences.themeMode}
         onBack={navigation.goBack} onPrevPage={() => viewer.current?.flipPrev()} onNextPage={() => viewer.current?.flipNext()}
-        onJumpToPage={target => viewer.current?.goToPage(target)} onOpenSettings={() => setSettingsVisible(true)} />
+        onJumpToPage={target => viewer.current?.goToPage(target)} onOpenSettings={() => setSettingsVisible(true)}
+        bookmarks={bookmarks} annotations={annotations} bookmarksLoading={bookmarksLoading} annotationsLoading={annotationsLoading}
+        bookmarksError={bookmarksError} annotationsError={annotationsError}
+        onRetryBookmarks={() => setMarksReload(value => value + 1)} onRetryAnnotations={() => setMarksReload(value => value + 1)} />
       {(visible || zoomRailVisible) && <View style={[styles.zoom, {
         top: insets.top + 76,
         backgroundColor: resolvedPreferences.themeMode === 'DARK' ? '#18212F' : resolvedPreferences.themeMode === 'SEPIA' ? '#EADFC8' : colors.surface,

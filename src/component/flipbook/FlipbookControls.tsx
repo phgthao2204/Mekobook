@@ -14,13 +14,15 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  TextInput,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Book, ChapterTOC, UserPreference } from '../../types';
+import { Annotation, Book, Bookmark, ChapterTOC, UserPreference } from '../../types';
 import { getBookTOC } from '../../services/api';
 import { errorMessage } from '../../services/http';
+import { ReaderNavigationMode, ReaderNavigationSheet } from './ReaderNavigationSheet';
 
 interface FlipbookControlsProps {
   book: Book;
@@ -33,6 +35,14 @@ interface FlipbookControlsProps {
   onJumpToPage: (page: number) => void;
   onOpenSettings: () => void;
   themeMode?: UserPreference['themeMode'];
+  bookmarks: Bookmark[];
+  annotations: Annotation[];
+  bookmarksLoading: boolean;
+  annotationsLoading: boolean;
+  bookmarksError?: string;
+  annotationsError?: string;
+  onRetryBookmarks: () => void;
+  onRetryAnnotations: () => void;
 }
 
 export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
@@ -46,6 +56,14 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
   onJumpToPage,
   onOpenSettings,
   themeMode = 'LIGHT',
+  bookmarks,
+  annotations,
+  bookmarksLoading,
+  annotationsLoading,
+  bookmarksError,
+  annotationsError,
+  onRetryBookmarks,
+  onRetryAnnotations,
 }) => {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -54,6 +72,10 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
   const [tocList, setTocList] = useState<ChapterTOC[]>([]);
   const [loadingToc, setLoadingToc] = useState<boolean>(false);
   const [tocError, setTocError] = useState('');
+  const [navigationMode, setNavigationMode] = useState<ReaderNavigationMode | null>(null);
+  const [pagePickerVisible, setPagePickerVisible] = useState(false);
+  const [pageInput, setPageInput] = useState(String(currentPage));
+  const [pageInputError, setPageInputError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -81,6 +103,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
     <View style={styles.overlayContainer} pointerEvents="box-none">
       {/* TOP HEADER BAR */}
       <View style={[styles.topBar, readingSurface, { paddingTop: Math.max(insets.top + 8, 16) }]}>
+        <View style={styles.headerMain}>
         <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={22} color={readingText.color} />
         </TouchableOpacity>
@@ -94,16 +117,6 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
           </Text>}
         </View>
 
-        {/* TOC TRIGGER BUTTON */}
-        <TouchableOpacity
-          style={styles.tocButton}
-          onPress={() => setShowToc(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="list" size={17} color={colors.primary} />
-          {!compact && <Text style={styles.tocButtonText}>Mục lục</Text>}
-        </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.settingsButton}
           onPress={onOpenSettings}
@@ -114,10 +127,30 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
           <Ionicons name="settings-outline" size={19} color={colors.primary} />
         </TouchableOpacity>
 
-        <View style={styles.pageBadge}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Chuyển đến trang" style={styles.pageBadge}
+          onPress={() => { setPageInput(String(currentPage)); setPageInputError(''); setPagePickerVisible(true); }}>
           <Text style={styles.pageBadgeText}>
             {compact ? `${currentPage}/${totalPages}` : `${pageLabel} (${currentPage}/${totalPages})`}
           </Text>
+        </TouchableOpacity>
+        </View>
+        <View style={styles.toolsRow}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Mở mục lục" style={styles.toolButton}
+            onPress={() => setShowToc(true)}>
+            <Ionicons name="list-outline" size={17} color={colors.primary} /><Text style={styles.toolLabel}>Mục lục</Text>
+          </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Mở ảnh thu nhỏ" style={styles.toolButton}
+            onPress={() => setNavigationMode('thumbnails')}>
+            <Ionicons name="grid-outline" size={16} color={colors.primary} /><Text style={styles.toolLabel}>Trang</Text>
+          </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Xem trang đã đánh dấu" style={styles.toolButton}
+            onPress={() => setNavigationMode('bookmarks')}>
+            <Ionicons name="bookmark-outline" size={16} color={colors.primary} /><Text style={styles.toolLabel}>Đánh dấu</Text>
+          </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Xem ghi chú và vùng đánh dấu" style={styles.toolButton}
+            onPress={() => setNavigationMode('annotations')}>
+            <Ionicons name="reader-outline" size={16} color={colors.primary} /><Text style={styles.toolLabel}>Ghi chú</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -272,6 +305,43 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
           </SafeAreaView>
         </View>
       </Modal>
+
+      <Modal visible={pagePickerVisible} transparent animationType="fade"
+        onRequestClose={() => setPagePickerVisible(false)}>
+        <View style={styles.pagePickerBackdrop}>
+          <View style={styles.pagePickerCard}>
+            <Text style={styles.pagePickerTitle}>Đi đến trang</Text>
+            <Text style={styles.pagePickerHint}>{`Nhập số trang từ 1 đến ${totalPages}`}</Text>
+            <TextInput autoFocus accessibilityLabel="Số trang cần mở" keyboardType="number-pad" selectTextOnFocus
+              value={pageInput} onChangeText={value => { setPageInput(value.replace(/\D/g, '')); setPageInputError(''); }}
+              onSubmitEditing={() => {
+                const target = Number(pageInput);
+                if (!Number.isInteger(target) || target < 1 || target > totalPages) { setPageInputError(`Nhập số từ 1 đến ${totalPages}.`); return; }
+                setPagePickerVisible(false); onJumpToPage(target);
+              }}
+              style={styles.pageInput} />
+            {!!pageInputError && <Text style={styles.pagePickerError}>{pageInputError}</Text>}
+            <View style={styles.pagePickerActions}>
+              <TouchableOpacity style={styles.pagePickerCancel} onPress={() => setPagePickerVisible(false)}>
+                <Text style={styles.pagePickerCancelText}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.pagePickerGo} onPress={() => {
+                const target = Number(pageInput);
+                if (!Number.isInteger(target) || target < 1 || target > totalPages) { setPageInputError(`Nhập số từ 1 đến ${totalPages}.`); return; }
+                setPagePickerVisible(false); onJumpToPage(target);
+              }}>
+                <Text style={styles.pagePickerGoText}>Mở trang</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <ReaderNavigationSheet visible={navigationMode !== null} mode={navigationMode} book={book}
+        currentPage={currentPage} bookmarks={bookmarks} annotations={annotations}
+        bookmarksLoading={bookmarksLoading} annotationsLoading={annotationsLoading}
+        bookmarksError={bookmarksError} annotationsError={annotationsError}
+        onRetryBookmarks={onRetryBookmarks} onRetryAnnotations={onRetryAnnotations}
+        onClose={() => setNavigationMode(null)} onJumpToPage={onJumpToPage} />
     </View>
   );
 };
@@ -283,10 +353,8 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 16,
+    flexDirection: 'column',
+    paddingTop: 8,
     paddingBottom: 12,
     paddingHorizontal: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.96)',
@@ -298,6 +366,11 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+  headerMain: { minHeight: 48, width: '100%', flexDirection: 'row', alignItems: 'center' },
+  toolsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', marginTop: 8, gap: 6 },
+  toolButton: { flex: 1, minHeight: 34, borderRadius: 9, backgroundColor: '#ECFDF5', borderWidth: 1,
+    borderColor: '#A7F3D0', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  toolLabel: { color: colors.primary, fontSize: 10, fontWeight: '800' },
   backButton: {
     width: 38,
     height: 38,
@@ -361,6 +434,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  pagePickerBackdrop: { flex: 1, padding: 24, backgroundColor: 'rgba(15,23,42,0.5)', alignItems: 'center', justifyContent: 'center' },
+  pagePickerCard: { width: '100%', maxWidth: 360, padding: 20, borderRadius: 18, backgroundColor: colors.surface },
+  pagePickerTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  pagePickerHint: { color: colors.muted, fontSize: 13, marginTop: 5 },
+  pageInput: { height: 48, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.border, borderRadius: 10,
+    color: colors.text, fontSize: 17, fontWeight: '700', marginTop: 16 },
+  pagePickerError: { color: '#B91C1C', fontSize: 12, marginTop: 6 },
+  pagePickerActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 18 },
+  pagePickerCancel: { minHeight: 42, paddingHorizontal: 16, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
+  pagePickerCancelText: { color: colors.muted, fontSize: 13, fontWeight: '700' },
+  pagePickerGo: { minHeight: 42, paddingHorizontal: 16, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+  pagePickerGoText: { color: colors.surface, fontSize: 13, fontWeight: '800' },
   bottomBar: {
     backgroundColor: 'rgba(255, 255, 255, 0.96)',
     paddingTop: 10,

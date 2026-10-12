@@ -7,7 +7,7 @@
 import React, { useRef, useImperativeHandle, forwardRef, useMemo, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
-import { Book, UserPreference, FlipbookToReactNativeMessage, ReactNativeToFlipbookMessage } from '../../types';
+import { Annotation, Book, UserPreference, FlipbookToReactNativeMessage, ReactNativeToFlipbookMessage } from '../../types';
 import { generateFlipbookHtml } from './flipbookEngineHtml';
 import { ENV } from '../../constants/env';
 
@@ -21,6 +21,7 @@ export interface FlipbookViewerProps {
   onError?: (message: string) => void;
   onZoomChange?: (scale: number) => void;
   preferences: UserPreference;
+  annotations?: Annotation[];
 }
 
 export interface FlipbookViewerRef {
@@ -42,6 +43,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
       onError,
       onZoomChange,
       preferences,
+      annotations = [],
     },
     ref
   ) => {
@@ -86,6 +88,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
     const source = useMemo(() => ({ html: htmlSource, baseUrl: ENV.API_BASE_URL }), [htmlSource]);
     useEffect(() => { postMessageToEngine({ type: 'SET_ACCESS_TOKEN', token: accessToken }); }, [accessToken]);
     useEffect(() => { postMessageToEngine({ type: 'UPDATE_PREFERENCES', preferences }); }, [preferences]);
+    useEffect(() => { postMessageToEngine({ type: 'SET_ANNOTATIONS', annotations }); }, [annotations]);
 
     const handleMessage = (event: WebViewMessageEvent) => {
       try {

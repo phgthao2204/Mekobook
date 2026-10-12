@@ -34,6 +34,10 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
     return () => window.removeEventListener('message', receive);
   }, []);
 
+  useEffect(() => {
+    frame.current?.contentWindow?.postMessage({ type: 'SET_ANNOTATIONS', annotations: props.annotations || [] }, '*');
+  }, [props.annotations]);
+
   useImperativeHandle(ref, () => {
     // Sandboxed srcdoc has an opaque origin; source validation is on receive.
     const send = (message: ReactNativeToFlipbookMessage) => frame.current?.contentWindow?.postMessage(message, '*');

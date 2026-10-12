@@ -126,11 +126,24 @@ export interface LibraryBook extends Book {
 
 /** 7. Bookmark - Đánh dấu ruy băng trang (/o/c/bookmarks) */
 export interface Bookmark {
-  id?: number;
+  id: number;
   bookId: number;
   pageNumber: number;
-  bookmarkTitle: string;
+  bookmarkTitle?: string;
+  chapterTitle?: string;
   colorCode?: string;
+  colorTag?: string;
+  note?: string;
+}
+
+export interface Annotation {
+  id: number;
+  bookId: number;
+  pageNumber: number;
+  type: 'HIGHLIGHT' | 'STICKY_NOTE' | 'DRAWING_PEN' | string;
+  coordinateData?: string | Array<{ x: number; y: number }>;
+  color?: string;
+  noteText?: string;
 }
 
 /** Bridge Messages between React Native and Flipbook WebView Engine */
@@ -143,6 +156,7 @@ export type FlipbookToReactNativeMessage =
 
 export type ReactNativeToFlipbookMessage =
   | { type: 'SET_ACCESS_TOKEN'; token?: string }
+  | { type: 'SET_ANNOTATIONS'; annotations: Annotation[] }
   | { type: 'UPDATE_PREFERENCES'; preferences: UserPreference }
   | { type: 'ZOOM'; scale: number }
   | { type: 'TURN_NEXT' }

@@ -2,12 +2,13 @@ const https = require('node:https');
 const PREFIX = '/__mekobook_api';
 const MEDIA_PREFIX = '/__mekobook_media';
 function allowedMediaRequest(method, path) {
-  return (method === 'GET' || method === 'HEAD') && /^\/flipbooks\/[a-z0-9_\-/]+\.(jpe?g|png|webp)$/i.test(path);
+  return (method === 'GET' || method === 'HEAD')
+    && /^(?:\/flipbooks\/[a-z0-9_\-/]+|\/documents\/20117\/33056\/flipbooks\/[a-z0-9_\-/]+)\.(jpe?g|png|webp)$/i.test(path);
 }
 function allowedRequest(method, path) {
   if (method === 'POST') return path === '/o/oauth2/token';
   return method === 'GET' && (path === '/o/headless-admin-user/v1.0/my-user-account'
-    || /^\/o\/c\/(books|chaptertocs|userpreferences|readingprogresses|drmlicenses)(\/\d+)?$/.test(path));
+    || /^\/o\/c\/(books|chaptertocs|userpreferences|readingprogresses|bookmarks|annotations|drmlicenses)(\/\d+)?$/.test(path));
 }
 function createDevApiProxy(baseUrl, middleware, transport = https) {
   return (req, res, next) => {

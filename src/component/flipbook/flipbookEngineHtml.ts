@@ -114,6 +114,36 @@ export function generateFlipbookHtml({
       pointer-events: none;
     }
 
+    .reader-annotation-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .reader-annotation-vector {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    .reader-annotation-note {
+      position: absolute;
+      max-width: 58%;
+      max-height: 28%;
+      overflow: hidden;
+      padding: 5px 7px;
+      border: 1px solid rgba(15, 23, 42, 0.18);
+      border-radius: 5px;
+      color: #1E293B;
+      font-size: 10px;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+    }
+
     /* Spine Inner Shadow / Depth Crease */
     .page.--left .page-spine-shadow {
       position: absolute;
@@ -225,6 +255,7 @@ export function generateFlipbookHtml({
       var accessToken = ${JSON.stringify(accessToken).replace(/</g, '\\u003c')};
       var apiOrigin = ${JSON.stringify(new URL(ENV.API_BASE_URL).origin)};
       var pageFlipInstance = null;
+      var annotations = [];
 
       var preferences = ${JSON.stringify(preferences).replace(/</g, '\\u003c')};
       var zoomScale = 1, panX = 0, panY = 0;
@@ -235,6 +266,64 @@ export function generateFlipbookHtml({
         document.body.style.backgroundColor = background;
         document.getElementById('flipbook-container').style.backgroundColor = background;
         bookEl.style.filter = 'brightness(' + preferences.brightness + ')' + (preferences.themeMode === 'SEPIA' ? ' sepia(0.35)' : '');
+      }
+      function annotationPoints(annotation) {
+        var value = annotation && annotation.coordinateData;
+        if (typeof value === 'string') {
+          try { value = JSON.parse(value); } catch (_) { return []; }
+        }
+        if (!Array.isArray(value)) return [];
+        return value.filter(function(point) {
+          return point && Number.isFinite(Number(point.x)) && Number.isFinite(Number(point.y));
+        }).map(function(point) {
+          return { x: Math.max(0, Math.min(1, Number(point.x))), y: Math.max(0, Math.min(1, Number(point.y))) };
+        });
+      }
+      function applyAnnotations() {
+        document.querySelectorAll('.page').forEach(function(pageEl) {
+          var wrapper = pageEl.querySelector('.page-image-wrapper');
+          if (!wrapper || typeof wrapper.querySelector !== 'function' || typeof wrapper.appendChild !== 'function') return;
+          var oldLayer = wrapper.querySelector('.reader-annotation-layer');
+          if (oldLayer) oldLayer.remove();
+          var pageNumber = Number(pageEl.getAttribute('data-page'));
+          var pageAnnotations = annotations.filter(function(item) { return Number(item.pageNumber) === pageNumber; });
+          if (!pageAnnotations.length) return;
+          var layer = document.createElement('div');
+          layer.className = 'reader-annotation-layer';
+          pageAnnotations.forEach(function(item) {
+            var points = annotationPoints(item);
+            var color = typeof item.color === 'string' && /^#[0-9a-f]{3,8}$/i.test(item.color) ? item.color : '#FACC15';
+            if (item.type === 'STICKY_NOTE') {
+              var note = document.createElement('div');
+              note.className = 'reader-annotation-note';
+              note.style.left = ((points[0] ? points[0].x : 0.06) * 100) + '%';
+              note.style.top = ((points[0] ? points[0].y : 0.06) * 100) + '%';
+              note.style.backgroundColor = color;
+              note.textContent = typeof item.noteText === 'string' ? item.noteText : 'Ghi chú';
+              layer.appendChild(note);
+              return;
+            }
+            if (!points.length) return;
+            var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('viewBox', '0 0 1000 1000');
+            svg.setAttribute('preserveAspectRatio', 'none');
+            svg.classList.add('reader-annotation-vector');
+            var pointString = points.map(function(point) { return Math.round(point.x * 1000) + ',' + Math.round(point.y * 1000); }).join(' ');
+            var isHighlight = item.type === 'HIGHLIGHT';
+            var shape = document.createElementNS('http://www.w3.org/2000/svg', isHighlight && points.length >= 3 ? 'polygon' : 'polyline');
+            shape.setAttribute('points', pointString);
+            shape.setAttribute('fill', isHighlight && points.length >= 3 ? color : 'none');
+            shape.setAttribute('fill-opacity', '0.28');
+            shape.setAttribute('stroke', color);
+            shape.setAttribute('stroke-opacity', isHighlight ? '0.4' : '0.9');
+            shape.setAttribute('stroke-width', isHighlight ? '24' : '7');
+            shape.setAttribute('stroke-linecap', 'round');
+            shape.setAttribute('stroke-linejoin', 'round');
+            svg.appendChild(shape);
+            layer.appendChild(svg);
+          });
+          wrapper.appendChild(layer);
+        });
       }
       applyAppearance();
       function applyZoom() {
@@ -467,6 +556,7 @@ export function generateFlipbookHtml({
           pageFlipInstance.on('init', function() {
             loadingEl.style.display = 'none';
             bookEl.style.display = 'block';
+            applyAnnotations();
             postToRN({
               type: 'ENGINE_READY',
               totalPages: totalPages
@@ -571,6 +661,11 @@ export function generateFlipbookHtml({
         try {
           var msg = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
           if (msg.type === 'SET_ACCESS_TOKEN') { accessToken = typeof msg.token === 'string' ? msg.token : ''; return; }
+          if (msg.type === 'SET_ANNOTATIONS') {
+            annotations = Array.isArray(msg.annotations) ? msg.annotations : [];
+            applyAnnotations();
+            return;
+          }
           if (msg.type === 'UPDATE_PREFERENCES') {
             preferences = Object.assign({}, preferences, msg.preferences || {});
             applyAppearance();

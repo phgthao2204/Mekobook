@@ -10,6 +10,6 @@ export function webDevMediaUrl(url: string): string {
   if (!browserOrigin || typeof __DEV__ === 'undefined' || !__DEV__) return url;
   const parsed = new URL(url);
   if (parsed.origin !== new URL(ENV.API_BASE_URL).origin
-    || !/^\/flipbooks\/.*\.(jpe?g|png|webp)$/i.test(parsed.pathname)) return url;
+    || !/^(?:\/flipbooks\/[a-z0-9_\-/]+|\/documents\/20117\/33056\/flipbooks\/[a-z0-9_\-/]+)\.(jpe?g|png|webp)$/i.test(parsed.pathname)) return url;
   return `${browserOrigin}/__mekobook_media${parsed.pathname}${parsed.search}`;
 }
