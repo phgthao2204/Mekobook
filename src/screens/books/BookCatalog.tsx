@@ -9,6 +9,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LibraryBook, ReadingProgress, UserAccount } from '../../types';
 import { getBooks, getMediaRequestHeaders, getReadingProgresses } from '../../services/api';
 import { errorMessage } from '../../services/http';
+import { getLocalReadingProgress } from '../../services/localReadingProgress';
+import { mergeReadingProgress, normalizeSearchText } from '../../utils/reader';
 
 type ViewMode = 'grid' | 'list';
 
@@ -57,15 +59,32 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
   const loadLibrary = async () => {
     const version = ++requestId.current;
     setError('');
+    const remoteProgressRequest = getReadingProgresses(200)
+      .then(items => ({ items }))
+      .catch(reason => ({ reason }));
     try {
-      const [bookResult, progressResult] = await Promise.allSettled([
-        getBooks(100), getReadingProgresses(200),
+      const loadedBooks = await getBooks(100);
+      if (version !== requestId.current) return;
+      // Show the catalog as soon as its primary API responds. Progress is secondary
+      // and must not keep the entire library behind a long spinner.
+      setBooks(loadedBooks);
+      setLoading(false);
+      setRefreshing(false);
+
+      const [progressResult, localProgressResult] = await Promise.all([
+        remoteProgressRequest,
+        Promise.all(loadedBooks.map(book => getLocalReadingProgress(user.id, book.id).catch(() => undefined))),
       ]);
       if (version !== requestId.current) return;
-      if (bookResult.status === 'rejected') throw bookResult.reason;
-      const progressByBook = latestProgress(progressResult.status === 'fulfilled' ? progressResult.value : []);
-      setBooks(bookResult.value.map((book) => ({ ...book, progressUnavailable: progressResult.status === 'rejected', readingProgress: progressByBook.get(book.id) })));
-      if (progressResult.status === 'rejected') setError('Đã tải sách nhưng chưa tải được tiến trình đọc.');
+      const remoteProgressAvailable = 'items' in progressResult;
+      const remoteProgressByBook = latestProgress(remoteProgressAvailable ? progressResult.items : []);
+      const localProgressByBook = new Map(loadedBooks.map((book, index) => [book.id, localProgressResult[index]]));
+      const remoteProgressUnavailable = !remoteProgressAvailable;
+      setBooks(loadedBooks.map(book => {
+        const readingProgress = mergeReadingProgress(remoteProgressByBook.get(book.id), localProgressByBook.get(book.id));
+        return { ...book, readingProgress, progressUnavailable: remoteProgressUnavailable && !readingProgress };
+      }));
+      if (remoteProgressUnavailable) setError('Đã tải sách nhưng chưa tải được tiến trình đọc.');
     } catch (error) {
       if (version === requestId.current) setError(errorMessage(error));
     } finally {
@@ -76,11 +95,11 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
   useEffect(() => { loadLibrary(); return () => { requestId.current++; }; }, []);
 
   const filteredBooks = useMemo(() => {
-    const query = searchQuery.trim().toLocaleLowerCase('vi-VN');
+    const query = normalizeSearchText(searchQuery);
     if (!query) return books;
     return books.filter((book) =>
-      book.title.toLocaleLowerCase('vi-VN').includes(query) ||
-      book.author.toLocaleLowerCase('vi-VN').includes(query)
+      normalizeSearchText(book.title).includes(query) ||
+      normalizeSearchText(book.author).includes(query)
     );
   }, [books, searchQuery]);
 
@@ -180,7 +199,7 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
         <View style={styles.searchContainer}>
           <Ionicons name="search-outline" size={18} color={colors.primary} />
           <TextInput
-            style={styles.searchInput} placeholder="Tìm theo tên sách hoặc tác giả"
+            style={styles.searchInput} placeholder="Tìm tên sách hoặc tác giả (có thể bỏ dấu)"
             placeholderTextColor="#94A3B8" value={searchQuery} onChangeText={setSearchQuery}
             autoCorrect={false} returnKeyType="search"
           />

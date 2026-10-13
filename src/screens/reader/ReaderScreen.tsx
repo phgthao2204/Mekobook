@@ -10,6 +10,7 @@ import { LoadState } from '../../component/LoadState';
 import { colors } from '../../constants/theme';
 import { useAuth } from '../../hooks/useAuth';
 import { getBookAnnotations, getBookBookmarks } from '../../services/api';
+import { saveLocalReadingProgress } from '../../services/localReadingProgress';
 import { errorMessage } from '../../services/http';
 import { Annotation, Bookmark } from '../../types';
 export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, 'Reader'>) {
@@ -23,6 +24,7 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
       ? (systemColorScheme === 'dark' ? 'DARK' : 'LIGHT') as 'DARK' | 'LIGHT' : preferences.themeMode,
   }), [preferences, systemColorScheme]);
   const [page, setPage] = useState(initialPage);
+  const pageRef = useRef(initialPage);
   const [openingPage, setOpeningPage] = useState(initialPage);
   const [visible, setVisible] = useState(true);
   const [ready, setReady] = useState(false);
@@ -42,6 +44,22 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
   const viewer = useRef<FlipbookViewerRef>(null);
   const readerOpacity = useRef(new Animated.Value(0)).current;
   const zoomRailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persistPage = (value: number) => {
+    if (!session?.user.id) return;
+    void saveLocalReadingProgress(session.user.id, book.id, value, book.totalPages).catch(() => {});
+  };
+  const handlePageChange = (next: number) => {
+    pageRef.current = next;
+    setPage(next);
+    setZoom(1);
+    if (!session?.user.id) return;
+    if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
+    progressSaveTimer.current = setTimeout(() => {
+      progressSaveTimer.current = null;
+      persistPage(pageRef.current);
+    }, 250);
+  };
   const revealZoomRail = (scale: number) => {
     setZoom(scale);
     setZoomRailVisible(true);
@@ -55,6 +73,10 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
   useEffect(() => () => {
     if (zoomRailTimer.current) clearTimeout(zoomRailTimer.current);
   }, []);
+  useEffect(() => () => {
+    if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
+    persistPage(pageRef.current);
+  }, [book.id, book.totalPages, session?.user.id]);
   useEffect(() => {
     let active = true;
     setBookmarksLoading(true);
@@ -82,7 +104,7 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
     <Animated.View style={[styles.viewer, { opacity: readerOpacity }]}>
       <FlipbookViewer key={attempt} ref={viewer} book={book} accessToken={session?.accessToken} annotations={annotations}
         initialPage={openingPage} preferences={resolvedPreferences}
-        onPageChange={next => { setPage(next); setZoom(1); }} onToggleControls={() => setVisible(x => !x)}
+        onPageChange={handlePageChange} onToggleControls={() => setVisible(x => !x)}
         onZoomChange={revealZoomRail}
         onReady={() => {
           setReady(true);

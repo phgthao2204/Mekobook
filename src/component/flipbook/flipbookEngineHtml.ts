@@ -260,6 +260,7 @@ export function generateFlipbookHtml({
       var preferences = ${JSON.stringify(preferences).replace(/</g, '\\u003c')};
       var zoomScale = 1, panX = 0, panY = 0;
       var changing = false;
+      var preloadTimers = [], preloadGeneration = 0;
       bookEl.style.touchAction = 'none';
       function applyAppearance() {
         var background = preferences.themeMode === 'DARK' ? '#18212f' : preferences.themeMode === 'SEPIA' ? '#eadfc8' : '#F1F5F9';
@@ -327,8 +328,11 @@ export function generateFlipbookHtml({
       }
       applyAppearance();
       function applyZoom() {
-        var limitX = window.innerWidth * (zoomScale - 1) / 2;
-        var limitY = window.innerHeight * (zoomScale - 1) / 2;
+        var baseWidth = bookEl.offsetWidth || window.innerWidth;
+        var baseHeight = bookEl.offsetHeight || window.innerHeight;
+        var limitX = Math.max(0, (baseWidth * zoomScale - window.innerWidth) / 2);
+        var limitY = Math.max(0, (baseHeight * zoomScale - window.innerHeight) / 2);
+        if (zoomScale <= 1) panX = panY = 0;
         panX = Math.max(-limitX, Math.min(limitX, panX));
         panY = Math.max(-limitY, Math.min(limitY, panY));
         bookEl.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + zoomScale + ')';
@@ -410,7 +414,8 @@ export function generateFlipbookHtml({
         img.removeAttribute('src');
       }
 
-      function loadPageImage(img, targetSrc) {
+      function loadPageImage(img, targetSrc, highPriority) {
+        if ('fetchPriority' in img) img.fetchPriority = highPriority ? 'high' : 'low';
         if (img.getAttribute('data-loading-src') === targetSrc
           || (img.getAttribute('data-loaded-src') === targetSrc && (!img.complete || img.naturalWidth > 0))) return;
         img.setAttribute('data-loading-src', targetSrc);
@@ -430,7 +435,8 @@ export function generateFlipbookHtml({
             headers: {
               'Authorization': 'Bearer ' + accessToken,
               'ngrok-skip-browser-warning': 'true'
-            }
+            },
+            priority: highPriority ? 'high' : 'low'
           }).then(function(response) {
             if (!response.ok) throw new Error('HTTP ' + response.status);
             if (!/^image\\//i.test(response.headers.get('content-type') || '')) throw new Error('Máy chủ chưa trả ảnh hợp lệ.');
@@ -464,9 +470,12 @@ export function generateFlipbookHtml({
 
       // SLIDING WINDOW PRE-CACHING
       function updateSlidingWindow(currentPage) {
+        preloadTimers.forEach(clearTimeout);
+        preloadTimers = [];
+        var generation = ++preloadGeneration;
         var minPage = Math.max(1, currentPage - 2);
         var maxPage = Math.min(totalPages, currentPage + windowSize);
-        var loadedPages = [];
+        var visibleEnd = Math.min(totalPages, currentPage + (preferences.dualPageMode ? 1 : 0));
 
         var allPages = document.querySelectorAll('.page');
         allPages.forEach(function(el) {
@@ -476,8 +485,15 @@ export function generateFlipbookHtml({
 
           if (p >= minPage && p <= maxPage) {
             var targetSrc = img.getAttribute('data-src');
-            loadPageImage(img, targetSrc);
-            loadedPages.push(p);
+            var isVisible = p >= currentPage && p <= visibleEnd;
+            if (isVisible) {
+              loadPageImage(img, targetSrc, true);
+            } else {
+              var delay = Math.max(100, Math.abs(p - currentPage) * 140);
+              preloadTimers.push(setTimeout(function() {
+                if (generation === preloadGeneration) loadPageImage(img, targetSrc, false);
+              }, delay));
+            }
           } else {
             if (img.src || img.getAttribute('data-loading-src')) clearImage(img);
           }
@@ -585,19 +601,25 @@ export function generateFlipbookHtml({
 
       window.addEventListener('touchend', function(e) {
         if (e.changedTouches.length === 1) {
-          var dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
+          var deltaX = e.changedTouches[0].clientX - touchStartX;
+          var dx = Math.abs(deltaX);
           var dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
           var dt = Date.now() - touchStartTime;
 
-          // Quick tap within center 40%
-          if (pageFlipInstance && zoomScale === 1 && preferences.pageTurnEffect !== 'CURL_3D' && dx > 40 && dy < 40) {
-            var dir = e.changedTouches[0].clientX < touchStartX ? 1 : -1;
+          // A deliberate horizontal swipe is easier to discover than dragging
+          // the page corner; keep the selected 3D curl effect for that turn.
+          if (pageFlipInstance && zoomScale === 1 && dx > 40 && dy < 55) {
+            var dir = deltaX < 0 ? 1 : -1;
             navigatePage(pageFlipInstance.getCurrentPageIndex() + 1 + dir * (preferences.dualPageMode ? 2 : 1), dir);
           }
           if (zoomScale === 1 && dx < 10 && dy < 10 && dt < 280) {
             var x = e.changedTouches[0].clientX;
             var w = window.innerWidth;
-            if (x > w * 0.3 && x < w * 0.7) {
+            if (pageFlipInstance && x < w * 0.18) {
+              navigatePage(pageFlipInstance.getCurrentPageIndex() + 1 - (preferences.dualPageMode ? 2 : 1), -1);
+            } else if (pageFlipInstance && x > w * 0.82) {
+              navigatePage(pageFlipInstance.getCurrentPageIndex() + 1 + (preferences.dualPageMode ? 2 : 1), 1);
+            } else if (x > w * 0.3 && x < w * 0.7) {
               postToRN({ type: 'TAP_CENTER' });
             }
           }
@@ -607,6 +629,7 @@ export function generateFlipbookHtml({
       var drag = null;
       var pinchDistance = 0;
       var pinchStartScale = 1;
+      var pinchStartX = 0, pinchStartY = 0, pinchStartPanX = 0, pinchStartPanY = 0;
       var lastZoomNotification = 0;
       function notifyZoom(force) {
         var now = Date.now();
@@ -620,7 +643,7 @@ export function generateFlipbookHtml({
         return Math.sqrt(dx * dx + dy * dy);
       }
       bookEl.addEventListener('pointerdown', function(e) {
-        if (zoomScale <= 1) return;
+        if (zoomScale <= 1 || e.pointerType === 'touch') return;
         e.preventDefault(); e.stopImmediatePropagation();
         drag = { x: e.clientX, y: e.clientY, px: panX, py: panY };
         bookEl.setPointerCapture(e.pointerId);
@@ -636,18 +659,38 @@ export function generateFlipbookHtml({
         if (e.touches.length === 2) {
           pinchDistance = touchDistance(e.touches);
           pinchStartScale = zoomScale;
+          pinchStartPanX = panX; pinchStartPanY = panY;
+          pinchStartX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          pinchStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+          drag = null;
           e.preventDefault(); e.stopImmediatePropagation();
         } else if (zoomScale > 1) {
+          var point = e.touches[0];
+          if (point) drag = { x: point.clientX, y: point.clientY, px: panX, py: panY };
+          e.preventDefault();
           e.stopImmediatePropagation();
         }
       }, { capture: true, passive: false });
       bookEl.addEventListener('touchmove', function(e) {
         if (e.touches.length === 2 && pinchDistance > 0) {
-          zoomScale = Math.max(1, Math.min(3, pinchStartScale * touchDistance(e.touches) / pinchDistance));
+          var nextScale = Math.max(1, Math.min(3, pinchStartScale * touchDistance(e.touches) / pinchDistance));
+          var centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          var centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+          var originX = window.innerWidth / 2, originY = window.innerHeight / 2;
+          var contentX = (pinchStartX - originX - pinchStartPanX) / pinchStartScale;
+          var contentY = (pinchStartY - originY - pinchStartPanY) / pinchStartScale;
+          zoomScale = nextScale;
+          panX = centerX - originX - contentX * zoomScale;
+          panY = centerY - originY - contentY * zoomScale;
           applyZoom();
           notifyZoom(false);
           e.preventDefault(); e.stopImmediatePropagation();
         } else if (zoomScale > 1) {
+          if (e.touches.length === 1 && drag) {
+            panX = drag.px + e.touches[0].clientX - drag.x;
+            panY = drag.py + e.touches[0].clientY - drag.y;
+            applyZoom();
+          }
           e.preventDefault(); e.stopImmediatePropagation();
         }
       }, { capture: true, passive: false });
@@ -655,7 +698,11 @@ export function generateFlipbookHtml({
         if (e.touches.length < 2 && pinchDistance > 0) {
           pinchDistance = 0;
           notifyZoom(true);
+          if (zoomScale > 1 && e.touches.length === 1) {
+            drag = { x: e.touches[0].clientX, y: e.touches[0].clientY, px: panX, py: panY };
+          }
         }
+        if (e.touches.length === 0) drag = null;
       }, { capture: true, passive: true });
       function handleRNCommand(rawData) {
         try {

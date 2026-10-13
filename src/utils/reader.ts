@@ -9,6 +9,15 @@ export function hasReadAccess(isFree: boolean | undefined, licenses: DrmLicense[
 export function latestProgress(items: ReadingProgress[]): ReadingProgress | undefined {
   return [...items].sort((a, b) => (b.lastReadTimestamp || 0) - (a.lastReadTimestamp || 0))[0];
 }
+export function mergeReadingProgress(server?: ReadingProgress, local?: ReadingProgress): ReadingProgress | undefined {
+  if (!server) return local;
+  if (!local) return server;
+  return (local.lastReadTimestamp || 0) >= (server.lastReadTimestamp || 0) ? local : server;
+}
+export function normalizeSearchText(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd')
+    .toLocaleLowerCase('vi-VN').replace(/\s+/g, ' ').trim();
+}
 export function hasStartedReading(progress?: ReadingProgress): boolean {
   return !!progress && (progress.readStatus === 'READING' || progress.readStatus === 'COMPLETED'
     || progress.currentPage > 1 || progress.percentage > 0);

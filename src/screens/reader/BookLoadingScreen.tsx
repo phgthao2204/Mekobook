@@ -7,6 +7,7 @@ import { prepareReader } from '../../services/reader';
 import { getMediaRequestHeaders } from '../../services/api';
 import { errorMessage } from '../../services/http';
 import { colors } from '../../constants/theme';
+import { useAuth } from '../../hooks/useAuth';
 
 const stages = [
   { progress: 0.2, message: 'Đang kiểm tra quyền đọc...' },
@@ -15,6 +16,7 @@ const stages = [
 ];
 
 export function BookLoadingScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, 'BookLoading'>) {
+  const { session } = useAuth();
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [stage, setStage] = useState(0);
@@ -33,7 +35,7 @@ export function BookLoadingScreen({ route, navigation }: NativeStackScreenProps<
       Animated.timing(progress, { toValue: stages[next].progress, duration: 300, useNativeDriver: false }).start();
     }, delay));
 
-    prepareReader(route.params.bookId, route.params.mode).then(result => {
+    prepareReader(route.params.bookId, route.params.mode, session?.user.id).then(result => {
       if (!active) return;
       setStage(2);
       Animated.timing(progress, { toValue: 1, duration: 220, useNativeDriver: false }).start(() => {
@@ -46,7 +48,7 @@ export function BookLoadingScreen({ route, navigation }: NativeStackScreenProps<
       stageTimers.forEach(clearTimeout);
       progress.stopAnimation();
     };
-  }, [route.params.bookId, route.params.mode, attempt, navigation, progress]);
+  }, [route.params.bookId, route.params.mode, attempt, navigation, progress, session?.user.id]);
 
   const width = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
   return <View style={styles.screen}>

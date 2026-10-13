@@ -11,7 +11,7 @@ require.extensions['.ts'] = (module, filename) => {
   }).outputText, filename);
 };
 process.env.EXPO_PUBLIC_API_BASE_URL = 'https://example.test';
-const { clampPage, hasReadAccess, normalizePreferences, latestProgress, hasStartedReading } = require('../src/utils/reader.ts');
+const { clampPage, hasReadAccess, normalizePreferences, latestProgress, mergeReadingProgress, normalizeSearchText, hasStartedReading } = require('../src/utils/reader.ts');
 const { apiHttp, setApiAccessToken, setSessionRenewal, getMediaRequestHeaders } = require('../src/services/http.ts');
 const { getBooks, normalizeServerUrl, getPageImageUrl, getThumbnailUrl, getBookBookmarks, getBookAnnotations, normalizeDrmLicense } = require('../src/services/api.ts');
 const { prepareReader, getBookAccess } = require('../src/services/reader.ts');
@@ -157,6 +157,31 @@ test('preferences use documented API names and safe defaults', () => {
   assert.equal(prefs.dualPageMode, true); assert.equal(prefs.pageTurnSoundEnabled, true);
   assert.equal(normalizePreferences({ brightness: NaN, pageTurnEffect: 'bad' }).brightness, 1);
   assert.equal(latestProgress([{ currentPage: 2, lastReadTimestamp: 1 }, { currentPage: 8, lastReadTimestamp: 3 }]).currentPage, 8);
+  assert.equal(mergeReadingProgress({ currentPage: 4, lastReadTimestamp: 10 }, { currentPage: 9, lastReadTimestamp: 11 }).currentPage, 9);
+  assert.equal(normalizeSearchText('Văn   hóa Việt Nam'), 'van hoa viet nam');
+  assert.ok(normalizeSearchText('Văn hóa').includes(normalizeSearchText('va')));
+});
+test('local reader position is saved per account and can be restored without a write API', async () => {
+  const values = new Map();
+  const load = Module._load;
+  Module._load = function(request, parent, isMain) {
+    if (request === './readingProgressStorage' && parent?.filename.endsWith('localReadingProgress.ts')) {
+      return {
+        getReadingProgressValue: async key => values.get(key) ?? null,
+        setReadingProgressValue: async (key, value) => { values.set(key, value); },
+      };
+    }
+    return load.call(this, request, parent, isMain);
+  };
+  try {
+    const { saveLocalReadingProgress, getLocalReadingProgress } = require('../src/services/localReadingProgress.ts');
+    await saveLocalReadingProgress(17, 42, 6, 10);
+    const saved = await getLocalReadingProgress(17, 42);
+    assert.equal(saved.currentPage, 6);
+    assert.equal(saved.percentage, 55.56);
+    assert.equal(saved.readStatus, 'READING');
+    assert.equal(await getLocalReadingProgress(18, 42), undefined);
+  } finally { Module._load = load; }
 });
 test('web dev session storage restores in the tab and clears on logout', async () => {
   const storage = require('../src/services/sessionStorage.web.ts');
@@ -235,12 +260,13 @@ test('catalog paginates and does not return fictional books on server errors', a
   await assert.rejects(getBooks());
 });
 test('reader rechecks DRM, restores progress and applies preferences; only GET endpoints', async () => {
-  let active = true;
+  let active = true, progressRequests = 0;
   apiHttp.defaults.adapter = async config => {
     assert.equal(config.method, 'get');
     if (config.url.endsWith('/books/1')) return respond(config, book);
     if (config.url.endsWith('/drmlicenses')) return respond(config, { items: [{ id: 4, bookId: 1, status: active ? 'ACTIVE' : 'EXPIRED' }] });
     if (config.url.endsWith('/readingprogresses')) {
+      progressRequests++;
       assert.equal(config.params.filter, 'bookId eq 1');
       return respond(config, { items: [{ bookId: 1, currentPage: 7, percentage: 70 }] });
     }
@@ -249,7 +275,9 @@ test('reader rechecks DRM, restores progress and applies preferences; only GET e
   };
   const result = await prepareReader(1, 'continue');
   assert.equal(result.initialPage, 7); assert.equal(result.preferences.themeMode, 'DARK');
+  assert.equal(progressRequests, 1);
   assert.equal((await prepareReader(1, 'start')).initialPage, 1);
+  assert.equal(progressRequests, 1, 'starting over should skip the optional progress request');
   active = false; await assert.rejects(prepareReader(1, 'continue'), /giấy phép/);
 });
 test('resume/restart is available even when the saved reading page is 1', () => {
@@ -305,6 +333,8 @@ test('generated engine scripts parse and wire preferences/zoom/load before ready
     assert.ok(html.includes("msg.type === 'SET_ANNOTATIONS'"));
     assert.ok(html.includes('reader-annotation-layer'));
     assert.ok(html.includes('pinchStartScale * touchDistance'));
+    assert.ok(html.includes('panX = drag.px + e.touches[0].clientX - drag.x'));
+    assert.ok(html.includes('dx > 40 && dy < 55'));
     assert.ok(html.includes("target.origin !== apiOrigin"));
     assert.ok(html.includes("'Authorization': 'Bearer ' + accessToken"));
     assert.ok(!html.includes('reader-token&'));
@@ -368,14 +398,29 @@ test('engine bridge initializes once, sends ready, zooms/pans and applies effect
     windowEvents.message({ data: { type: 'UPDATE_PREFERENCES', preferences: { brightness: 0.4, themeMode: 'SEPIA' } } });
     assert.ok(bookEl.style.filter.includes('brightness(0.4)'));
     assert.ok(bookEl.style.filter.includes('sepia'));
-    bookEvents.pointerdown({ clientX: 10, clientY: 10, pointerId: 1, preventDefault() {}, stopImmediatePropagation() {} });
+    const panBefore = bookEl.style.transform.match(/translate\(([-\d.]+)px,([-\d.]+)px\)/).slice(1).map(Number);
+    bookEvents.pointerdown({ clientX: 10, clientY: 10, pointerId: 1, pointerType: 'mouse', preventDefault() {}, stopImmediatePropagation() {} });
     bookEvents.pointermove({ clientX: 45, clientY: 70, preventDefault() {}, stopImmediatePropagation() {} });
-    assert.ok(bookEl.style.transform.includes('translate(35px,60px)'));
+    const panAfter = bookEl.style.transform.match(/translate\(([-\d.]+)px,([-\d.]+)px\)/).slice(1).map(Number);
+    assert.equal(panAfter[0] - panBefore[0], 35);
+    assert.equal(panAfter[1] - panBefore[1], 60);
+    const touchPanBefore = bookEl.style.transform.match(/translate\(([-\d.]+)px,([-\d.]+)px\)/).slice(1).map(Number);
+    bookEvents.touchstart({ touches: [{ clientX: 20, clientY: 30 }], preventDefault() {}, stopImmediatePropagation() {} });
+    bookEvents.touchmove({ touches: [{ clientX: 55, clientY: 72 }], preventDefault() {}, stopImmediatePropagation() {} });
+    const touchPanAfter = bookEl.style.transform.match(/translate\(([-\d.]+)px,([-\d.]+)px\)/).slice(1).map(Number);
+    assert.equal(touchPanAfter[0] - touchPanBefore[0], 35);
+    assert.equal(touchPanAfter[1] - touchPanBefore[1], 42);
     windowEvents.message({ data: { type: 'TURN_NEXT' } });
     windowEvents.message({ data: { type: 'TURN_NEXT' } });
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(turns, 1); assert.equal(instances, 1);
     assert.ok(messages.some(message => message.type === 'PAGE_CHANGED' && message.page === 8));
+    await new Promise(resolve => setTimeout(resolve, 650));
+    windowEvents.message({ data: { type: 'ZOOM', scale: 1 } });
+    windowEvents.touchstart({ touches: [{ clientX: 300, clientY: 300 }] });
+    windowEvents.touchend({ changedTouches: [{ clientX: 220, clientY: 302 }] });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(turns, 2, 'a horizontal swipe should turn a page under every selected effect');
   }
 });
 

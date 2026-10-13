@@ -12,17 +12,19 @@ import { errorMessage } from '../../services/http';
 import { colors } from '../../constants/theme';
 import { LoadState } from '../../component/LoadState';
 import { clampPage, hasStartedReading } from '../../utils/reader';
+import { useAuth } from '../../hooks/useAuth';
 export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, 'BookDetail'>) {
+  const { session } = useAuth();
   const [access, setAccess] = useState<BookAccess | null>(null);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   useFocusEffect(useCallback(() => {
     let active = true;
     setAccess(null); setError('');
-    getBookAccess(route.params.bookId).then(value => { if (active) setAccess(value); })
+    getBookAccess(route.params.bookId, session?.user.id).then(value => { if (active) setAccess(value); })
       .catch(reason => { if (active) setError(errorMessage(reason)); });
     return () => { active = false; };
-  }, [route.params.bookId, attempt]));
+  }, [route.params.bookId, attempt, session?.user.id]));
   if (!access) return <LoadState error={error} onRetry={() => setAttempt(x => x + 1)} onBack={navigation.goBack} />;
   const { book, licenses, canRead } = access;
   const page = clampPage(book.readingProgress?.currentPage || 1, book.totalPages);
