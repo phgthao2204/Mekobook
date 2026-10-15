@@ -23,6 +23,7 @@ import { Annotation, Book, Bookmark, ChapterTOC, UserPreference } from '../../ty
 import { getBookTOC } from '../../services/api';
 import { errorMessage } from '../../services/http';
 import { ReaderNavigationMode, ReaderNavigationSheet } from './ReaderNavigationSheet';
+import { readingPercentage } from '../../utils/reader';
 
 interface FlipbookControlsProps {
   book: Book;
@@ -43,6 +44,17 @@ interface FlipbookControlsProps {
   annotationsError?: string;
   onRetryBookmarks: () => void;
   onRetryAnnotations: () => void;
+  onToggleBookmark: () => void;
+  currentPageBookmarked: boolean;
+  bookmarkSaving: boolean;
+  drawingMode: boolean;
+  drawingColor: string;
+  drawingWidth: number;
+  onToggleDrawing: () => void;
+  onDrawingColorChange: (color: string) => void;
+  onDrawingWidthChange: (width: number) => void;
+  onDeleteBookmark: (bookmark: Bookmark) => void;
+  onDeleteAnnotation: (annotation: Annotation) => void;
 }
 
 export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
@@ -64,6 +76,17 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
   annotationsError,
   onRetryBookmarks,
   onRetryAnnotations,
+  onToggleBookmark,
+  currentPageBookmarked,
+  bookmarkSaving,
+  drawingMode,
+  drawingColor,
+  drawingWidth,
+  onToggleDrawing,
+  onDrawingColorChange,
+  onDrawingWidthChange,
+  onDeleteBookmark,
+  onDeleteAnnotation,
 }) => {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -94,7 +117,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
 
   if (!visible) return null;
 
-  const percentage = Math.round((currentPage / (totalPages || 1)) * 100);
+  const percentage = Math.round(readingPercentage(currentPage, totalPages));
   const pageLabel = currentPage === 1 && book.coverUrl ? 'Bìa sách' : `Trang ${currentPage}`;
   const readingSurface = { backgroundColor: themeMode === 'DARK' ? '#18212F' : themeMode === 'SEPIA' ? '#EADFC8' : colors.surface };
   const readingText = { color: themeMode === 'DARK' ? colors.surface : colors.text };
@@ -144,29 +167,46 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
             <Ionicons name="grid-outline" size={16} color={colors.primary} /><Text style={styles.toolLabel}>Trang</Text>
           </TouchableOpacity>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Xem trang đã đánh dấu" style={styles.toolButton}
-            onPress={() => setNavigationMode('bookmarks')}>
-            <Ionicons name="bookmark-outline" size={16} color={colors.primary} /><Text style={styles.toolLabel}>Đánh dấu</Text>
+            disabled={bookmarkSaving} onLongPress={() => setNavigationMode('bookmarks')} onPress={onToggleBookmark}>
+            {bookmarkSaving ? <ActivityIndicator size="small" color={colors.primary} />
+              : <Ionicons name={currentPageBookmarked ? 'bookmark' : 'bookmark-outline'} size={16} color={currentPageBookmarked ? '#F59E0B' : colors.primary} />}
+            <Text style={styles.toolLabel}>{currentPageBookmarked ? 'Bỏ dấu' : 'Đánh dấu'}</Text>
           </TouchableOpacity>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Xem ghi chú và vùng đánh dấu" style={styles.toolButton}
             onPress={() => setNavigationMode('annotations')}>
             <Ionicons name="reader-outline" size={16} color={colors.primary} /><Text style={styles.toolLabel}>Ghi chú</Text>
           </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={drawingMode ? 'Tắt chế độ vẽ' : 'Bật chế độ vẽ'}
+            style={[styles.toolButton, drawingMode && styles.toolButtonActive]} onPress={onToggleDrawing}>
+            <Ionicons name={drawingMode ? 'close-circle' : 'pencil'} size={16} color={drawingMode ? colors.surface : colors.primary} />
+            <Text style={[styles.toolLabel, drawingMode && styles.toolLabelActive]}>{drawingMode ? 'Xong' : 'Vẽ'}</Text>
+          </TouchableOpacity>
         </View>
+        {drawingMode && <View style={styles.drawingOptions}>
+          {['#EF4444', '#F59E0B', '#10B981', '#2563EB', '#111827'].map(color =>
+            <TouchableOpacity key={color} accessibilityRole="button" accessibilityLabel={`Chọn màu ${color}`}
+              onPress={() => onDrawingColorChange(color)} style={[styles.colorSwatch, { backgroundColor: color }, drawingColor === color && styles.colorSwatchActive]} />)}
+          {[0.003, 0.006, 0.01].map(widthValue => <TouchableOpacity key={widthValue} accessibilityRole="button"
+            accessibilityLabel={`Chọn độ dày ${widthValue}`} onPress={() => onDrawingWidthChange(widthValue)}
+            style={[styles.widthOption, drawingWidth === widthValue && styles.widthOptionActive]}>
+            <View style={{ width: 22, height: Math.max(2, widthValue * 700), borderRadius: 5, backgroundColor: drawingColor }} />
+          </TouchableOpacity>)}
+        </View>}
       </View>
 
       {/* BOTTOM NAVIGATION & PROGRESS BAR */}
       <View style={[styles.bottomBar, readingSurface, { paddingBottom: Math.max(insets.bottom + 10, 16) }]}>
         <View style={styles.scrubberRow}>
           <TouchableOpacity
-            style={[styles.navButton, currentPage <= 1 && styles.buttonDisabled]}
+            style={[styles.navButton, (currentPage <= 1 || drawingMode) && styles.buttonDisabled]}
             onPress={onPrevPage}
-            disabled={currentPage <= 1}
+            disabled={currentPage <= 1 || drawingMode}
             activeOpacity={0.7}
           >
             <Ionicons
               name="chevron-back"
               size={22}
-              color={currentPage <= 1 ? '#94A3B8' : colors.surface}
+              color={currentPage <= 1 || drawingMode ? '#94A3B8' : colors.surface}
             />
           </TouchableOpacity>
 
@@ -180,15 +220,15 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
           </View>
 
           <TouchableOpacity
-            style={[styles.navButton, currentPage >= totalPages && styles.buttonDisabled]}
+            style={[styles.navButton, (currentPage >= totalPages || drawingMode) && styles.buttonDisabled]}
             onPress={onNextPage}
-            disabled={currentPage >= totalPages}
+            disabled={currentPage >= totalPages || drawingMode}
             activeOpacity={0.7}
           >
             <Ionicons
               name="chevron-forward"
               size={22}
-              color={currentPage >= totalPages ? '#94A3B8' : colors.surface}
+              color={currentPage >= totalPages || drawingMode ? '#94A3B8' : colors.surface}
             />
           </TouchableOpacity>
         </View>
@@ -341,6 +381,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
         bookmarksLoading={bookmarksLoading} annotationsLoading={annotationsLoading}
         bookmarksError={bookmarksError} annotationsError={annotationsError}
         onRetryBookmarks={onRetryBookmarks} onRetryAnnotations={onRetryAnnotations}
+        onDeleteBookmark={onDeleteBookmark} onDeleteAnnotation={onDeleteAnnotation}
         onClose={() => setNavigationMode(null)} onJumpToPage={onJumpToPage} />
     </View>
   );
@@ -371,6 +412,13 @@ const styles = StyleSheet.create({
   toolButton: { flex: 1, minHeight: 34, borderRadius: 9, backgroundColor: '#ECFDF5', borderWidth: 1,
     borderColor: '#A7F3D0', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   toolLabel: { color: colors.primary, fontSize: 10, fontWeight: '800' },
+  toolButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  toolLabelActive: { color: colors.surface },
+  drawingOptions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingTop: 9 },
+  colorSwatch: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: 'transparent' },
+  colorSwatchActive: { borderColor: '#334155', transform: [{ scale: 1.15 }] },
+  widthOption: { width: 34, height: 28, borderRadius: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
+  widthOptionActive: { borderWidth: 2, borderColor: colors.primary },
   backButton: {
     width: 38,
     height: 38,

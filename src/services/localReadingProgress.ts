@@ -1,4 +1,5 @@
 import { ReadingProgress } from '../types';
+import { readingPercentage } from '../utils/reader';
 
 const keyFor = (userId: number, bookId: number) => `mekobook.reading.progress.${userId}.${bookId}`;
 const writes = new Map<string, Promise<void>>();
@@ -22,7 +23,7 @@ export function saveLocalReadingProgress(userId: number, bookId: number, page: n
     bookId,
     currentPage,
     totalPages,
-    percentage: totalPages <= 1 ? 100 : Math.round(((currentPage - 1) / (totalPages - 1)) * 10000) / 100,
+    percentage: readingPercentage(currentPage, totalPages),
     readStatus: currentPage >= totalPages ? 'COMPLETED' : currentPage > 1 ? 'READING' : 'NOT_STARTED',
     lastReadTimestamp: Date.now(),
   };

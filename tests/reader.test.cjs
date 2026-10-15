@@ -11,9 +11,10 @@ require.extensions['.ts'] = (module, filename) => {
   }).outputText, filename);
 };
 process.env.EXPO_PUBLIC_API_BASE_URL = 'https://example.test';
-const { clampPage, hasReadAccess, normalizePreferences, latestProgress, mergeReadingProgress, normalizeSearchText, hasStartedReading } = require('../src/utils/reader.ts');
+const { clampPage, hasReadAccess, normalizePreferences, latestProgress, mergeReadingProgress, normalizeSearchText, hasStartedReading, readingPercentage } = require('../src/utils/reader.ts');
 const { apiHttp, setApiAccessToken, setSessionRenewal, getMediaRequestHeaders } = require('../src/services/http.ts');
-const { getBooks, normalizeServerUrl, getPageImageUrl, getThumbnailUrl, getBookBookmarks, getBookAnnotations, normalizeDrmLicense } = require('../src/services/api.ts');
+const { getBooks, normalizeServerUrl, getPageImageUrl, getThumbnailUrl, getBookBookmarks, getBookAnnotations,
+  createBookmark, deleteBookmark, createAnnotation, deleteAnnotation, normalizeDrmLicense } = require('../src/services/api.ts');
 const { prepareReader, getBookAccess } = require('../src/services/reader.ts');
 const { generateFlipbookHtml } = require('../src/component/flipbook/flipbookEngineHtml.ts');
 const { AxiosError } = require('axios');
@@ -43,6 +44,10 @@ test('web dev proxy only permits documented reads and OAuth grants', () => {
   assert.equal(allowedRequest('GET', '/o/c/bookmarks'), true);
   assert.equal(allowedRequest('GET', '/o/c/annotations'), true);
   assert.equal(allowedRequest('POST', '/o/oauth2/token'), true);
+  assert.equal(allowedRequest('POST', '/o/c/bookmarks'), true);
+  assert.equal(allowedRequest('POST', '/o/c/annotations'), true);
+  assert.equal(allowedRequest('PATCH', '/o/c/bookmarks/33130'), true);
+  assert.equal(allowedRequest('DELETE', '/o/c/annotations/33140'), true);
   assert.equal(allowedRequest('POST', '/o/c/readingprogresses'), false);
   assert.equal(allowedRequest('DELETE', '/o/c/books/32884'), false);
   assert.equal(allowedRequest('GET', '/o/c/books/../drmlicenses'), false);
@@ -160,6 +165,8 @@ test('preferences use documented API names and safe defaults', () => {
   assert.equal(mergeReadingProgress({ currentPage: 4, lastReadTimestamp: 10 }, { currentPage: 9, lastReadTimestamp: 11 }).currentPage, 9);
   assert.equal(normalizeSearchText('Văn   hóa Việt Nam'), 'van hoa viet nam');
   assert.ok(normalizeSearchText('Văn hóa').includes(normalizeSearchText('va')));
+  assert.equal(readingPercentage(3, 35), 8.57);
+  assert.equal(readingPercentage(35, 35), 100);
 });
 test('local reader position is saved per account and can be restored without a write API', async () => {
   const values = new Map();
@@ -178,7 +185,7 @@ test('local reader position is saved per account and can be restored without a w
     await saveLocalReadingProgress(17, 42, 6, 10);
     const saved = await getLocalReadingProgress(17, 42);
     assert.equal(saved.currentPage, 6);
-    assert.equal(saved.percentage, 55.56);
+    assert.equal(saved.percentage, 60);
     assert.equal(saved.readStatus, 'READING');
     assert.equal(await getLocalReadingProgress(18, 42), undefined);
   } finally { Module._load = load; }
@@ -245,6 +252,28 @@ test('bookmarks and annotations use documented book filters and return page orde
     assert.equal(request.method, 'get');
     assert.equal(request.params.filter, 'bookId eq 1');
   }
+});
+test('bookmark and drawing writes follow the documented API contract', async () => {
+  const requests = [];
+  apiHttp.defaults.adapter = async config => {
+    requests.push(config);
+    const body = typeof config.data === 'string' ? JSON.parse(config.data) : config.data;
+    if (config.method === 'post' && config.url.endsWith('/bookmarks')) return respond(config, { id: 31, ...body });
+    if (config.method === 'post' && config.url.endsWith('/annotations')) return respond(config, { id: 41, ...body });
+    return respond(config, {});
+  };
+  const bookmark = await createBookmark({ bookId: 1, pageNumber: 3, bookmarkTitle: 'Trang 3', colorTag: '#F59E0B' });
+  const annotation = await createAnnotation({ bookId: 1, pageNumber: 3, type: 'DRAWING_PEN',
+    coordinateData: [{ x: 0.1, y: 0.2 }, { x: 0.3, y: 0.4 }], color: '#EF4444', strokeWidth: 0.004 });
+  await deleteBookmark(bookmark.id);
+  await deleteAnnotation(annotation.id);
+  assert.equal(bookmark.id, 31);
+  assert.equal(annotation.id, 41);
+  assert.equal(typeof annotation.coordinateData, 'string');
+  assert.deepEqual(requests.map(item => [item.method, new URL(item.url).pathname]), [
+    ['post', '/o/c/bookmarks'], ['post', '/o/c/annotations'],
+    ['delete', '/o/c/bookmarks/31'], ['delete', '/o/c/annotations/41'],
+  ]);
 });
 test('media does not leak access token to a different content origin', () => {
   setApiAccessToken('test-token');
@@ -395,6 +424,12 @@ test('engine bridge initializes once, sends ready, zooms/pans and applies effect
     bookEvents.touchstart({ touches: [{ clientX: 0, clientY: 0 }, { clientX: 100, clientY: 0 }], preventDefault() {}, stopImmediatePropagation() {} });
     bookEvents.touchmove({ touches: [{ clientX: 0, clientY: 0 }, { clientX: 200, clientY: 0 }], preventDefault() {}, stopImmediatePropagation() {} });
     assert.ok(bookEl.style.transform.includes('scale(3)'));
+    const turnsBeforePinchRelease = turns;
+    windowEvents.touchstart({ touches: [{ clientX: 300, clientY: 300 }] });
+    windowEvents.touchstart({ touches: [{ clientX: 300, clientY: 300 }, { clientX: 120, clientY: 300 }] });
+    windowEvents.touchend({ touches: [{ clientX: 300, clientY: 300 }], changedTouches: [{ clientX: 120, clientY: 300 }] });
+    windowEvents.touchend({ touches: [], changedTouches: [{ clientX: 300, clientY: 300 }] });
+    assert.equal(turns, turnsBeforePinchRelease, 'releasing a pinch must never turn a page');
     windowEvents.message({ data: { type: 'UPDATE_PREFERENCES', preferences: { brightness: 0.4, themeMode: 'SEPIA' } } });
     assert.ok(bookEl.style.filter.includes('brightness(0.4)'));
     assert.ok(bookEl.style.filter.includes('sepia'));

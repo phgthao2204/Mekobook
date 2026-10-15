@@ -23,9 +23,15 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
       try {
         const message: FlipbookToReactNativeMessage = JSON.parse(event.data.data);
         switch (message.type) {
-          case 'ENGINE_READY': callbacks.current.onReady?.(message.totalPages); break;
+          case 'ENGINE_READY':
+            frame.current?.contentWindow?.postMessage({ type: 'SET_ANNOTATIONS', annotations: callbacks.current.annotations || [] }, '*');
+            frame.current?.contentWindow?.postMessage({ type: 'SET_DRAWING_MODE',
+              ...(callbacks.current.drawingMode || { enabled: false, color: '#EF4444', strokeWidth: 0.004 }) }, '*');
+            callbacks.current.onReady?.(message.totalPages); break;
           case 'PAGE_CHANGED': callbacks.current.onPageChange?.(message.page, message.totalPages); break;
           case 'TAP_CENTER': callbacks.current.onToggleControls?.(); break;
+          case 'ZOOM_CHANGED': callbacks.current.onZoomChange?.(message.scale); break;
+          case 'DRAWING_CREATED': callbacks.current.onDrawingCreated?.(message.drawing); break;
           case 'ERROR': callbacks.current.onError?.(message.message); break;
         }
       } catch { /* Ignore malformed messages; never log page payloads. */ }
@@ -37,6 +43,10 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
   useEffect(() => {
     frame.current?.contentWindow?.postMessage({ type: 'SET_ANNOTATIONS', annotations: props.annotations || [] }, '*');
   }, [props.annotations]);
+  useEffect(() => {
+    frame.current?.contentWindow?.postMessage({ type: 'SET_DRAWING_MODE',
+      ...(props.drawingMode || { enabled: false, color: '#EF4444', strokeWidth: 0.004 }) }, '*');
+  }, [props.drawingMode]);
 
   useImperativeHandle(ref, () => {
     // Sandboxed srcdoc has an opaque origin; source validation is on receive.
@@ -44,6 +54,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
     return {
       flipNext: () => send({ type: 'TURN_NEXT' }), flipPrev: () => send({ type: 'TURN_PREV' }),
       goToPage: page => send({ type: 'GO_TO_PAGE', page }), zoom: scale => send({ type: 'ZOOM', scale }),
+      setDrawingMode: (enabled, color, strokeWidth) => send({ type: 'SET_DRAWING_MODE', enabled, color, strokeWidth }),
     };
   }, []);
   return <iframe ref={frame} title={`Trình đọc ${props.book.title}`} srcDoc={html}

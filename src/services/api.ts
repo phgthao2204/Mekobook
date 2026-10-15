@@ -1,5 +1,5 @@
 import { ENV, getApiUrl } from '../constants/env';
-import { Annotation, Book, Bookmark, ChapterTOC, DrmLicense, LiferayItemResponse, ReadingProgress, UserPreference } from '../types';
+import { Annotation, AnnotationInput, Book, Bookmark, BookmarkInput, ChapterTOC, DrmLicense, LiferayItemResponse, ReadingProgress, UserPreference } from '../types';
 import { apiHttp } from './http';
 import { webDevMediaUrl } from '../utils/media';
 export { setApiAccessToken, getMediaRequestHeaders } from './http';
@@ -50,9 +50,35 @@ export async function getBookBookmarks(bookId: number): Promise<Bookmark[]> {
   const bookmarks = await getItems<Bookmark>(ENV.API_PATHS.BOOKMARKS, { filter: `bookId eq ${bookId}` });
   return bookmarks.filter(item => Number.isInteger(item.pageNumber)).sort((a, b) => a.pageNumber - b.pageNumber);
 }
+export async function createBookmark(input: BookmarkInput): Promise<Bookmark> {
+  return (await apiHttp.post<Bookmark>(getApiUrl(ENV.API_PATHS.BOOKMARKS), input)).data;
+}
+export async function updateBookmark(id: number, input: Partial<BookmarkInput>): Promise<Bookmark> {
+  return (await apiHttp.patch<Bookmark>(getApiUrl(`${ENV.API_PATHS.BOOKMARKS}/${id}`), input)).data;
+}
+export async function deleteBookmark(id: number): Promise<void> {
+  await apiHttp.delete(getApiUrl(`${ENV.API_PATHS.BOOKMARKS}/${id}`));
+}
 export async function getBookAnnotations(bookId: number): Promise<Annotation[]> {
   const annotations = await getItems<Annotation>(ENV.API_PATHS.ANNOTATIONS, { filter: `bookId eq ${bookId}` });
   return annotations.filter(item => Number.isInteger(item.pageNumber)).sort((a, b) => a.pageNumber - b.pageNumber);
+}
+export async function createAnnotation(input: AnnotationInput): Promise<Annotation> {
+  return (await apiHttp.post<Annotation>(getApiUrl(ENV.API_PATHS.ANNOTATIONS), {
+    ...input,
+    coordinateData: typeof input.coordinateData === 'string' ? input.coordinateData : JSON.stringify(input.coordinateData || []),
+  })).data;
+}
+export async function updateAnnotation(id: number, input: Partial<AnnotationInput>): Promise<Annotation> {
+  return (await apiHttp.patch<Annotation>(getApiUrl(`${ENV.API_PATHS.ANNOTATIONS}/${id}`), {
+    ...input,
+    ...(input.coordinateData === undefined ? {} : {
+      coordinateData: typeof input.coordinateData === 'string' ? input.coordinateData : JSON.stringify(input.coordinateData),
+    }),
+  })).data;
+}
+export async function deleteAnnotation(id: number): Promise<void> {
+  await apiHttp.delete(getApiUrl(`${ENV.API_PATHS.ANNOTATIONS}/${id}`));
 }
 export function getReadingProgresses(_pageSize = 100, bookId?: number): Promise<ReadingProgress[]> {
   return getItems(ENV.API_PATHS.READING_PROGRESSES, bookId ? { filter: `bookId eq ${bookId}` } : {});

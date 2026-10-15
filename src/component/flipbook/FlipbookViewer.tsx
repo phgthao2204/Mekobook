@@ -7,7 +7,7 @@
 import React, { useRef, useImperativeHandle, forwardRef, useMemo, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
-import { Annotation, Book, UserPreference, FlipbookToReactNativeMessage, ReactNativeToFlipbookMessage } from '../../types';
+import { Annotation, AnnotationInput, Book, UserPreference, FlipbookToReactNativeMessage, ReactNativeToFlipbookMessage } from '../../types';
 import { generateFlipbookHtml } from './flipbookEngineHtml';
 import { ENV } from '../../constants/env';
 
@@ -22,6 +22,8 @@ export interface FlipbookViewerProps {
   onZoomChange?: (scale: number) => void;
   preferences: UserPreference;
   annotations?: Annotation[];
+  drawingMode?: { enabled: boolean; color: string; strokeWidth: number };
+  onDrawingCreated?: (drawing: AnnotationInput) => void;
 }
 
 export interface FlipbookViewerRef {
@@ -29,6 +31,7 @@ export interface FlipbookViewerRef {
   flipPrev: () => void;
   goToPage: (page: number) => void;
   zoom: (scale: number) => void;
+  setDrawingMode: (enabled: boolean, color: string, strokeWidth: number) => void;
 }
 
 export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>(
@@ -44,6 +47,8 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
       onZoomChange,
       preferences,
       annotations = [],
+      drawingMode = { enabled: false, color: '#EF4444', strokeWidth: 0.004 },
+      onDrawingCreated,
     },
     ref
   ) => {
@@ -74,6 +79,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
       goToPage: (page: number) => {
         postMessageToEngine({ type: 'GO_TO_PAGE', page });
       },
+      setDrawingMode: (enabled, color, strokeWidth) => postMessageToEngine({ type: 'SET_DRAWING_MODE', enabled, color, strokeWidth }),
     }));
 
     const htmlSource = useMemo(() => {
@@ -89,6 +95,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
     useEffect(() => { postMessageToEngine({ type: 'SET_ACCESS_TOKEN', token: accessToken }); }, [accessToken]);
     useEffect(() => { postMessageToEngine({ type: 'UPDATE_PREFERENCES', preferences }); }, [preferences]);
     useEffect(() => { postMessageToEngine({ type: 'SET_ANNOTATIONS', annotations }); }, [annotations]);
+    useEffect(() => { postMessageToEngine({ type: 'SET_DRAWING_MODE', ...drawingMode }); }, [drawingMode]);
 
     const handleMessage = (event: WebViewMessageEvent) => {
       try {
@@ -106,12 +113,17 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
             break;
           case 'ENGINE_READY':
             postMessageToEngine({ type: 'SET_ACCESS_TOKEN', token: currentToken.current });
+            postMessageToEngine({ type: 'SET_ANNOTATIONS', annotations });
+            postMessageToEngine({ type: 'SET_DRAWING_MODE', ...drawingMode });
             if (onReady) {
               onReady(data.totalPages);
             }
             break;
           case 'ZOOM_CHANGED':
             onZoomChange?.(Math.max(1, Math.min(3, data.scale)));
+            break;
+          case 'DRAWING_CREATED':
+            onDrawingCreated?.(data.drawing);
             break;
           case 'ERROR':
             onError?.(data.message);

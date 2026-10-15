@@ -256,6 +256,8 @@ export function generateFlipbookHtml({
       var apiOrigin = ${JSON.stringify(new URL(ENV.API_BASE_URL).origin)};
       var pageFlipInstance = null;
       var annotations = [];
+      var drawingMode = { enabled: false, color: '#EF4444', strokeWidth: 0.004 };
+      var activeDrawing = null;
 
       var preferences = ${JSON.stringify(preferences).replace(/</g, '\\u003c')};
       var zoomScale = 1, panX = 0, panY = 0;
@@ -317,7 +319,10 @@ export function generateFlipbookHtml({
             shape.setAttribute('fill-opacity', '0.28');
             shape.setAttribute('stroke', color);
             shape.setAttribute('stroke-opacity', isHighlight ? '0.4' : '0.9');
-            shape.setAttribute('stroke-width', isHighlight ? '24' : '7');
+            var normalizedWidth = Number(item.strokeWidth);
+            var strokeWidth = Number.isFinite(normalizedWidth) && normalizedWidth > 0
+              ? Math.max(1, Math.min(80, normalizedWidth * 1000)) : (isHighlight ? 24 : 7);
+            shape.setAttribute('stroke-width', String(strokeWidth));
             shape.setAttribute('stroke-linecap', 'round');
             shape.setAttribute('stroke-linejoin', 'round');
             svg.appendChild(shape);
@@ -403,6 +408,77 @@ export function generateFlipbookHtml({
           window.ReactNativeWebView.postMessage(JSON.stringify(data));
         }
       }
+
+      function drawingPoint(touch, wrapper) {
+        var rect = wrapper.getBoundingClientRect();
+        if (!rect.width || !rect.height) return null;
+        return {
+          x: Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width)),
+          y: Math.max(0, Math.min(1, (touch.clientY - rect.top) / rect.height))
+        };
+      }
+      function drawingWrapperAt(touch) {
+        var target = document.elementFromPoint(touch.clientX, touch.clientY);
+        return target && target.closest ? target.closest('.page-image-wrapper') : null;
+      }
+      function renderActiveDrawing() {
+        if (!activeDrawing) return;
+        var old = activeDrawing.wrapper.querySelector('.reader-active-drawing');
+        if (old) old.remove();
+        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 1000 1000');
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.classList.add('reader-annotation-vector', 'reader-active-drawing');
+        svg.style.zIndex = '7';
+        svg.style.pointerEvents = 'none';
+        var line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        line.setAttribute('points', activeDrawing.points.map(function(point) {
+          return Math.round(point.x * 1000) + ',' + Math.round(point.y * 1000);
+        }).join(' '));
+        line.setAttribute('fill', 'none');
+        line.setAttribute('stroke', drawingMode.color);
+        line.setAttribute('stroke-width', String(Math.max(1, drawingMode.strokeWidth * 1000)));
+        line.setAttribute('stroke-linecap', 'round');
+        line.setAttribute('stroke-linejoin', 'round');
+        svg.appendChild(line);
+        activeDrawing.wrapper.appendChild(svg);
+      }
+
+      document.addEventListener('touchstart', function(e) {
+        if (!drawingMode.enabled || e.touches.length !== 1) return;
+        var wrapper = drawingWrapperAt(e.touches[0]);
+        if (!wrapper) return;
+        var pageEl = wrapper.closest('.page');
+        var point = drawingPoint(e.touches[0], wrapper);
+        if (!pageEl || !point) return;
+        activeDrawing = { wrapper: wrapper, pageNumber: Number(pageEl.getAttribute('data-page')), points: [point] };
+        renderActiveDrawing();
+        e.preventDefault(); e.stopImmediatePropagation();
+      }, { capture: true, passive: false });
+      document.addEventListener('touchmove', function(e) {
+        if (!drawingMode.enabled || !activeDrawing || e.touches.length !== 1) return;
+        var point = drawingPoint(e.touches[0], activeDrawing.wrapper);
+        var previous = activeDrawing.points[activeDrawing.points.length - 1];
+        if (point && (!previous || Math.abs(point.x - previous.x) + Math.abs(point.y - previous.y) > 0.002)) {
+          if (activeDrawing.points.length < 500) activeDrawing.points.push(point);
+          renderActiveDrawing();
+        }
+        e.preventDefault(); e.stopImmediatePropagation();
+      }, { capture: true, passive: false });
+      document.addEventListener('touchend', function(e) {
+        if (!drawingMode.enabled || !activeDrawing) return;
+        var completed = activeDrawing;
+        activeDrawing = null;
+        var preview = completed.wrapper.querySelector('.reader-active-drawing');
+        if (preview) preview.remove();
+        if (completed.points.length > 1) {
+          postToRN({ type: 'DRAWING_CREATED', drawing: {
+            bookId: ${book.id}, pageNumber: completed.pageNumber, type: 'DRAWING_PEN',
+            coordinateData: completed.points, color: drawingMode.color, strokeWidth: drawingMode.strokeWidth
+          }});
+        }
+        e.preventDefault(); e.stopImmediatePropagation();
+      }, { capture: true, passive: false });
 
       function clearImage(img) {
         if (img.loadController) { img.loadController.abort(); img.loadController = null; }
@@ -590,8 +666,15 @@ export function generateFlipbookHtml({
       var touchStartX = 0;
       var touchStartY = 0;
       var touchStartTime = 0;
+      var suppressPageTurnUntilAllTouchesEnd = false;
 
       window.addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) {
+          // A pinch starts with one finger and then receives a second
+          // touchstart. Never reinterpret either release as a page swipe.
+          suppressPageTurnUntilAllTouchesEnd = true;
+          return;
+        }
         if (e.touches.length === 1) {
           touchStartX = e.touches[0].clientX;
           touchStartY = e.touches[0].clientY;
@@ -600,7 +683,7 @@ export function generateFlipbookHtml({
       }, { passive: true });
 
       window.addEventListener('touchend', function(e) {
-        if (e.changedTouches.length === 1) {
+        if (!suppressPageTurnUntilAllTouchesEnd && !drawingMode.enabled && e.changedTouches.length === 1) {
           var deltaX = e.changedTouches[0].clientX - touchStartX;
           var dx = Math.abs(deltaX);
           var dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
@@ -624,6 +707,7 @@ export function generateFlipbookHtml({
             }
           }
         }
+        if (!e.touches || e.touches.length === 0) suppressPageTurnUntilAllTouchesEnd = false;
       }, { passive: true });
 
       var drag = null;
@@ -711,6 +795,14 @@ export function generateFlipbookHtml({
           if (msg.type === 'SET_ANNOTATIONS') {
             annotations = Array.isArray(msg.annotations) ? msg.annotations : [];
             applyAnnotations();
+            return;
+          }
+          if (msg.type === 'SET_DRAWING_MODE') {
+            drawingMode.enabled = !!msg.enabled;
+            if (typeof msg.color === 'string' && /^#[0-9a-f]{6}$/i.test(msg.color)) drawingMode.color = msg.color;
+            var width = Number(msg.strokeWidth);
+            if (Number.isFinite(width)) drawingMode.strokeWidth = Math.max(0.001, Math.min(0.03, width));
+            bookEl.style.cursor = drawingMode.enabled ? 'crosshair' : '';
             return;
           }
           if (msg.type === 'UPDATE_PREFERENCES') {

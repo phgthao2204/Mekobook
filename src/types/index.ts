@@ -134,29 +134,42 @@ export interface Bookmark {
   colorCode?: string;
   colorTag?: string;
   note?: string;
+  dateCreated?: string;
+  dateModified?: string;
 }
+
+export type BookmarkInput = Omit<Bookmark, 'id' | 'dateCreated' | 'dateModified' | 'colorCode'>;
+
+export interface AnnotationPoint { x: number; y: number }
 
 export interface Annotation {
   id: number;
   bookId: number;
   pageNumber: number;
   type: 'HIGHLIGHT' | 'STICKY_NOTE' | 'DRAWING_PEN' | string;
-  coordinateData?: string | Array<{ x: number; y: number }>;
+  coordinateData?: string | AnnotationPoint[];
   color?: string;
+  strokeWidth?: number;
   noteText?: string;
+  dateCreated?: string;
+  dateModified?: string;
 }
+
+export type AnnotationInput = Omit<Annotation, 'id' | 'dateCreated' | 'dateModified'>;
 
 /** Bridge Messages between React Native and Flipbook WebView Engine */
 export type FlipbookToReactNativeMessage =
   | { type: 'ENGINE_READY'; totalPages: number }
   | { type: 'PAGE_CHANGED'; page: number; totalPages: number }
   | { type: 'ZOOM_CHANGED'; scale: number }
+  | { type: 'DRAWING_CREATED'; drawing: AnnotationInput }
   | { type: 'TAP_CENTER' }
   | { type: 'ERROR'; message: string };
 
 export type ReactNativeToFlipbookMessage =
   | { type: 'SET_ACCESS_TOKEN'; token?: string }
   | { type: 'SET_ANNOTATIONS'; annotations: Annotation[] }
+  | { type: 'SET_DRAWING_MODE'; enabled: boolean; color: string; strokeWidth: number }
   | { type: 'UPDATE_PREFERENCES'; preferences: UserPreference }
   | { type: 'ZOOM'; scale: number }
   | { type: 'TURN_NEXT' }

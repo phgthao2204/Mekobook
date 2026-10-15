@@ -3,6 +3,12 @@ import { defaultPreferences } from '../constants/preferences';
 export function clampPage(page: number, total: number): number {
   return Math.max(1, Math.min(Number.isFinite(page) ? Math.floor(page) : 1, total));
 }
+/** Canonical progress formula used by Reader, detail, catalog and local storage. */
+export function readingPercentage(page: number, totalPages: number): number {
+  if (!Number.isFinite(totalPages) || totalPages < 1) return 0;
+  const currentPage = clampPage(page, totalPages);
+  return Math.round((currentPage / totalPages) * 10000) / 100;
+}
 export function hasReadAccess(isFree: boolean | undefined, licenses: DrmLicense[]): boolean {
   return isFree === true || licenses.some(license => license.status === 'ACTIVE');
 }

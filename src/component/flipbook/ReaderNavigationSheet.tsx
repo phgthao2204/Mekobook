@@ -24,6 +24,8 @@ interface ReaderNavigationSheetProps {
   onRetryAnnotations: () => void;
   onClose: () => void;
   onJumpToPage: (page: number) => void;
+  onDeleteBookmark: (bookmark: Bookmark) => void;
+  onDeleteAnnotation: (annotation: Annotation) => void;
 }
 
 function safeColor(value?: string): string {
@@ -87,29 +89,39 @@ export function ReaderNavigationSheet(props: ReaderNavigationSheetProps) {
         /> : mode === 'bookmarks' ? <FlatList<Bookmark>
           data={bookmarks} keyExtractor={(item, index) => String(item.id || `${item.pageNumber}-${index}`)}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => <TouchableOpacity accessibilityRole="button"
-            accessibilityLabel={`Mở trang đánh dấu ${item.pageNumber}`} style={styles.listRow}
-            onPress={() => { onClose(); onJumpToPage(item.pageNumber); }}>
+          renderItem={({ item }) => <View style={styles.listRow}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Mở trang đánh dấu ${item.pageNumber}`}
+              style={styles.rowMain} onPress={() => { onClose(); onJumpToPage(item.pageNumber); }}>
             <View style={[styles.marker, { backgroundColor: safeColor(item.colorTag || item.colorCode) }]} />
             <View style={styles.rowCopy}>
               <Text style={styles.rowTitle}>{item.chapterTitle || item.bookmarkTitle || `Trang ${item.pageNumber}`}</Text>
               {!!item.note && <Text style={styles.rowDetail} numberOfLines={2}>{item.note}</Text>}
             </View>
             <Text style={styles.pagePill}>{`Tr. ${item.pageNumber}`}</Text>
-          </TouchableOpacity>}
+            </TouchableOpacity>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Xóa đánh dấu trang ${item.pageNumber}`}
+              style={styles.deleteButton} onPress={() => props.onDeleteBookmark(item)}>
+              <Ionicons name="trash-outline" size={18} color="#DC2626" />
+            </TouchableOpacity>
+          </View>}
         /> : <FlatList<Annotation>
           data={annotations} keyExtractor={(item, index) => String(item.id || `${item.pageNumber}-${index}`)}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => <TouchableOpacity accessibilityRole="button"
-            accessibilityLabel={`Mở ghi chú trang ${item.pageNumber}`} style={styles.listRow}
-            onPress={() => { onClose(); onJumpToPage(item.pageNumber); }}>
+          renderItem={({ item }) => <View style={styles.listRow}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Mở ghi chú trang ${item.pageNumber}`}
+              style={styles.rowMain} onPress={() => { onClose(); onJumpToPage(item.pageNumber); }}>
             <View style={[styles.marker, { backgroundColor: safeColor(item.color) }]} />
             <View style={styles.rowCopy}>
               <Text style={styles.rowTitle}>{item.type === 'HIGHLIGHT' ? 'Vùng đánh dấu' : item.type === 'DRAWING_PEN' ? 'Nét vẽ' : 'Ghi chú'}</Text>
               {!!item.noteText && <Text style={styles.rowDetail} numberOfLines={3}>{item.noteText}</Text>}
             </View>
             <Text style={styles.pagePill}>{`Tr. ${item.pageNumber}`}</Text>
-          </TouchableOpacity>}
+            </TouchableOpacity>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Xóa nét vẽ trang ${item.pageNumber}`}
+              style={styles.deleteButton} onPress={() => props.onDeleteAnnotation(item)}>
+              <Ionicons name="trash-outline" size={18} color="#DC2626" />
+            </TouchableOpacity>
+          </View>}
         />}
       </SafeAreaView>
     </View>
@@ -133,7 +145,9 @@ const styles = StyleSheet.create({
   thumbnailPlaceholder: { width: '100%', aspectRatio: 0.72, borderRadius: 6, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
   thumbnailPage: { textAlign: 'center', color: colors.text, fontSize: 11, fontWeight: '700', paddingTop: 5 },
   itemTextActive: { color: colors.primary },
-  listRow: { minHeight: 62, padding: 12, marginBottom: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface },
+  listRow: { minHeight: 62, marginBottom: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface },
+  rowMain: { flex: 1, minHeight: 60, padding: 12, flexDirection: 'row', alignItems: 'center' },
+  deleteButton: { width: 44, minHeight: 60, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderLeftColor: colors.border },
   marker: { width: 10, height: 34, borderRadius: 5, marginRight: 12 },
   rowCopy: { flex: 1, marginRight: 10 },
   rowTitle: { color: colors.text, fontSize: 13, fontWeight: '800' },

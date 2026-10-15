@@ -1,5 +1,6 @@
 import { colors } from '../../constants/theme';
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator, FlatList, Image, Platform, RefreshControl,
   StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View,
@@ -10,7 +11,7 @@ import { LibraryBook, ReadingProgress, UserAccount } from '../../types';
 import { getBooks, getMediaRequestHeaders, getReadingProgresses } from '../../services/api';
 import { errorMessage } from '../../services/http';
 import { getLocalReadingProgress } from '../../services/localReadingProgress';
-import { mergeReadingProgress, normalizeSearchText } from '../../utils/reader';
+import { mergeReadingProgress, normalizeSearchText, readingPercentage } from '../../utils/reader';
 
 type ViewMode = 'grid' | 'list';
 
@@ -37,7 +38,7 @@ function readingState(book: LibraryBook) {
   if (!progress || progress.currentPage < 1 || (progress.readStatus === 'NOT_STARTED' && progress.percentage <= 0)) {
     return { label: 'Chưa đọc', color: colors.muted, background: '#F1F5F9' };
   }
-  if (progress.readStatus === 'COMPLETED' || progress.percentage >= 100) {
+  if (progress.readStatus === 'COMPLETED' || progress.currentPage >= book.totalPages) {
     return { label: 'Đã hoàn thành', color: '#047857', background: '#D1FAE5' };
   }
   return { label: 'Đang đọc', color: '#1D4ED8', background: '#DBEAFE' };
@@ -56,7 +57,7 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
   const [error, setError] = useState('');
   const requestId = useRef(0);
 
-  const loadLibrary = async () => {
+  const loadLibrary = useCallback(async () => {
     const version = ++requestId.current;
     setError('');
     const remoteProgressRequest = getReadingProgresses(200)
@@ -90,9 +91,12 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
     } finally {
       if (version === requestId.current) { setLoading(false); setRefreshing(false); }
     }
-  };
+  }, [user.id]);
 
-  useEffect(() => { loadLibrary(); return () => { requestId.current++; }; }, []);
+  useFocusEffect(useCallback(() => {
+    void loadLibrary();
+    return () => { requestId.current++; };
+  }, [loadLibrary]));
 
   const filteredBooks = useMemo(() => {
     const query = normalizeSearchText(searchQuery);
@@ -106,7 +110,7 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
   const renderProgress = (book: LibraryBook, compact: boolean) => {
     const progress = book.readingProgress;
     const state = readingState(book);
-    const percentage = Math.max(0, Math.min(100, Math.round(progress?.percentage || 0)));
+    const percentage = progress ? Math.round(readingPercentage(progress.currentPage, book.totalPages)) : 0;
     return (
       <View style={styles.progressSection}>
         <View style={styles.progressHeader}>

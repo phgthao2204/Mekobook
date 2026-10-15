@@ -11,7 +11,7 @@ import { getMediaRequestHeaders } from '../../services/api';
 import { errorMessage } from '../../services/http';
 import { colors } from '../../constants/theme';
 import { LoadState } from '../../component/LoadState';
-import { clampPage, hasStartedReading } from '../../utils/reader';
+import { clampPage, hasStartedReading, readingPercentage } from '../../utils/reader';
 import { useAuth } from '../../hooks/useAuth';
 export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, 'BookDetail'>) {
   const { session } = useAuth();
@@ -29,6 +29,7 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
   const { book, licenses, canRead } = access;
   const page = clampPage(book.readingProgress?.currentPage || 1, book.totalPages);
   const started = hasStartedReading(book.readingProgress);
+  const percentage = Math.round(readingPercentage(page, book.totalPages));
   const open = (mode: 'start' | 'continue') => navigation.navigate('BookLoading', {
     bookId: book.id,
     mode,
@@ -46,7 +47,7 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
       <Text style={styles.text}>Năm xuất bản: {book.publicationYear || 'Chưa có thông tin'}</Text>
       <Text style={styles.text}>{book.totalPages} trang</Text>
       <Text style={styles.text}>{book.description || 'Chưa có mô tả'}</Text>
-      <Text style={styles.text}>Tiến trình: {access.progressUnavailable ? 'Chưa tải được tiến trình. Vui lòng thử lại.' : book.readingProgress ? `Trang ${page} · ${Math.max(0, Math.min(100, book.readingProgress.percentage || 0))}%` : 'Chưa đọc'}</Text>
+      <Text style={styles.text}>Tiến trình: {access.progressUnavailable ? 'Chưa tải được tiến trình. Vui lòng thử lại.' : book.readingProgress ? `Trang ${page}/${book.totalPages} · ${percentage}%` : 'Chưa đọc'}</Text>
       {access.progressUnavailable && <TouchableOpacity accessibilityRole="button" onPress={() => setAttempt(x => x + 1)}><Text style={styles.muted}>Tải lại tiến trình</Text></TouchableOpacity>}
       <View style={styles.license}>
         <Text style={styles.text}>Quyền đọc: {book.isFree ? 'Miễn phí' : access.licensesUnavailable ? 'Chưa kiểm tra được giấy phép' : canRead ? 'Giấy phép còn hiệu lực' : 'Chưa xác nhận giấy phép còn hiệu lực'}</Text>

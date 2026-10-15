@@ -6,7 +6,8 @@ function allowedMediaRequest(method, path) {
     && /^(?:\/flipbooks\/[a-z0-9_\-/]+|\/documents\/20117\/33056\/flipbooks\/[a-z0-9_\-/]+)\.(jpe?g|png|webp)$/i.test(path);
 }
 function allowedRequest(method, path) {
-  if (method === 'POST') return path === '/o/oauth2/token';
+  if (method === 'POST') return path === '/o/oauth2/token' || /^\/o\/c\/(bookmarks|annotations)$/.test(path);
+  if (method === 'PATCH' || method === 'DELETE') return /^\/o\/c\/(bookmarks|annotations)\/\d+$/.test(path);
   return method === 'GET' && (path === '/o/headless-admin-user/v1.0/my-user-account'
     || /^\/o\/c\/(books|chaptertocs|userpreferences|readingprogresses|bookmarks|annotations|drmlicenses)(\/\d+)?$/.test(path));
 }
