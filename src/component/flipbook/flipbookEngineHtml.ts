@@ -82,8 +82,8 @@ export function generateFlipbookHtml({
 
     #book {
       display: none;
-      box-shadow: 0 16px 40px rgba(5, 150, 105, 0.18), 0 4px 16px rgba(0, 0, 0, 0.12);
-      border-radius: 8px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08);
+      border-radius: 6px;
     }
 
     .page {
@@ -93,8 +93,8 @@ export function generateFlipbookHtml({
       display: flex;
       justify-content: center;
       align-items: center;
-      border: 2.5px solid #059669; /* Khung viền xanh lá phân biệt rõ rệt */
-      border-radius: 8px;
+      border: 1px solid #CBD5E1;
+      border-radius: 6px;
       box-sizing: border-box;
     }
 
@@ -260,6 +260,9 @@ export function generateFlipbookHtml({
       var activeDrawing = null;
 
       var preferences = ${JSON.stringify(preferences).replace(/</g, '\\u003c')};
+      // Dual-page rendering has been retired because it does not reliably fit
+      // the available phone viewport. Ignore older server/local preferences.
+      preferences.dualPageMode = false;
       var zoomScale = 1, panX = 0, panY = 0;
       var changing = false;
       var preloadTimers = [], preloadGeneration = 0;
@@ -397,6 +400,30 @@ export function generateFlipbookHtml({
           } else {
             changing = false;
           }
+        }).catch(function(error) {
+          changing = false;
+          postToRN({ type: 'ERROR', message: error.message });
+        });
+      }
+
+      function jumpToPage(page, retryCount) {
+        var target = Math.max(1, Math.min(Math.floor(Number(page) || 1), totalPages));
+        var retries = Number(retryCount) || 0;
+        // Commands can arrive while a previous curl animation is still ending.
+        // Do not silently discard an explicit page request from the page picker.
+        if (changing || !pageFlipInstance || pageFlipInstance.getState() !== 'read') {
+          if (retries < 30) setTimeout(function() { jumpToPage(target, retries + 1); }, 80);
+          else postToRN({ type: 'ERROR', message: 'Chưa thể chuyển đến trang ' + target + '. Vui lòng thử lại.' });
+          return;
+        }
+        if (isPageVisible(target)) return;
+        changing = true;
+        waitForPage(target).then(function() {
+          // Direct navigation must use an absolute page index. flip() is for
+          // animated page curls and can align to a neighboring spread.
+          pageFlipInstance.turnToPage(target - 1);
+          zoomScale = 1; panX = panY = 0; applyZoom();
+          changing = false;
         }).catch(function(error) {
           changing = false;
           postToRN({ type: 'ERROR', message: error.message });
@@ -599,10 +626,8 @@ export function generateFlipbookHtml({
           // large blank bands above and below the source image on phones.
           // Reserve space for the native top and bottom controls so page
           // content is not hidden behind either toolbar.
-          var availableHeight = Math.max(320, containerHeight - 190);
-          var pageTargetHeight = usePortrait
-            ? Math.min(availableHeight, Math.floor(pageTargetWidth / imageAspect))
-            : Math.min(Math.floor(containerHeight * 0.78), Math.floor(pageTargetWidth / imageAspect));
+          var availableHeight = Math.max(120, containerHeight - 190);
+          var pageTargetHeight = Math.min(availableHeight, Math.floor(pageTargetWidth / imageAspect));
           bookEl.style.display = 'block';
           pageFlipInstance = new St.PageFlip(bookEl, {
             width: pageTargetWidth,
@@ -625,7 +650,10 @@ export function generateFlipbookHtml({
             mobileScrollSupport: false,
             swipeDistance: 15,
             showPageCorners: true,
-            useMouseEvents: preferences.pageTurnEffect === 'CURL_3D',
+            // Use exactly one gesture owner. The native PageFlip touch handler
+            // and our reader swipe handler previously reacted to the same
+            // gesture, which could advance twice or bounce to the old page.
+            useMouseEvents: false,
             clickEventForward: true,
           });
 
@@ -691,16 +719,18 @@ export function generateFlipbookHtml({
 
           // A deliberate horizontal swipe is easier to discover than dragging
           // the page corner; keep the selected 3D curl effect for that turn.
-          if (pageFlipInstance && zoomScale === 1 && dx > 40 && dy < 55) {
+          if (pageFlipInstance && zoomScale <= 1.01 && dx > 40 && dy < 55) {
             var dir = deltaX < 0 ? 1 : -1;
             navigatePage(pageFlipInstance.getCurrentPageIndex() + 1 + dir * (preferences.dualPageMode ? 2 : 1), dir);
           }
-          if (zoomScale === 1 && dx < 10 && dy < 10 && dt < 280) {
+          if (zoomScale <= 1.01 && dx < 10 && dy < 10 && dt < 280) {
             var x = e.changedTouches[0].clientX;
             var w = window.innerWidth;
-            if (pageFlipInstance && x < w * 0.18) {
+            // Keep generous left/right zones so page turning remains usable
+            // when the native controls are hidden in full-screen reading.
+            if (pageFlipInstance && x < w * 0.3) {
               navigatePage(pageFlipInstance.getCurrentPageIndex() + 1 - (preferences.dualPageMode ? 2 : 1), -1);
-            } else if (pageFlipInstance && x > w * 0.82) {
+            } else if (pageFlipInstance && x > w * 0.7) {
               navigatePage(pageFlipInstance.getCurrentPageIndex() + 1 + (preferences.dualPageMode ? 2 : 1), 1);
             } else if (x > w * 0.3 && x < w * 0.7) {
               postToRN({ type: 'TAP_CENTER' });
@@ -823,8 +853,7 @@ export function generateFlipbookHtml({
               navigatePage(pageFlipInstance.getCurrentPageIndex() + 1 - (preferences.dualPageMode ? 2 : 1), -1);
               break;
             case 'GO_TO_PAGE':
-              var target = Math.max(0, Math.min(msg.page - 1, totalPages - 1));
-              navigatePage(target + 1, 0);
+              jumpToPage(msg.page, 0);
               break;
           }
         } catch(e) {

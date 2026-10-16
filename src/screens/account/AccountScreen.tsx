@@ -4,10 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/theme';
 import { UserAccount } from '../../types';
+import { AppBottomNavigation } from '../../component/AppBottomNavigation';
 
 interface AccountScreenProps {
   user: UserAccount;
   onBack: () => void;
+  onOpenLibrary: () => void;
   onLogout: () => Promise<void>;
   onRefreshProfile: () => Promise<UserAccount>;
 }
@@ -22,7 +24,7 @@ function ProfileRow({ icon, label, value }: { icon: React.ComponentProps<typeof 
   </View>;
 }
 
-export function AccountScreen({ user, onBack, onLogout, onRefreshProfile }: AccountScreenProps) {
+export function AccountScreen({ user, onBack, onOpenLibrary, onLogout, onRefreshProfile }: AccountScreenProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState('');
   const displayName = user.name || [user.givenName, user.familyName].filter(Boolean).join(' ') || 'Người đọc';
@@ -105,6 +107,7 @@ export function AccountScreen({ user, onBack, onLogout, onRefreshProfile }: Acco
         <Text style={styles.logoutText}>Đăng xuất</Text>
       </TouchableOpacity>
     </ScrollView>
+    <AppBottomNavigation active="account" onOpenLibrary={onOpenLibrary} onOpenAccount={() => {}} />
   </SafeAreaView>;
 }
 

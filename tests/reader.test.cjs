@@ -371,12 +371,13 @@ test('generated engine scripts parse and wire preferences/zoom/load before ready
   }
 });
 
-test('dual-page layout preserves source page aspect ratio instead of filling phone height', () => {
+test('reader forces stable single-page layout and preserves source page aspect ratio', () => {
   const html = generateFlipbookHtml({ book, initialPage: 1,
     preferences: normalizePreferences({ dualPageMode: true }) });
   assert.ok(html.includes('initialImage.naturalWidth / initialImage.naturalHeight'));
   assert.ok(html.includes('Math.floor(pageTargetWidth / imageAspect)'));
-  assert.ok(html.includes('Math.floor(containerHeight * 0.78)'));
+  assert.ok(html.includes('preferences.dualPageMode = false'));
+  assert.ok(html.includes('Math.max(120, containerHeight - 190)'));
 });
 
 test('engine bridge initializes once, sends ready, zooms/pans and applies effects', async () => {
@@ -417,6 +418,7 @@ test('engine bridge initializes once, sends ready, zooms/pans and applies effect
     await window.onload();
     assert.equal(instances, 1); assert.equal(messages[0].type, 'ENGINE_READY');
     assert.equal(receivedSettings.usePortrait, true);
+    assert.equal(receivedSettings.useMouseEvents, false, 'only the reader gesture handler may own a swipe');
     assert.ok(receivedSettings.minWidth > window.innerWidth / 2);
     assert.ok(bookEl.style.filter.includes('brightness(0.5)'));
     windowEvents.message({ data: { type: 'ZOOM', scale: 2 } });
@@ -456,6 +458,15 @@ test('engine bridge initializes once, sends ready, zooms/pans and applies effect
     windowEvents.touchend({ changedTouches: [{ clientX: 220, clientY: 302 }] });
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(turns, 2, 'a horizontal swipe should turn a page under every selected effect');
+    windowEvents.message({ data: { type: 'GO_TO_PAGE', page: 4 } });
+    await new Promise(resolve => setTimeout(resolve, 700));
+    assert.equal(current, 3, 'page picker must navigate to the exact one-based page');
+    assert.ok(messages.some(message => message.type === 'PAGE_CHANGED' && message.page === 4));
+    await new Promise(resolve => setTimeout(resolve, 650));
+    windowEvents.touchstart({ touches: [{ clientX: 300, clientY: 300 }] });
+    windowEvents.touchend({ touches: [], changedTouches: [{ clientX: 300, clientY: 300 }] });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(current, 4, 'the full-screen right tap zone must turn to the next page');
   }
 });
 

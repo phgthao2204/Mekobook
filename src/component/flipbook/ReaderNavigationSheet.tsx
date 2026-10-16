@@ -22,6 +22,7 @@ interface ReaderNavigationSheetProps {
   annotationsError?: string;
   onRetryBookmarks: () => void;
   onRetryAnnotations: () => void;
+  onBack?: () => void;
   onClose: () => void;
   onJumpToPage: (page: number) => void;
   onDeleteBookmark: (bookmark: Bookmark) => void;
@@ -50,19 +51,21 @@ export function ReaderNavigationSheet(props: ReaderNavigationSheetProps) {
   const { visible, mode, book, currentPage, bookmarks, annotations, onClose, onJumpToPage } = props;
   const pages = useMemo(() => Array.from({ length: book.totalPages }, (_, index) => index + 1), [book.totalPages]);
   if (!mode) return null;
-  const title = mode === 'thumbnails' ? 'Ảnh thu nhỏ' : mode === 'bookmarks' ? 'Trang đã đánh dấu' : 'Ghi chú và vùng đánh dấu';
+  const title = mode === 'thumbnails' ? 'Trang' : mode === 'bookmarks' ? 'Trang đã đánh dấu' : 'Chú thích';
   const loading = mode === 'bookmarks' ? props.bookmarksLoading : mode === 'annotations' ? props.annotationsLoading : false;
   const error = mode === 'bookmarks' ? props.bookmarksError : mode === 'annotations' ? props.annotationsError : '';
   const empty = mode === 'bookmarks' ? bookmarks.length === 0 : mode === 'annotations' ? annotations.length === 0 : false;
 
-  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={props.onBack || onClose}>
     <View style={styles.backdrop}>
       <TouchableOpacity style={styles.dismissArea} activeOpacity={1} onPress={onClose} />
       <SafeAreaView style={styles.sheet} edges={['bottom']}>
         <View style={styles.header}>
+          {props.onBack ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="Quay lại Công cụ đọc"
+            style={styles.back} onPress={props.onBack}><Ionicons name="arrow-back" size={21} color={colors.text} /></TouchableOpacity> : null}
           <View style={styles.titleWrap}>
             <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subtitle} numberOfLines={1}>{book.title}</Text>
+            <Text style={styles.subtitle}>{book.title}</Text>
           </View>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Đóng" style={styles.close}
             onPress={onClose}><Ionicons name="close" size={22} color={colors.muted} /></TouchableOpacity>
@@ -79,7 +82,7 @@ export function ReaderNavigationSheet(props: ReaderNavigationSheetProps) {
           </TouchableOpacity>
         </View> : empty ? <View style={styles.state}>
           <Ionicons name={mode === 'bookmarks' ? 'bookmark-outline' : 'document-text-outline'} size={30} color={colors.muted} />
-          <Text style={styles.stateText}>{mode === 'bookmarks' ? 'Chưa có trang nào được đánh dấu.' : 'Sách chưa có ghi chú hoặc vùng đánh dấu.'}</Text>
+          <Text style={styles.stateText}>{mode === 'bookmarks' ? 'Chưa có trang nào được đánh dấu.' : 'Sách chưa có ghi chú hoặc nét vẽ.'}</Text>
         </View> : mode === 'thumbnails' ? <FlatList
           key="thumbnails-grid" data={pages} numColumns={3} keyExtractor={page => String(page)}
           contentContainerStyle={styles.list} columnWrapperStyle={styles.thumbnailRow}
@@ -90,12 +93,12 @@ export function ReaderNavigationSheet(props: ReaderNavigationSheetProps) {
           data={bookmarks} keyExtractor={(item, index) => String(item.id || `${item.pageNumber}-${index}`)}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => <View style={styles.listRow}>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Mở trang đánh dấu ${item.pageNumber}`}
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Mở trang đã đánh dấu ${item.pageNumber}`}
               style={styles.rowMain} onPress={() => { onClose(); onJumpToPage(item.pageNumber); }}>
-            <View style={[styles.marker, { backgroundColor: safeColor(item.colorTag || item.colorCode) }]} />
+            <View style={styles.itemIcon}><Ionicons name="bookmark" size={18} color={safeColor(item.colorTag || item.colorCode)} /></View>
             <View style={styles.rowCopy}>
-              <Text style={styles.rowTitle}>{item.chapterTitle || item.bookmarkTitle || `Trang ${item.pageNumber}`}</Text>
-              {!!item.note && <Text style={styles.rowDetail} numberOfLines={2}>{item.note}</Text>}
+              <Text style={styles.rowTitle}>Trang đã đánh dấu</Text>
+              <Text style={styles.rowDetail} numberOfLines={2}>{item.note || item.chapterTitle || item.bookmarkTitle || `Trang ${item.pageNumber}`}</Text>
             </View>
             <Text style={styles.pagePill}>{`Tr. ${item.pageNumber}`}</Text>
             </TouchableOpacity>
@@ -110,7 +113,7 @@ export function ReaderNavigationSheet(props: ReaderNavigationSheetProps) {
           renderItem={({ item }) => <View style={styles.listRow}>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Mở ghi chú trang ${item.pageNumber}`}
               style={styles.rowMain} onPress={() => { onClose(); onJumpToPage(item.pageNumber); }}>
-            <View style={[styles.marker, { backgroundColor: safeColor(item.color) }]} />
+            <View style={styles.itemIcon}><Ionicons name={item.type === 'DRAWING_PEN' ? 'pencil' : 'document-text'} size={18} color={safeColor(item.color)} /></View>
             <View style={styles.rowCopy}>
               <Text style={styles.rowTitle}>{item.type === 'HIGHLIGHT' ? 'Vùng đánh dấu' : item.type === 'DRAWING_PEN' ? 'Nét vẽ' : 'Ghi chú'}</Text>
               {!!item.noteText && <Text style={styles.rowDetail} numberOfLines={3}>{item.noteText}</Text>}
@@ -132,14 +135,15 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15,23,42,0.55)' },
   dismissArea: { flex: 1 },
   sheet: { maxHeight: '82%', minHeight: '42%', backgroundColor: colors.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22 },
-  header: { minHeight: 68, paddingHorizontal: 18, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { minHeight: 76, paddingHorizontal: 18, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border },
   titleWrap: { flex: 1, marginRight: 12 },
+  back: { width: 38, height: 38, borderRadius: 19, marginRight: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
   title: { color: colors.text, fontSize: 17, fontWeight: '800' },
-  subtitle: { color: colors.muted, fontSize: 12, marginTop: 3 },
+  subtitle: { color: colors.muted, fontSize: 12, lineHeight: 16, marginTop: 3 },
   close: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
   list: { padding: 14, paddingBottom: 28 },
-  thumbnailRow: { justifyContent: 'space-between' },
-  thumbnailTile: { width: '32%', marginBottom: 12, padding: 5, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
+  thumbnailRow: { justifyContent: 'flex-start', gap: 8 },
+  thumbnailTile: { width: '31.6%', marginBottom: 12, padding: 5, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
   thumbnailTileActive: { borderColor: colors.primary, borderWidth: 2 },
   thumbnailImage: { width: '100%', aspectRatio: 0.72, backgroundColor: '#E2E8F0', borderRadius: 6 },
   thumbnailPlaceholder: { width: '100%', aspectRatio: 0.72, borderRadius: 6, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
@@ -148,7 +152,7 @@ const styles = StyleSheet.create({
   listRow: { minHeight: 62, marginBottom: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface },
   rowMain: { flex: 1, minHeight: 60, padding: 12, flexDirection: 'row', alignItems: 'center' },
   deleteButton: { width: 44, minHeight: 60, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderLeftColor: colors.border },
-  marker: { width: 10, height: 34, borderRadius: 5, marginRight: 12 },
+  itemIcon: { width: 38, height: 38, borderRadius: 10, marginRight: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
   rowCopy: { flex: 1, marginRight: 10 },
   rowTitle: { color: colors.text, fontSize: 13, fontWeight: '800' },
   rowDetail: { color: colors.muted, fontSize: 12, marginTop: 4, lineHeight: 17 },

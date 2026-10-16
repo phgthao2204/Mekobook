@@ -26,6 +26,7 @@ function AccountRoute({ navigation }: NativeStackScreenProps<RootStackParamList,
   const { session, signOut, refreshProfile } = useAuth();
   if (!session) return null;
   return <AccountScreen user={session.user} onBack={() => navigation.goBack()}
+    onOpenLibrary={() => navigation.navigate('Library')}
     onLogout={signOut} onRefreshProfile={refreshProfile} />;
 }
 export function AppNavigator() {

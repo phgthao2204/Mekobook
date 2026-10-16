@@ -12,6 +12,7 @@ import { getBooks, getMediaRequestHeaders, getReadingProgresses } from '../../se
 import { errorMessage } from '../../services/http';
 import { getLocalReadingProgress } from '../../services/localReadingProgress';
 import { mergeReadingProgress, normalizeSearchText, readingPercentage } from '../../utils/reader';
+import { AppBottomNavigation } from '../../component/AppBottomNavigation';
 
 type ViewMode = 'grid' | 'list';
 
@@ -113,12 +114,12 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
     const percentage = progress ? Math.round(readingPercentage(progress.currentPage, book.totalPages)) : 0;
     return (
       <View style={styles.progressSection}>
-        <View style={styles.progressHeader}>
+        <View style={[styles.progressHeader, compact && styles.compactProgressHeader]}>
           <View style={[styles.stateBadge, { backgroundColor: state.background }]}>
             <Text style={[styles.stateText, { color: state.color }]}>{state.label}</Text>
           </View>
           {progress && progress.currentPage >= 1 ? (
-            <Text style={styles.pageProgress} numberOfLines={1}>
+            <Text style={[styles.pageProgress, compact && styles.compactPageProgress]} numberOfLines={1}>
               Trang {progress.currentPage}/{book.totalPages} · {percentage}%
             </Text>
           ) : null}
@@ -203,7 +204,7 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
         <View style={styles.searchContainer}>
           <Ionicons name="search-outline" size={18} color={colors.primary} />
           <TextInput
-            style={styles.searchInput} placeholder="Tìm tên sách hoặc tác giả (có thể bỏ dấu)"
+            style={styles.searchInput} placeholder="Tìm sách hoặc tác giả"
             placeholderTextColor="#94A3B8" value={searchQuery} onChangeText={setSearchQuery}
             autoCorrect={false} returnKeyType="search"
           />
@@ -238,6 +239,7 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
           ListEmptyComponent={<View style={styles.centerContainer}><Ionicons name="search-outline" size={36} color="#94A3B8" /><Text style={styles.emptyText}>Không tìm thấy sách phù hợp</Text></View>}
         />
       )}
+      <AppBottomNavigation active="library" onOpenLibrary={() => {}} onOpenAccount={onOpenAccount} />
     </SafeAreaView>
   );
 };
@@ -262,7 +264,7 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 18, paddingBottom: 24 },
   gridRow: { justifyContent: 'space-between' },
   bookCard: { backgroundColor: colors.surface, borderRadius: 15, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, marginBottom: 13, elevation: 2, shadowColor: colors.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 },
-  listCard: { flexDirection: 'row', height: 174 },
+  listCard: { flexDirection: 'row', minHeight: 174 },
   gridCard: { width: '48.5%' },
   coverWrapper: { position: 'relative', backgroundColor: colors.border },
   listCover: { width: 118, height: 174, borderRightWidth: 1, borderRightColor: '#D1FAE5' },
@@ -278,9 +280,11 @@ const styles = StyleSheet.create({
   bookAuthor: { flex: 1, color: '#475569', fontSize: 11, fontWeight: '500' },
   progressSection: { marginTop: 9 },
   progressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 5 },
+  compactProgressHeader: { alignItems: 'flex-start', flexDirection: 'column', gap: 4 },
   stateBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   stateText: { fontSize: 10, fontWeight: '800' },
   pageProgress: { flex: 1, color: colors.muted, textAlign: 'right', fontSize: 9, fontWeight: '600' },
+  compactPageProgress: { alignSelf: 'stretch', flex: 0, textAlign: 'left', fontSize: 10 },
   progressTrack: { height: 4, borderRadius: 2, backgroundColor: colors.border, marginTop: 6, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 2, backgroundColor: '#3B82F6' },
   lastRead: { color: '#94A3B8', fontSize: 9, marginTop: 4 },

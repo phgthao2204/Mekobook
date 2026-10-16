@@ -57,10 +57,6 @@ export function ReaderSettingsModal({ visible, value, onClose, onApply }: Reader
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.label}>Hiển thị trang</Text>
-          <ChoiceRow choices={[{ label: 'Một trang', value: 0 }, { label: 'Hai trang', value: 1 }]}
-            value={draft.dualPageMode ? 1 : 0} onChange={next => update('dualPageMode', next === 1)} />
-
           <Text style={styles.label}>Giao diện</Text>
           <ChoiceRow choices={[
             { label: 'Sáng', value: 'LIGHT' }, { label: 'Tối', value: 'DARK' },

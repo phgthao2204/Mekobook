@@ -2,8 +2,8 @@
   "expo": {
     "name": "Mekobook",
     "slug": "mekobook-mobile",
-    "version": "1.5.0",
-    "orientation": "default",
+    "version": "1.5.1",
+    "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
@@ -11,7 +11,7 @@
     },
     "android": {
       "package": "vn.mekosoft.mekobook",
-      "versionCode": 15,
+      "versionCode": 16,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#059669",

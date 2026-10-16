@@ -23,6 +23,12 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
     themeMode: preferences.themeMode === 'SYSTEM'
       ? (systemColorScheme === 'dark' ? 'DARK' : 'LIGHT') as 'DARK' | 'LIGHT' : preferences.themeMode,
   }), [preferences, systemColorScheme]);
+  const enginePreferences = useMemo(() => ({
+    ...resolvedPreferences,
+    // Keep compatibility with preferences previously saved by the API, but
+    // always use the stable one-page reader experience.
+    dualPageMode: false,
+  }), [resolvedPreferences]);
   const [page, setPage] = useState(initialPage);
   const pageRef = useRef(initialPage);
   const [openingPage, setOpeningPage] = useState(initialPage);
@@ -146,7 +152,7 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
     <Animated.View style={[styles.viewer, { opacity: readerOpacity }]}>
       <FlipbookViewer key={attempt} ref={viewer} book={book} accessToken={session?.accessToken} annotations={annotations}
         drawingMode={{ enabled: drawingMode, color: drawingColor, strokeWidth: drawingWidth }} onDrawingCreated={saveDrawing}
-        initialPage={openingPage} preferences={resolvedPreferences}
+        initialPage={openingPage} preferences={enginePreferences}
         onPageChange={handlePageChange} onToggleControls={() => setVisible(x => !x)}
         onZoomChange={revealZoomRail}
         onReady={() => {
@@ -197,8 +203,7 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
     <ReaderSettingsModal visible={settingsVisible} value={preferences} onClose={() => setSettingsVisible(false)}
       onApply={next => {
         setSettingsVisible(false);
-        const requiresEngineRestart = next.dualPageMode !== preferences.dualPageMode
-          || next.pageTurnEffect !== preferences.pageTurnEffect;
+        const requiresEngineRestart = next.pageTurnEffect !== preferences.pageTurnEffect;
         setPreferences(next);
         setZoom(1);
         if (requiresEngineRestart) {
