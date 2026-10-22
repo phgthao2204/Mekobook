@@ -241,7 +241,7 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
             autoCorrect={false} returnKeyType="search"
           />
           {searchQuery.length > 0 ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Xóa từ khóa">
+            <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityRole="button" accessibilityLabel="Xóa từ khóa" hitSlop={10}>
               <Ionicons name="close-circle" size={18} color="#94A3B8" />
             </TouchableOpacity>
           ) : null}
@@ -249,15 +249,15 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
         <View style={styles.libraryToolbar}>
           <Text style={styles.resultCount}>{filteredBooks.length} cuốn sách</Text>
           <View style={styles.toolbarActions}>
-            <TouchableOpacity style={styles.shelfButton} onPress={() => setShelvesVisible(true)} accessibilityLabel="Quản lý tủ sách cá nhân">
+            <TouchableOpacity style={styles.shelfButton} onPress={() => setShelvesVisible(true)} accessibilityRole="button" accessibilityLabel="Quản lý tủ sách cá nhân" hitSlop={4}>
               <Ionicons name="albums-outline" size={16} color={theme.colors.primary} />
               <Text style={styles.shelfButtonText}>Tủ sách cá nhân</Text>
             </TouchableOpacity>
             <View style={styles.viewSwitcher}>
-              <TouchableOpacity style={[styles.viewButton, viewMode === 'grid' && styles.viewButtonActive]} onPress={() => setViewMode('grid')} accessibilityLabel="Dạng lưới" accessibilityState={{ selected: viewMode === 'grid' }}>
+              <TouchableOpacity style={[styles.viewButton, viewMode === 'grid' && styles.viewButtonActive]} onPress={() => setViewMode('grid')} accessibilityRole="button" accessibilityLabel="Dạng lưới" accessibilityState={{ selected: viewMode === 'grid' }} hitSlop={5}>
                 <Ionicons name="grid-outline" size={18} color={viewMode === 'grid' ? theme.colors.textInverse : theme.colors.textMuted} />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.viewButton, viewMode === 'list' && styles.viewButtonActive]} onPress={() => setViewMode('list')} accessibilityLabel="Dạng danh sách" accessibilityState={{ selected: viewMode === 'list' }}>
+              <TouchableOpacity style={[styles.viewButton, viewMode === 'list' && styles.viewButtonActive]} onPress={() => setViewMode('list')} accessibilityRole="button" accessibilityLabel="Dạng danh sách" accessibilityState={{ selected: viewMode === 'list' }} hitSlop={5}>
                 <Ionicons name="list-outline" size={20} color={viewMode === 'list' ? theme.colors.textInverse : theme.colors.textMuted} />
               </TouchableOpacity>
             </View>

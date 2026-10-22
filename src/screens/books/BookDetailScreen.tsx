@@ -108,6 +108,7 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
           <Text style={[styles.permissionTitle, { color: permission.color }]}>{permission.label}</Text>
           <Text style={styles.permissionDetail}>{permission.detail}</Text>
           {access.licensesUnavailable ? <TouchableOpacity accessibilityRole="button" style={styles.permissionRetry}
+            hitSlop={7} accessibilityLabel="Kiểm tra lại quyền đọc"
             onPress={() => setAttempt(value => value + 1)}>
             <Ionicons name="refresh-outline" size={14} color={theme.colors.primary} />
             <Text style={styles.permissionRetryText}>Kiểm tra lại quyền đọc</Text>
@@ -134,7 +135,7 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
         </View>)}
       </View> : null}
 
-      <TouchableOpacity style={styles.addToShelfButton} onPress={() => setShelvesVisible(true)} accessibilityRole="button">
+      <TouchableOpacity style={styles.addToShelfButton} onPress={() => setShelvesVisible(true)} accessibilityRole="button" accessibilityLabel="Thêm sách vào tủ sách cá nhân">
         <View style={styles.addToShelfIcon}><Ionicons name="albums-outline" size={21} color={theme.colors.primary} /></View>
         <View style={styles.addToShelfContent}>
           <Text style={styles.addToShelfTitle}>Thêm vào tủ sách</Text>
@@ -157,11 +158,11 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
     </ScrollView>
 
     <View style={styles.stickyActions}>
-      {started ? <TouchableOpacity disabled={!canRead} accessibilityRole="button" style={[styles.secondaryButton, !canRead && styles.disabled]} onPress={() => open('start')}>
+      {started ? <TouchableOpacity disabled={!canRead} accessibilityRole="button" accessibilityLabel="Đọc sách từ đầu" accessibilityState={{ disabled: !canRead }} style={[styles.secondaryButton, !canRead && styles.disabled]} onPress={() => open('start')}>
         <Ionicons name="refresh-outline" size={18} color={theme.colors.primary} />
         <Text style={styles.secondaryButtonText}>Đọc từ đầu</Text>
       </TouchableOpacity> : null}
-      <TouchableOpacity disabled={!canRead} accessibilityRole="button" style={[styles.primaryButton, started && styles.flexButton, !canRead && styles.disabled]}
+      <TouchableOpacity disabled={!canRead} accessibilityRole="button" accessibilityLabel={started ? `Đọc tiếp từ trang ${page}` : 'Bắt đầu đọc sách'} accessibilityState={{ disabled: !canRead }} style={[styles.primaryButton, started && styles.flexButton, !canRead && styles.disabled]}
         onPress={() => open(started ? 'continue' : 'start')}>
         <Ionicons name="book-outline" size={18} color={theme.colors.textInverse} />
         <Text style={styles.primaryButtonText}>{started && !access.progressUnavailable ? `Đọc tiếp trang ${page}` : 'Bắt đầu đọc'}</Text>

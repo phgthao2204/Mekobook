@@ -197,11 +197,18 @@ export function PersonalShelfModal({ visible, bookId, books = [], onSelectBook, 
           {loading ? <Loading /> : <ScrollView style={styles.list} contentContainerStyle={shelfItems.length ? styles.listContent : styles.emptyContent}>
             {shelfItems.length ? shelfItems.map(item => {
               const listedBook = booksById.get(item.bookId);
-              return <TouchableOpacity key={item.id} style={styles.bookRow} disabled={!listedBook || !onSelectBook} onPress={() => openBook(item)}>
-                {listedBook?.coverUrl ? <Image source={{ uri: listedBook.coverUrl, headers: getMediaRequestHeaders(listedBook.coverUrl) }} style={styles.cover} /> : <View style={styles.coverPlaceholder}><Ionicons name="book-outline" size={22} color={theme.colors.textMuted} /></View>}
-                <View style={styles.shelfInfo}><Text style={styles.shelfName} numberOfLines={2}>{listedBook?.title || `Sách #${item.bookId}`}</Text><Text style={styles.shelfMeta} numberOfLines={1}>{listedBook?.author || 'Sách trong tủ sách cá nhân'}</Text></View>
-                <TouchableOpacity style={styles.removeButton} disabled={savingId !== null} onPress={() => removeItem(item)} accessibilityLabel="Gỡ sách khỏi tủ">{savingId === item.id ? <ActivityIndicator size="small" color={theme.colors.error} /> : <Ionicons name="close-circle-outline" size={22} color={theme.colors.error} />}</TouchableOpacity>
-              </TouchableOpacity>;
+              return <View key={item.id} style={styles.bookRow}>
+                <TouchableOpacity style={styles.bookMain} disabled={!listedBook || !onSelectBook}
+                  onPress={() => openBook(item)} accessibilityRole="button"
+                  accessibilityLabel={`Mở ${listedBook?.title || `sách ${item.bookId}`}`}>
+                  {listedBook?.coverUrl ? <Image source={{ uri: listedBook.coverUrl, headers: getMediaRequestHeaders(listedBook.coverUrl) }} style={styles.cover} /> : <View style={styles.coverPlaceholder}><Ionicons name="book-outline" size={22} color={theme.colors.textMuted} /></View>}
+                  <View style={styles.shelfInfo}><Text style={styles.shelfName} numberOfLines={2}>{listedBook?.title || `Sách #${item.bookId}`}</Text><Text style={styles.shelfMeta} numberOfLines={1}>{listedBook?.author || 'Sách trong tủ sách cá nhân'}</Text></View>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.removeButton} disabled={savingId !== null} onPress={() => removeItem(item)}
+                  accessibilityRole="button" accessibilityLabel={`Gỡ ${listedBook?.title || 'sách'} khỏi tủ`}>
+                  {savingId === item.id ? <ActivityIndicator size="small" color={theme.colors.error} /> : <Ionicons name="close-circle-outline" size={22} color={theme.colors.error} />}
+                </TouchableOpacity>
+              </View>;
             }) : <Empty icon="book-outline" title="Tủ sách đang trống" text="Thêm sách từ màn hình thông tin sách." />}
           </ScrollView>}
         </> : <>
@@ -241,7 +248,8 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   shelfRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border },
   shelfIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, shelfInfo: { flex: 1, paddingHorizontal: 12 },
   shelfName: { color: theme.colors.text, fontSize: 14, fontWeight: '800' }, shelfMeta: { color: theme.colors.textMuted, fontSize: 11, marginTop: 3 },
-  bookRow: { minHeight: 78, flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border },
+  bookRow: { minHeight: 78, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border },
+  bookMain: { flex: 1, minHeight: 78, flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
   cover: { width: 46, height: 62, borderRadius: 6, backgroundColor: theme.colors.border }, coverPlaceholder: { width: 46, height: 62, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surfaceMuted }, removeButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   detailActions: { flexDirection: 'row', gap: 10, marginBottom: 8 }, secondaryAction: { flex: 1, height: 42, borderRadius: 10, backgroundColor: theme.colors.primarySoft, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' }, secondaryText: { color: theme.colors.primary, fontSize: 12, fontWeight: '800' }, deleteAction: { flex: 0.8, height: 42, borderRadius: 10, backgroundColor: theme.colors.errorSoft, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' }, deleteText: { color: theme.colors.error, fontSize: 12, fontWeight: '800' },
   state: { minHeight: 220, alignItems: 'center', justifyContent: 'center' }, stateText: { color: theme.colors.textMuted, fontSize: 12, marginTop: 9 },
