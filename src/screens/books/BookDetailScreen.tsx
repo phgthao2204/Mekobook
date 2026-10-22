@@ -110,7 +110,7 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
           {access.licensesUnavailable ? <TouchableOpacity accessibilityRole="button" style={styles.permissionRetry}
             hitSlop={7} accessibilityLabel="Kiểm tra lại quyền đọc"
             onPress={() => setAttempt(value => value + 1)}>
-            <Ionicons name="refresh-outline" size={14} color={theme.colors.primary} />
+            <Ionicons name="refresh-outline" size={18} color={theme.colors.primary} />
             <Text style={styles.permissionRetryText}>Kiểm tra lại quyền đọc</Text>
           </TouchableOpacity> : null}
         </View>
@@ -195,8 +195,8 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   retryButton: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10, alignSelf: 'flex-end' }, retryText: { color: theme.colors.primary, fontSize: 12, fontWeight: '700' },
   permissionCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 16, borderWidth: 1, marginBottom: 14 }, permissionIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   permissionContent: { flex: 1, marginLeft: 12 }, permissionCaption: { color: theme.colors.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 0.8 }, permissionTitle: { fontSize: 15, fontWeight: '900', marginTop: 2 }, permissionDetail: { color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 },
-  permissionRetry: { minHeight: 34, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, paddingHorizontal: 11, borderRadius: 10, backgroundColor: theme.colors.surface },
-  permissionRetryText: { color: theme.colors.primary, fontSize: 11, fontWeight: '800' },
+  permissionRetry: { minHeight: 48, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 8, paddingHorizontal: 14, borderRadius: 13, backgroundColor: theme.colors.surface },
+  permissionRetryText: { color: theme.colors.primary, fontSize: 13, fontWeight: '800' },
   licenseCard: { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.info, borderRadius: 16, padding: 15, marginBottom: 14 },
   licenseHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 }, licenseHeaderIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: theme.colors.infoSoft, alignItems: 'center', justifyContent: 'center', marginRight: 10 }, licenseHeaderTitle: { color: theme.colors.text, fontSize: 15, fontWeight: '800' },
   licenseBody: { gap: 10 }, licenseBodyBorder: { borderTopWidth: 1, borderTopColor: theme.colors.border, marginTop: 13, paddingTop: 13 },
