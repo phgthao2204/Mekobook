@@ -2,9 +2,11 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../constants/theme';
+import { AppTheme, useTheme, useThemedStyles } from '../../theme';
 
 export function SplashScreen() {
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.92)).current;
   const progress = useRef(new Animated.Value(0)).current;
@@ -19,10 +21,10 @@ export function SplashScreen() {
 
   const progressWidth = progress.interpolate({ inputRange: [0, 1], outputRange: ['8%', '100%'] });
   return <SafeAreaView style={styles.screen}>
-    <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+    <StatusBar barStyle={theme.isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.background} />
     <Animated.View style={[styles.brand, { opacity, transform: [{ scale }] }]}>
       <View style={styles.logoBadge}>
-        <Ionicons name="book" size={42} color={colors.surface} />
+        <Ionicons name="book" size={42} color={theme.colors.textInverse} />
       </View>
       <Text style={styles.appName}>MEKOBOOK</Text>
       <Text style={styles.tagline}>Thư viện sách điện tử Mekosoft</Text>
@@ -36,17 +38,17 @@ export function SplashScreen() {
   </SafeAreaView>;
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
+const createStyles = (theme: AppTheme) => StyleSheet.create({
+  screen: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.background },
   brand: { alignItems: 'center', marginBottom: 90 },
-  logoBadge: { width: 88, height: 88, borderRadius: 28, backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center', shadowColor: colors.primary,
+  logoBadge: { width: 88, height: 88, borderRadius: 28, backgroundColor: theme.colors.primary,
+    alignItems: 'center', justifyContent: 'center', shadowColor: theme.colors.primary,
     shadowOpacity: 0.22, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 6 },
-  appName: { color: colors.primary, fontSize: 31, fontWeight: '900', letterSpacing: 2.5, marginTop: 20 },
-  tagline: { color: colors.muted, fontSize: 14, marginTop: 7 },
+  appName: { color: theme.colors.primary, fontSize: 31, fontWeight: '900', letterSpacing: 2.5, marginTop: 20 },
+  tagline: { color: theme.colors.textMuted, fontSize: 14, marginTop: 7 },
   loading: { position: 'absolute', left: 44, right: 44, bottom: 60, alignItems: 'center' },
   progressTrack: { width: '100%', maxWidth: 320, height: 5, borderRadius: 3,
-    backgroundColor: colors.border, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 3, backgroundColor: colors.primary },
-  loadingText: { color: colors.muted, fontSize: 12, marginTop: 12 },
+    backgroundColor: theme.colors.border, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: theme.colors.primary },
+  loadingText: { color: theme.colors.textMuted, fontSize: 12, marginTop: 12 },
 });

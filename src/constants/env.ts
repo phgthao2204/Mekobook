@@ -34,8 +34,6 @@ export const ENV = {
     BOOKMARKS: process.env.EXPO_PUBLIC_BOOKMARKS_PATH || '/o/c/bookmarks',
     ANNOTATIONS: process.env.EXPO_PUBLIC_ANNOTATIONS_PATH || '/o/c/annotations',
     DRM_LICENSES: process.env.EXPO_PUBLIC_DRM_LICENSES_PATH || '/o/c/drmlicenses',
-    DEVICE_REGISTRATIONS:
-      process.env.EXPO_PUBLIC_DEVICE_REGISTRATIONS_PATH || '/o/c/deviceregistrations',
   },
 
   // Liferay Site & Scope

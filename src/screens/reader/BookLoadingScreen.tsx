@@ -6,7 +6,7 @@ import { RootStackParamList } from '../../navigation/types';
 import { prepareReader } from '../../services/reader';
 import { getMediaRequestHeaders } from '../../services/api';
 import { errorMessage } from '../../services/http';
-import { colors } from '../../constants/theme';
+import { AppTheme, useTheme, useThemedStyles } from '../../theme';
 import { useAuth } from '../../hooks/useAuth';
 
 const stages = [
@@ -16,6 +16,8 @@ const stages = [
 ];
 
 export function BookLoadingScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, 'BookLoading'>) {
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { session } = useAuth();
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -54,18 +56,18 @@ export function BookLoadingScreen({ route, navigation }: NativeStackScreenProps<
   return <View style={styles.screen}>
     <TouchableOpacity accessibilityRole="button" accessibilityLabel="Quay lại chi tiết sách"
       onPress={navigation.goBack} style={styles.back}>
-      <Ionicons name="arrow-back" size={23} color={colors.text} />
+      <Ionicons name="arrow-back" size={23} color={theme.colors.text} />
     </TouchableOpacity>
     <View style={styles.content}>
       <View style={styles.coverFrame}>
         {preview?.coverUrl ? <Image source={{ uri: preview.coverUrl, headers: getMediaRequestHeaders(preview.coverUrl) }}
-          style={styles.cover} resizeMode="contain" /> : <Ionicons name="book" size={54} color={colors.primary} />}
+          style={styles.cover} resizeMode="contain" /> : <Ionicons name="book" size={54} color={theme.colors.primary} />}
       </View>
       <Text style={styles.title} numberOfLines={2}>{preview?.title || 'Đang mở sách'}</Text>
       {!!preview?.author && <Text style={styles.author} numberOfLines={1}>{preview.author}</Text>}
 
       {error ? <View style={styles.errorCard}>
-        <Ionicons name="alert-circle-outline" size={26} color={colors.error} />
+        <Ionicons name="alert-circle-outline" size={26} color={theme.colors.error} />
         <Text style={styles.error}>{error}</Text>
         <TouchableOpacity accessibilityRole="button" style={styles.retry} onPress={() => setAttempt(value => value + 1)}>
           <Text style={styles.retryText}>Thử lại</Text>
@@ -79,26 +81,26 @@ export function BookLoadingScreen({ route, navigation }: NativeStackScreenProps<
   </View>;
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+const createStyles = (theme: AppTheme) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: theme.colors.background },
   back: { position: 'absolute', top: 48, left: 18, zIndex: 2, width: 42, height: 42, borderRadius: 21,
-    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', elevation: 2 },
+    backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center', elevation: 2 },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  coverFrame: { width: 170, height: 230, borderRadius: 16, backgroundColor: colors.surface, alignItems: 'center',
-    justifyContent: 'center', padding: 10, elevation: 5, shadowColor: '#0F172A', shadowOpacity: 0.12,
+  coverFrame: { width: 170, height: 230, borderRadius: 16, backgroundColor: theme.colors.surface, alignItems: 'center',
+    justifyContent: 'center', padding: 10, elevation: 5, shadowColor: theme.colors.shadow, shadowOpacity: 0.12,
     shadowRadius: 14, shadowOffset: { width: 0, height: 7 } },
   cover: { width: '100%', height: '100%', borderRadius: 10 },
-  title: { color: colors.text, fontSize: 20, lineHeight: 27, fontWeight: '800', textAlign: 'center', marginTop: 24 },
-  author: { color: colors.muted, fontSize: 14, marginTop: 7 },
+  title: { color: theme.colors.text, fontSize: 20, lineHeight: 27, fontWeight: '800', textAlign: 'center', marginTop: 24 },
+  author: { color: theme.colors.textMuted, fontSize: 14, marginTop: 7 },
   loadingBlock: { width: '100%', maxWidth: 380, marginTop: 34, alignItems: 'center' },
-  progressTrack: { width: '100%', height: 7, borderRadius: 4, backgroundColor: colors.border, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 4, backgroundColor: colors.primary },
-  message: { color: colors.text, fontSize: 14, fontWeight: '700', marginTop: 16 },
-  hint: { color: colors.muted, fontSize: 12, marginTop: 6 },
+  progressTrack: { width: '100%', height: 7, borderRadius: 4, backgroundColor: theme.colors.border, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 4, backgroundColor: theme.colors.primary },
+  message: { color: theme.colors.text, fontSize: 14, fontWeight: '700', marginTop: 16 },
+  hint: { color: theme.colors.textMuted, fontSize: 12, marginTop: 6 },
   errorCard: { width: '100%', maxWidth: 380, alignItems: 'center', marginTop: 28, padding: 18,
-    borderRadius: 14, backgroundColor: '#FEF2F2' },
-  error: { color: colors.error, textAlign: 'center', lineHeight: 20, marginTop: 8 },
-  retry: { height: 44, paddingHorizontal: 28, borderRadius: 10, backgroundColor: colors.primary,
+    borderRadius: 14, backgroundColor: theme.colors.errorSoft },
+  error: { color: theme.colors.error, textAlign: 'center', lineHeight: 20, marginTop: 8 },
+  retry: { height: 44, paddingHorizontal: 28, borderRadius: 10, backgroundColor: theme.colors.primary,
     alignItems: 'center', justifyContent: 'center', marginTop: 16 },
-  retryText: { color: colors.surface, fontWeight: '800' },
+  retryText: { color: theme.colors.textInverse, fontWeight: '800' },
 });

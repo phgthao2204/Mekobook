@@ -1,5 +1,5 @@
 import { ENV, getApiUrl } from '../constants/env';
-import { Annotation, AnnotationInput, Book, Bookmark, BookmarkInput, ChapterTOC, DrmLicense, LiferayItemResponse, ReadingProgress, UserPreference } from '../types';
+import { Annotation, AnnotationInput, Book, Bookmark, BookmarkInput, ChapterTOC, DrmLicense, LiferayItemResponse, PersonalShelf, PersonalShelfInput, ReadingProgress, ShelfItem, UserPreference } from '../types';
 import { apiHttp } from './http';
 import { webDevMediaUrl } from '../utils/media';
 export { setApiAccessToken, getMediaRequestHeaders } from './http';
@@ -45,6 +45,30 @@ export async function getBookById(id: number): Promise<Book> {
 }
 export function getBookTOC(bookId: number): Promise<ChapterTOC[]> {
   return getItems(ENV.API_PATHS.CHAPTER_TOCS, { filter: `bookId eq ${bookId}`, sort: 'displayOrder:asc' });
+}
+export function getPersonalShelves(): Promise<PersonalShelf[]> {
+  return getItems(ENV.API_PATHS.PERSONAL_SHELFS, { sort: 'displayOrder:asc' });
+}
+export async function createPersonalShelf(input: PersonalShelfInput): Promise<PersonalShelf> {
+  return (await apiHttp.post<PersonalShelf>(getApiUrl(ENV.API_PATHS.PERSONAL_SHELFS), input)).data;
+}
+export async function updatePersonalShelf(id: number, input: Partial<PersonalShelfInput>): Promise<PersonalShelf> {
+  return (await apiHttp.patch<PersonalShelf>(getApiUrl(`${ENV.API_PATHS.PERSONAL_SHELFS}/${id}`), input)).data;
+}
+export async function addBookToShelf(shelfId: number, bookId: number): Promise<ShelfItem> {
+  return (await apiHttp.post<ShelfItem>(getApiUrl(ENV.API_PATHS.SHELF_ITEMS), { shelfId, bookId })).data;
+}
+export function getShelfItemsByShelf(shelfId: number): Promise<ShelfItem[]> {
+  return getItems(ENV.API_PATHS.SHELF_ITEMS, { filter: `shelfId eq ${shelfId}`, sort: 'dateCreated:desc' });
+}
+export function getShelfItemsByBook(bookId: number): Promise<ShelfItem[]> {
+  return getItems(ENV.API_PATHS.SHELF_ITEMS, { filter: `bookId eq ${bookId}` });
+}
+export async function deleteShelfItem(shelfItemId: number): Promise<void> {
+  await apiHttp.delete(getApiUrl(`${ENV.API_PATHS.SHELF_ITEMS}/${shelfItemId}`));
+}
+export async function deletePersonalShelf(shelfId: number): Promise<void> {
+  await apiHttp.delete(getApiUrl(`${ENV.API_PATHS.PERSONAL_SHELFS}/${shelfId}`));
 }
 export async function getBookBookmarks(bookId: number): Promise<Bookmark[]> {
   const bookmarks = await getItems<Bookmark>(ENV.API_PATHS.BOOKMARKS, { filter: `bookId eq ${bookId}` });

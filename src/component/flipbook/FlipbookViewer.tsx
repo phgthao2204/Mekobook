@@ -32,6 +32,7 @@ export interface FlipbookViewerRef {
   goToPage: (page: number) => void;
   zoom: (scale: number) => void;
   setDrawingMode: (enabled: boolean, color: string, strokeWidth: number) => void;
+  selectAnnotation: (annotationId: number, page: number) => void;
 }
 
 export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>(
@@ -80,6 +81,10 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
         postMessageToEngine({ type: 'GO_TO_PAGE', page });
       },
       setDrawingMode: (enabled, color, strokeWidth) => postMessageToEngine({ type: 'SET_DRAWING_MODE', enabled, color, strokeWidth }),
+      selectAnnotation: (annotationId, page) => {
+        postMessageToEngine({ type: 'GO_TO_PAGE', page });
+        setTimeout(() => postMessageToEngine({ type: 'SELECT_ANNOTATION', annotationId }), 250);
+      },
     }));
 
     const htmlSource = useMemo(() => {

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../constants/theme';
+import { colors } from '../../theme';
 import { getMediaRequestHeaders } from '../../services/http';
 import { getThumbnailUrl } from '../../services/api';
 import { Annotation, Book, Bookmark } from '../../types';
@@ -27,10 +27,18 @@ interface ReaderNavigationSheetProps {
   onJumpToPage: (page: number) => void;
   onDeleteBookmark: (bookmark: Bookmark) => void;
   onDeleteAnnotation: (annotation: Annotation) => void;
+  onEditAnnotation: (annotation: Annotation) => void;
+  onSelectAnnotation: (annotation: Annotation) => void;
 }
 
 function safeColor(value?: string): string {
   return value && /^#[\da-f]{3,8}$/i.test(value) ? value : colors.primary;
+}
+
+function annotationTime(value?: string): string {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
 }
 
 function ThumbnailTile({ book, page, currentPage, onPress }: {
@@ -110,21 +118,29 @@ export function ReaderNavigationSheet(props: ReaderNavigationSheetProps) {
         /> : <FlatList<Annotation>
           data={annotations} keyExtractor={(item, index) => String(item.id || `${item.pageNumber}-${index}`)}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => <View style={styles.listRow}>
+          renderItem={({ item }) => {
+            const drawing = item.type === 'DRAWING_PEN';
+            const createdAt = annotationTime(item.dateCreated);
+            const fallbackTitle = drawing && createdAt ? `Nét vẽ lúc ${createdAt}` : drawing ? `Nét vẽ #${item.id}` : item.type === 'HIGHLIGHT' ? 'Vùng đánh dấu' : 'Ghi chú';
+            return <View style={styles.listRow}>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Mở ghi chú trang ${item.pageNumber}`}
-              style={styles.rowMain} onPress={() => { onClose(); onJumpToPage(item.pageNumber); }}>
+              style={styles.rowMain} onPress={() => { onClose(); props.onSelectAnnotation(item); }}>
             <View style={styles.itemIcon}><Ionicons name={item.type === 'DRAWING_PEN' ? 'pencil' : 'document-text'} size={18} color={safeColor(item.color)} /></View>
             <View style={styles.rowCopy}>
-              <Text style={styles.rowTitle}>{item.type === 'HIGHLIGHT' ? 'Vùng đánh dấu' : item.type === 'DRAWING_PEN' ? 'Nét vẽ' : 'Ghi chú'}</Text>
-              {!!item.noteText && <Text style={styles.rowDetail} numberOfLines={3}>{item.noteText}</Text>}
+              <Text style={styles.rowTitle} numberOfLines={2}>{item.noteText || fallbackTitle}</Text>
+              <Text style={styles.rowDetail} numberOfLines={2}>{[drawing ? safeColor(item.color) : '', createdAt].filter(Boolean).join(' · ') || `Trang ${item.pageNumber}`}</Text>
             </View>
             <Text style={styles.pagePill}>{`Tr. ${item.pageNumber}`}</Text>
             </TouchableOpacity>
+            {drawing ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Sửa ghi chú nét vẽ trang ${item.pageNumber}`}
+              style={styles.editButton} onPress={() => props.onEditAnnotation(item)}>
+              <Ionicons name="create-outline" size={18} color={colors.primary} />
+            </TouchableOpacity> : null}
             <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Xóa nét vẽ trang ${item.pageNumber}`}
               style={styles.deleteButton} onPress={() => props.onDeleteAnnotation(item)}>
               <Ionicons name="trash-outline" size={18} color="#DC2626" />
             </TouchableOpacity>
-          </View>}
+          </View>; }}
         />}
       </SafeAreaView>
     </View>
@@ -152,6 +168,7 @@ const styles = StyleSheet.create({
   listRow: { minHeight: 62, marginBottom: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface },
   rowMain: { flex: 1, minHeight: 60, padding: 12, flexDirection: 'row', alignItems: 'center' },
   deleteButton: { width: 44, minHeight: 60, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderLeftColor: colors.border },
+  editButton: { width: 44, minHeight: 60, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderLeftColor: colors.border },
   itemIcon: { width: 38, height: 38, borderRadius: 10, marginRight: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
   rowCopy: { flex: 1, marginRight: 10 },
   rowTitle: { color: colors.text, fontSize: 13, fontWeight: '800' },

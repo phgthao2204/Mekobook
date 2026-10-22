@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../constants/theme';
+import { colors } from '../../theme';
 import { UserPreference } from '../../types';
 
 interface ReaderSettingsModalProps {

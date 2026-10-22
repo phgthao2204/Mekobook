@@ -143,6 +143,14 @@ export function generateFlipbookHtml({
       overflow-wrap: anywhere;
       box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
     }
+    .reader-annotation-selected {
+      animation: readerAnnotationPulse 0.7s ease-in-out 3;
+      filter: drop-shadow(0 0 7px #2563EB);
+    }
+    @keyframes readerAnnotationPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.28; }
+    }
 
     /* Spine Inner Shadow / Depth Crease */
     .page.--left .page-spine-shadow {
@@ -273,17 +281,25 @@ export function generateFlipbookHtml({
         document.getElementById('flipbook-container').style.backgroundColor = background;
         bookEl.style.filter = 'brightness(' + preferences.brightness + ')' + (preferences.themeMode === 'SEPIA' ? ' sepia(0.35)' : '');
       }
-      function annotationPoints(annotation) {
+      function annotationStrokes(annotation) {
         var value = annotation && annotation.coordinateData;
         if (typeof value === 'string') {
           try { value = JSON.parse(value); } catch (_) { return []; }
         }
         if (!Array.isArray(value)) return [];
-        return value.filter(function(point) {
-          return point && Number.isFinite(Number(point.x)) && Number.isFinite(Number(point.y));
-        }).map(function(point) {
-          return { x: Math.max(0, Math.min(1, Number(point.x))), y: Math.max(0, Math.min(1, Number(point.y))) };
-        });
+        var rawStrokes = Array.isArray(value[0]) ? value : [value];
+        return rawStrokes.map(function(stroke) {
+          return stroke.filter(function(point) {
+            return point && Number.isFinite(Number(point.x)) && Number.isFinite(Number(point.y));
+          }).map(function(point) {
+            return { x: Math.max(0, Math.min(1, Number(point.x))), y: Math.max(0, Math.min(1, Number(point.y))) };
+          });
+        }).filter(function(stroke) { return stroke.length > 0; });
+      }
+      function annotationPoints(annotation) {
+        return annotationStrokes(annotation).reduce(function(points, stroke) {
+          return points.concat(stroke);
+        }, []);
       }
       function applyAnnotations() {
         document.querySelectorAll('.page').forEach(function(pageEl) {
@@ -297,11 +313,13 @@ export function generateFlipbookHtml({
           var layer = document.createElement('div');
           layer.className = 'reader-annotation-layer';
           pageAnnotations.forEach(function(item) {
-            var points = annotationPoints(item);
+            var strokes = annotationStrokes(item);
+            var points = strokes[0] || [];
             var color = typeof item.color === 'string' && /^#[0-9a-f]{3,8}$/i.test(item.color) ? item.color : '#FACC15';
             if (item.type === 'STICKY_NOTE') {
               var note = document.createElement('div');
               note.className = 'reader-annotation-note';
+              note.setAttribute('data-annotation-id', String(item.id));
               note.style.left = ((points[0] ? points[0].x : 0.06) * 100) + '%';
               note.style.top = ((points[0] ? points[0].y : 0.06) * 100) + '%';
               note.style.backgroundColor = color;
@@ -314,24 +332,38 @@ export function generateFlipbookHtml({
             svg.setAttribute('viewBox', '0 0 1000 1000');
             svg.setAttribute('preserveAspectRatio', 'none');
             svg.classList.add('reader-annotation-vector');
-            var pointString = points.map(function(point) { return Math.round(point.x * 1000) + ',' + Math.round(point.y * 1000); }).join(' ');
+            svg.setAttribute('data-annotation-id', String(item.id));
             var isHighlight = item.type === 'HIGHLIGHT';
-            var shape = document.createElementNS('http://www.w3.org/2000/svg', isHighlight && points.length >= 3 ? 'polygon' : 'polyline');
-            shape.setAttribute('points', pointString);
-            shape.setAttribute('fill', isHighlight && points.length >= 3 ? color : 'none');
-            shape.setAttribute('fill-opacity', '0.28');
-            shape.setAttribute('stroke', color);
-            shape.setAttribute('stroke-opacity', isHighlight ? '0.4' : '0.9');
             var normalizedWidth = Number(item.strokeWidth);
             var strokeWidth = Number.isFinite(normalizedWidth) && normalizedWidth > 0
               ? Math.max(1, Math.min(80, normalizedWidth * 1000)) : (isHighlight ? 24 : 7);
-            shape.setAttribute('stroke-width', String(strokeWidth));
-            shape.setAttribute('stroke-linecap', 'round');
-            shape.setAttribute('stroke-linejoin', 'round');
-            svg.appendChild(shape);
+            strokes.forEach(function(stroke, strokeIndex) {
+              var pointString = stroke.map(function(point) { return Math.round(point.x * 1000) + ',' + Math.round(point.y * 1000); }).join(' ');
+              var shape = document.createElementNS('http://www.w3.org/2000/svg', isHighlight && strokeIndex === 0 && stroke.length >= 3 ? 'polygon' : 'polyline');
+              shape.setAttribute('points', pointString);
+              shape.setAttribute('fill', isHighlight && strokeIndex === 0 && stroke.length >= 3 ? color : 'none');
+              shape.setAttribute('fill-opacity', '0.28');
+              shape.setAttribute('stroke', color);
+              shape.setAttribute('stroke-opacity', isHighlight ? '0.4' : '0.9');
+              shape.setAttribute('stroke-width', String(strokeWidth));
+              shape.setAttribute('stroke-linecap', 'round');
+              shape.setAttribute('stroke-linejoin', 'round');
+              svg.appendChild(shape);
+            });
             layer.appendChild(svg);
           });
           wrapper.appendChild(layer);
+        });
+      }
+      function focusAnnotation(annotationId) {
+        var wanted = String(annotationId);
+        document.querySelectorAll('[data-annotation-id]').forEach(function(element) {
+          element.classList.remove('reader-annotation-selected');
+          if (element.getAttribute('data-annotation-id') === wanted) {
+            void element.getBoundingClientRect();
+            element.classList.add('reader-annotation-selected');
+            setTimeout(function() { element.classList.remove('reader-annotation-selected'); }, 2300);
+          }
         });
       }
       applyAppearance();
@@ -423,7 +455,23 @@ export function generateFlipbookHtml({
           // animated page curls and can align to a neighboring spread.
           pageFlipInstance.turnToPage(target - 1);
           zoomScale = 1; panX = panY = 0; applyZoom();
-          changing = false;
+          // Some Android WebViews/PageFlip builds silently ignore a distant
+          // turnToPage call while their internal layout is settling. Verify the
+          // result and retry with the absolute flip API instead of losing the
+          // user's explicit page-picker request.
+          setTimeout(function() {
+            if (pageFlipInstance.getCurrentPageIndex() + 1 === target) {
+              changing = false;
+              return;
+            }
+            try { pageFlipInstance.flip(target - 1); } catch (_) {}
+            setTimeout(function() {
+              changing = false;
+              if (pageFlipInstance.getCurrentPageIndex() + 1 !== target) {
+                postToRN({ type: 'ERROR', message: 'Không thể chuyển đến trang ' + target + '. Vui lòng thử lại.' });
+              }
+            }, 700);
+          }, 120);
         }).catch(function(error) {
           changing = false;
           postToRN({ type: 'ERROR', message: error.message });
@@ -825,6 +873,10 @@ export function generateFlipbookHtml({
           if (msg.type === 'SET_ANNOTATIONS') {
             annotations = Array.isArray(msg.annotations) ? msg.annotations : [];
             applyAnnotations();
+            return;
+          }
+          if (msg.type === 'SELECT_ANNOTATION') {
+            focusAnnotation(Number(msg.annotationId));
             return;
           }
           if (msg.type === 'SET_DRAWING_MODE') {

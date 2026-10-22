@@ -73,6 +73,25 @@ export interface ChapterTOC {
   displayOrder: number;
 }
 
+/** Personal shelf owned by the authenticated reader (/o/c/personalshelfs). */
+export interface PersonalShelf {
+  id: number;
+  shelfName: string;
+  colorTag: string;
+  displayOrder: number;
+  dateCreated?: string;
+  dateModified?: string;
+}
+
+export type PersonalShelfInput = Pick<PersonalShelf, 'shelfName' | 'colorTag' | 'displayOrder'>;
+
+export interface ShelfItem {
+  id: number;
+  shelfId: number;
+  bookId: number;
+  dateCreated?: string;
+}
+
 /** 5. UserPreference - Cấu hình trải nghiệm đọc (/o/c/userpreferences) */
 export interface UserPreference {
   id?: number;
@@ -141,13 +160,14 @@ export interface Bookmark {
 export type BookmarkInput = Omit<Bookmark, 'id' | 'dateCreated' | 'dateModified' | 'colorCode'>;
 
 export interface AnnotationPoint { x: number; y: number }
+export type AnnotationCoordinates = AnnotationPoint[] | AnnotationPoint[][];
 
 export interface Annotation {
   id: number;
   bookId: number;
   pageNumber: number;
   type: 'HIGHLIGHT' | 'STICKY_NOTE' | 'DRAWING_PEN' | string;
-  coordinateData?: string | AnnotationPoint[];
+  coordinateData?: string | AnnotationCoordinates;
   color?: string;
   strokeWidth?: number;
   noteText?: string;
@@ -169,6 +189,7 @@ export type FlipbookToReactNativeMessage =
 export type ReactNativeToFlipbookMessage =
   | { type: 'SET_ACCESS_TOKEN'; token?: string }
   | { type: 'SET_ANNOTATIONS'; annotations: Annotation[] }
+  | { type: 'SELECT_ANNOTATION'; annotationId: number }
   | { type: 'SET_DRAWING_MODE'; enabled: boolean; color: string; strokeWidth: number }
   | { type: 'UPDATE_PREFERENCES'; preferences: UserPreference }
   | { type: 'ZOOM'; scale: number }

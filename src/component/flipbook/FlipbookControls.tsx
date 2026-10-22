@@ -4,7 +4,7 @@
  * ZERO EMOJIS - USES PURE VECTOR ICONS (Ionicons)
  */
 
-import { colors } from '../../constants/theme';
+import { colors } from '../../theme';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -51,11 +51,14 @@ interface FlipbookControlsProps {
   drawingMode: boolean;
   drawingColor: string;
   drawingWidth: number;
+  drawingLocked: boolean;
   onToggleDrawing: () => void;
   onDrawingColorChange: (color: string) => void;
   onDrawingWidthChange: (width: number) => void;
   onDeleteBookmark: (bookmark: Bookmark) => void;
   onDeleteAnnotation: (annotation: Annotation) => void;
+  onEditAnnotation: (annotation: Annotation) => void;
+  onSelectAnnotation: (annotation: Annotation) => void;
 }
 
 export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
@@ -83,11 +86,14 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
   drawingMode,
   drawingColor,
   drawingWidth,
+  drawingLocked,
   onToggleDrawing,
   onDrawingColorChange,
   onDrawingWidthChange,
   onDeleteBookmark,
   onDeleteAnnotation,
+  onEditAnnotation,
+  onSelectAnnotation,
 }) => {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -123,8 +129,13 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
   const latestCurrentPageDrawing = [...annotations].reverse().find(item =>
     item.pageNumber === currentPage && item.type === 'DRAWING_PEN');
   const pageLabel = currentPage === 1 && book.coverUrl ? 'Bìa sách' : `Trang ${currentPage}`;
-  const readingSurface = { backgroundColor: themeMode === 'DARK' ? '#18212F' : themeMode === 'SEPIA' ? '#EADFC8' : colors.surface };
+  const darkMode = themeMode === 'DARK';
+  const readingSurface = { backgroundColor: darkMode ? '#18212F' : themeMode === 'SEPIA' ? '#EADFC8' : colors.surface,
+    borderColor: darkMode ? '#334155' : colors.border };
   const readingText = { color: themeMode === 'DARK' ? colors.surface : colors.text };
+  const actionColor = darkMode ? '#6EE7B7' : colors.primary;
+  const disabledColor = darkMode ? '#64748B' : '#94A3B8';
+  const darkButton = darkMode ? styles.darkButton : undefined;
   const openReaderPanel = (openPanel: () => void) => {
     setReaderMenuVisible(false);
     setTimeout(openPanel, 180);
@@ -139,7 +150,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
       {/* TOP HEADER BAR */}
       <View style={[styles.topBar, readingSurface, { paddingTop: Math.max(insets.top + 8, 16) }]}>
         <View style={styles.headerMain}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
+        <TouchableOpacity style={[styles.backButton, darkButton]} onPress={onBack} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={22} color={readingText.color} />
         </TouchableOpacity>
 
@@ -153,34 +164,37 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
         </View>
 
         <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Đi đến trang, hiện tại trang ${currentPage} trên ${totalPages}`}
-          style={styles.pageBadge}
+          style={[styles.pageBadge, darkButton]}
           onPress={() => { setPageInput(String(currentPage)); setPageInputError(''); setPagePickerVisible(true); }}>
-          <Text style={styles.pageBadgeText}>{currentPage}/{totalPages}</Text>
+          <Text style={[styles.pageBadgeText, darkMode && styles.darkButtonText]}>{currentPage}/{totalPages}</Text>
         </TouchableOpacity>
         </View>
         {drawingMode && <View style={styles.drawingOptions}>
           <View style={styles.drawingControlRow}>
             {['#EF4444', '#F59E0B', '#10B981', '#2563EB', '#111827'].map(color =>
               <TouchableOpacity key={color} accessibilityRole="button" accessibilityLabel={`Chọn màu ${color}`}
-                onPress={() => onDrawingColorChange(color)} style={[styles.colorSwatch, { backgroundColor: color }, drawingColor === color && styles.colorSwatchActive]} />)}
+                disabled={drawingLocked} onPress={() => onDrawingColorChange(color)}
+                style={[styles.colorSwatch, { backgroundColor: color }, drawingColor === color && styles.colorSwatchActive, drawingLocked && styles.drawingOptionLocked]} />)}
           </View>
           <View style={styles.drawingControlRow}>
             {[0.003, 0.006, 0.01].map(widthValue => <TouchableOpacity key={widthValue} accessibilityRole="button"
-              accessibilityLabel={`Chọn độ dày ${widthValue}`} onPress={() => onDrawingWidthChange(widthValue)}
-              style={[styles.widthOption, drawingWidth === widthValue && styles.widthOptionActive]}>
+              accessibilityLabel={`Chọn độ dày ${widthValue}`} disabled={drawingLocked} onPress={() => onDrawingWidthChange(widthValue)}
+              style={[styles.widthOption, darkButton, drawingWidth === widthValue && styles.widthOptionActive, drawingLocked && styles.drawingOptionLocked]}>
               <View style={{ width: 22, height: Math.max(2, widthValue * 700), borderRadius: 5, backgroundColor: drawingColor }} />
             </TouchableOpacity>)}
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="Quản lý chú thích và nét vẽ"
-              onPress={() => setNavigationMode('annotations')} style={styles.drawingActionButton}>
-              <Ionicons name="layers-outline" size={17} color={colors.primary} /><Text style={styles.drawingActionText}>Quản lý</Text>
+              onPress={() => setNavigationMode('annotations')} style={[styles.drawingActionButton, darkButton]}>
+              <Ionicons name="layers-outline" size={17} color={actionColor} /><Text style={[styles.drawingActionText, darkMode && styles.darkActionText]}>Quản lý</Text>
             </TouchableOpacity>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="Xóa nét vẽ gần nhất trên trang"
               disabled={!latestCurrentPageDrawing} onPress={() => latestCurrentPageDrawing && onDeleteAnnotation(latestCurrentPageDrawing)}
-              style={[styles.drawingActionButton, styles.undoButton, !latestCurrentPageDrawing && styles.deleteDrawingButtonDisabled]}>
-              <Ionicons name="arrow-undo-outline" size={17} color={latestCurrentPageDrawing ? '#DC2626' : '#94A3B8'} />
-              <Text style={[styles.drawingActionText, styles.undoText, !latestCurrentPageDrawing && styles.disabledActionText]}>Hoàn tác</Text>
+              style={[styles.drawingActionButton, styles.undoButton, darkMode && styles.darkUndoButton,
+                !latestCurrentPageDrawing && (darkMode ? styles.darkDisabledButton : styles.deleteDrawingButtonDisabled)]}>
+              <Ionicons name="arrow-undo-outline" size={17} color={latestCurrentPageDrawing ? (darkMode ? '#FCA5A5' : '#DC2626') : disabledColor} />
+              <Text style={[styles.drawingActionText, styles.undoText, darkMode && styles.darkUndoText, !latestCurrentPageDrawing && styles.disabledActionText]}>Hoàn tác</Text>
             </TouchableOpacity>
           </View>
+          {drawingLocked ? <Text style={[styles.drawingLockedHint, darkMode && styles.darkActionText]}>Lưu hoặc bỏ các nét hiện tại để đổi màu và độ dày</Text> : null}
         </View>}
       </View>
 
@@ -188,7 +202,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
       <View style={[styles.bottomBar, readingSurface, { paddingBottom: Math.max(insets.bottom + 10, 16) }]}>
         <View style={styles.scrubberRow}>
           <TouchableOpacity
-            style={styles.bottomNavAction}
+            style={[styles.bottomNavAction, darkButton]}
             onPress={onPrevPage}
             disabled={currentPage <= 1 || drawingMode}
             activeOpacity={0.7}
@@ -196,23 +210,23 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
             <Ionicons
               name="chevron-back"
               size={21}
-              color={currentPage <= 1 || drawingMode ? '#94A3B8' : colors.primary}
+              color={currentPage <= 1 || drawingMode ? disabledColor : actionColor}
             />
-            <Text style={[styles.bottomNavLabel, (currentPage <= 1 || drawingMode) && styles.bottomNavLabelDisabled]}>Trước</Text>
+            <Text style={[styles.bottomNavLabel, darkMode && styles.darkActionText, (currentPage <= 1 || drawingMode) && styles.bottomNavLabelDisabled]}>Trước</Text>
           </TouchableOpacity>
 
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={drawingMode ? 'Hoàn tất vẽ' : 'Mở công cụ đọc'}
-            style={[styles.bottomNavAction, drawingMode && styles.bottomNavActionActive]}
+            style={[styles.bottomNavAction, darkButton, drawingMode && styles.bottomNavActionActive]}
             onPress={() => drawingMode ? onToggleDrawing() : setReaderMenuVisible(true)}>
             <Ionicons name={drawingMode ? 'checkmark' : 'ellipsis-horizontal-circle-outline'} size={21}
-              color={drawingMode ? colors.surface : colors.primary} />
-            <Text style={[styles.bottomNavLabel, drawingMode && styles.bottomNavLabelActive]}>{drawingMode ? 'Xong' : 'Công cụ'}</Text>
+              color={drawingMode ? colors.surface : actionColor} />
+            <Text style={[styles.bottomNavLabel, darkMode && styles.darkActionText, drawingMode && styles.bottomNavLabelActive]}>{drawingMode ? 'Xong' : 'Công cụ'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Chuyển đến trang"
             style={styles.progressContainer}
             onPress={() => { setPageInput(String(currentPage)); setPageInputError(''); setPagePickerVisible(true); }}>
-            <View style={styles.progressBarBackground}>
+            <View style={[styles.progressBarBackground, darkMode && styles.darkProgressTrack]}>
               <View style={[styles.progressBarFill, { width: `${percentage}%` }]} />
             </View>
             <Text style={[styles.percentageText, readingText]}>
@@ -221,13 +235,13 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
           </TouchableOpacity>
 
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Mở tùy chọn đọc"
-            style={styles.bottomNavAction} onPress={onOpenSettings}>
-            <Ionicons name="settings-outline" size={21} color={colors.primary} />
-            <Text style={styles.bottomNavLabel}>Cài đặt</Text>
+            style={[styles.bottomNavAction, darkButton]} onPress={onOpenSettings}>
+            <Ionicons name="settings-outline" size={21} color={actionColor} />
+            <Text style={[styles.bottomNavLabel, darkMode && styles.darkActionText]}>Cài đặt</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.bottomNavAction}
+            style={[styles.bottomNavAction, darkButton]}
             onPress={onNextPage}
             disabled={currentPage >= totalPages || drawingMode}
             activeOpacity={0.7}
@@ -235,9 +249,9 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
             <Ionicons
               name="chevron-forward"
               size={21}
-              color={currentPage >= totalPages || drawingMode ? '#94A3B8' : colors.primary}
+              color={currentPage >= totalPages || drawingMode ? disabledColor : actionColor}
             />
-            <Text style={[styles.bottomNavLabel, (currentPage >= totalPages || drawingMode) && styles.bottomNavLabelDisabled]}>Sau</Text>
+            <Text style={[styles.bottomNavLabel, darkMode && styles.darkActionText, (currentPage >= totalPages || drawingMode) && styles.bottomNavLabelDisabled]}>Sau</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -445,6 +459,7 @@ export const FlipbookControls: React.FC<FlipbookControlsProps> = ({
         bookmarksError={bookmarksError} annotationsError={annotationsError}
         onRetryBookmarks={onRetryBookmarks} onRetryAnnotations={onRetryAnnotations}
         onDeleteBookmark={onDeleteBookmark} onDeleteAnnotation={onDeleteAnnotation}
+        onEditAnnotation={onEditAnnotation} onSelectAnnotation={onSelectAnnotation}
         onBack={() => backToReaderMenu(() => setNavigationMode(null))}
         onClose={() => setNavigationMode(null)} onJumpToPage={onJumpToPage} />
     </View>
@@ -487,8 +502,15 @@ const styles = StyleSheet.create({
   widthOptionActive: { borderWidth: 2, borderColor: colors.primary },
   drawingActionButton: { minWidth: 80, height: 30, paddingHorizontal: 8, borderRadius: 8, flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#A7F3D0' },
   drawingActionText: { color: colors.primary, fontSize: 10, fontWeight: '800' },
+  drawingOptionLocked: { opacity: 0.42 },
+  drawingLockedHint: { color: colors.muted, fontSize: 10, lineHeight: 14, textAlign: 'center' },
   undoButton: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }, undoText: { color: '#DC2626' }, disabledActionText: { color: '#94A3B8' },
   deleteDrawingButtonDisabled: { backgroundColor: '#F1F5F9', borderColor: colors.border },
+  darkButton: { backgroundColor: '#253244', borderWidth: 1, borderColor: '#475569' },
+  darkButtonText: { color: '#F8FAFC' }, darkActionText: { color: '#6EE7B7' },
+  darkUndoButton: { backgroundColor: '#3F2830', borderColor: '#7F1D1D' }, darkUndoText: { color: '#FCA5A5' },
+  darkDisabledButton: { backgroundColor: '#1E293B', borderColor: '#334155' },
+  darkProgressTrack: { backgroundColor: '#475569' },
   backButton: {
     width: 38,
     height: 38,

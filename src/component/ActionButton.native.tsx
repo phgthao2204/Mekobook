@@ -1,8 +1,9 @@
 import React from 'react';
 import { Host, Button } from '@expo/ui';
-import { colors } from '../constants/theme';
+import { useTheme } from '../theme';
 export function ActionButton({ label, onPress }: { label: string; onPress: () => void }) {
-  return <Host matchContents seedColor={colors.primary} style={{ marginTop: 12 }}>
+  const theme = useTheme();
+  return <Host matchContents seedColor={theme.colors.primary} style={{ marginTop: theme.spacing.md }}>
     <Button label={label} onPress={onPress} />
   </Host>;
 }

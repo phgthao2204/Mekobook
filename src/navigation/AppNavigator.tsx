@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../hooks/useAuth';
 import { LoginScreen } from '../screens/auth/LoginScreen';
@@ -9,7 +9,7 @@ import { BookDetailScreen } from '../screens/books/BookDetailScreen';
 import { BookLoadingScreen } from '../screens/reader/BookLoadingScreen';
 import { ReaderScreen } from '../screens/reader/ReaderScreen';
 import { SplashScreen } from '../screens/splash/SplashScreen';
-import { navigationTheme } from '../constants/theme';
+import { useTheme } from '../theme';
 import { RootStackParamList } from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 function LoginRoute() {
@@ -31,12 +31,19 @@ function AccountRoute({ navigation }: NativeStackScreenProps<RootStackParamList,
 }
 export function AppNavigator() {
   const { session, restoring } = useAuth();
+  const theme = useTheme();
   const [splashFinished, setSplashFinished] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setSplashFinished(true), 1000);
     return () => clearTimeout(timer);
   }, []);
   if (restoring || !splashFinished) return <SplashScreen />;
+  const baseNavigationTheme = theme.isDark ? DarkTheme : DefaultTheme;
+  const navigationTheme = { ...baseNavigationTheme, dark: theme.isDark, colors: {
+    ...baseNavigationTheme.colors, primary: theme.colors.primary, background: theme.colors.background,
+    card: theme.colors.surface, text: theme.colors.text, border: theme.colors.border,
+    notification: theme.colors.error,
+  } };
   return <NavigationContainer theme={navigationTheme}>
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!session ? <Stack.Screen name="Login" component={LoginRoute} /> : <>

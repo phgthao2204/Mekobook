@@ -55,6 +55,10 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
       flipNext: () => send({ type: 'TURN_NEXT' }), flipPrev: () => send({ type: 'TURN_PREV' }),
       goToPage: page => send({ type: 'GO_TO_PAGE', page }), zoom: scale => send({ type: 'ZOOM', scale }),
       setDrawingMode: (enabled, color, strokeWidth) => send({ type: 'SET_DRAWING_MODE', enabled, color, strokeWidth }),
+      selectAnnotation: (annotationId, page) => {
+        send({ type: 'GO_TO_PAGE', page });
+        setTimeout(() => send({ type: 'SELECT_ANNOTATION', annotationId }), 250);
+      },
     };
   }, []);
   return <iframe ref={frame} title={`Trình đọc ${props.book.title}`} srcDoc={html}

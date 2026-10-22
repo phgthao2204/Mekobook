@@ -1,4 +1,4 @@
-import { colors } from '../../constants/theme';
+import { AppTheme, useTheme, useThemedStyles } from '../../theme';
 import React, { useCallback, useMemo, useState, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -13,6 +13,7 @@ import { errorMessage } from '../../services/http';
 import { getLocalReadingProgress } from '../../services/localReadingProgress';
 import { mergeReadingProgress, normalizeSearchText, readingPercentage } from '../../utils/reader';
 import { AppBottomNavigation } from '../../component/AppBottomNavigation';
+import { PersonalShelfModal } from '../../component/PersonalShelfModal';
 
 type ViewMode = 'grid' | 'list';
 
@@ -33,16 +34,16 @@ function latestProgress(items: ReadingProgress[]): Map<number, ReadingProgress> 
   return result;
 }
 
-function readingState(book: LibraryBook) {
-  if (book.progressUnavailable) return { label: 'Chưa tải tiến trình', color: colors.muted, background: '#F1F5F9' };
+function readingState(book: LibraryBook, theme: AppTheme) {
+  if (book.progressUnavailable) return { label: 'Chưa tải tiến trình', color: theme.colors.textMuted, background: theme.colors.surfaceMuted };
   const progress = book.readingProgress;
   if (!progress || progress.currentPage < 1 || (progress.readStatus === 'NOT_STARTED' && progress.percentage <= 0)) {
-    return { label: 'Chưa đọc', color: colors.muted, background: '#F1F5F9' };
+    return { label: 'Chưa đọc', color: theme.colors.textMuted, background: theme.colors.surfaceMuted };
   }
   if (progress.readStatus === 'COMPLETED' || progress.currentPage >= book.totalPages) {
-    return { label: 'Đã hoàn thành', color: '#047857', background: '#D1FAE5' };
+    return { label: 'Đã hoàn thành', color: theme.colors.success, background: theme.colors.successSoft };
   }
-  return { label: 'Đang đọc', color: '#1D4ED8', background: '#DBEAFE' };
+  return { label: 'Đang đọc', color: theme.colors.info, background: theme.colors.infoSoft };
 }
 
 function formatDate(timestamp?: number): string {
@@ -50,17 +51,22 @@ function formatDate(timestamp?: number): string {
 }
 
 export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, onOpenAccount }) => {
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [books, setBooks] = useState<LibraryBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [error, setError] = useState('');
+  const [progressOnlyError, setProgressOnlyError] = useState(false);
+  const [progressRetrying, setProgressRetrying] = useState(false);
+  const [shelvesVisible, setShelvesVisible] = useState(false);
   const requestId = useRef(0);
 
   const loadLibrary = useCallback(async () => {
     const version = ++requestId.current;
-    setError('');
+    setError(''); setProgressOnlyError(false);
     const remoteProgressRequest = getReadingProgresses(200)
       .then(items => ({ items }))
       .catch(reason => ({ reason }));
@@ -86,13 +92,36 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
         const readingProgress = mergeReadingProgress(remoteProgressByBook.get(book.id), localProgressByBook.get(book.id));
         return { ...book, readingProgress, progressUnavailable: remoteProgressUnavailable && !readingProgress };
       }));
-      if (remoteProgressUnavailable) setError('Đã tải sách nhưng chưa tải được tiến trình đọc.');
+      if (remoteProgressUnavailable) {
+        setError('Đã tải sách nhưng chưa tải được tiến trình đọc.');
+        setProgressOnlyError(true);
+      }
     } catch (error) {
-      if (version === requestId.current) setError(errorMessage(error));
+      if (version === requestId.current) { setError(errorMessage(error)); setProgressOnlyError(false); }
     } finally {
       if (version === requestId.current) { setLoading(false); setRefreshing(false); }
     }
   }, [user.id]);
+  const retryProgress = async () => {
+    if (progressRetrying || !books.length) return;
+    setProgressRetrying(true);
+    try {
+      const [remoteItems, localItems] = await Promise.all([
+        getReadingProgresses(200),
+        Promise.all(books.map(book => getLocalReadingProgress(user.id, book.id).catch(() => undefined))),
+      ]);
+      const remoteByBook = latestProgress(remoteItems);
+      const localByBook = new Map(books.map((book, index) => [book.id, localItems[index]]));
+      setBooks(current => current.map(book => ({ ...book,
+        readingProgress: mergeReadingProgress(remoteByBook.get(book.id), localByBook.get(book.id)),
+        progressUnavailable: false,
+      })));
+      setError(''); setProgressOnlyError(false);
+    } catch (reason) {
+      setError(`Chưa tải được tiến trình đọc. ${errorMessage(reason)}`);
+      setProgressOnlyError(true);
+    } finally { setProgressRetrying(false); }
+  };
 
   useFocusEffect(useCallback(() => {
     void loadLibrary();
@@ -110,7 +139,7 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
 
   const renderProgress = (book: LibraryBook, compact: boolean) => {
     const progress = book.readingProgress;
-    const state = readingState(book);
+    const state = readingState(book, theme);
     const percentage = progress ? Math.round(readingPercentage(progress.currentPage, book.totalPages)) : 0;
     return (
       <View style={styles.progressSection}>
@@ -158,7 +187,7 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
         <View style={[styles.infoWrapper, grid && styles.gridInfo]}>
           <Text style={[styles.bookTitle, grid && styles.gridTitle]} numberOfLines={2}>{item.title}</Text>
           <View style={styles.authorRow}>
-            <Ionicons name="person-outline" size={12} color={colors.primary} />
+          <Ionicons name="person-outline" size={12} color={theme.colors.primary} />
             <Text style={styles.bookAuthor} numberOfLines={1}>{item.author}</Text>
           </View>
           {renderProgress(item, grid)}
@@ -171,7 +200,7 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
             </View>
             {!grid ? (
               <View style={styles.readButton}>
-                <Ionicons name="book-outline" size={14} color={colors.surface} />
+        <Ionicons name="book-outline" size={14} color={theme.colors.textInverse} />
                 <Text style={styles.readButtonText}>
                   {item.readingProgress && item.readingProgress.currentPage > 1 ? 'Đọc tiếp' : 'Đọc sách'}
                 </Text>
@@ -185,7 +214,7 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={theme.isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.surface} />
       <View style={styles.header}>
         <View style={styles.headerTitle}>
           <Text style={styles.appName}>MEKOBOOK</Text>
@@ -198,11 +227,14 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
       </View>
 
       <View style={styles.toolsContainer}>
-        {error ? <TouchableOpacity accessibilityRole="button" onPress={() => { setLoading(true); loadLibrary(); }}>
-          <Text style={{ color: colors.error, padding: 10 }}>{error} Chạm để thử lại.</Text>
+        {error ? <TouchableOpacity accessibilityRole="button" disabled={progressRetrying}
+          onPress={() => progressOnlyError && books.length ? void retryProgress() : (setLoading(true), void loadLibrary())}
+          style={styles.errorRetry}>
+          {progressRetrying ? <ActivityIndicator size="small" color={theme.colors.error} /> : null}
+          <Text style={styles.errorRetryText}>{error} {progressRetrying ? 'Đang thử lại…' : 'Chạm để thử lại.'}</Text>
         </TouchableOpacity> : null}
         <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={18} color={colors.primary} />
+          <Ionicons name="search-outline" size={18} color={theme.colors.primary} />
           <TextInput
             style={styles.searchInput} placeholder="Tìm sách hoặc tác giả"
             placeholderTextColor="#94A3B8" value={searchQuery} onChangeText={setSearchQuery}
@@ -216,19 +248,25 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
         </View>
         <View style={styles.libraryToolbar}>
           <Text style={styles.resultCount}>{filteredBooks.length} cuốn sách</Text>
-          <View style={styles.viewSwitcher}>
-            <TouchableOpacity style={[styles.viewButton, viewMode === 'grid' && styles.viewButtonActive]} onPress={() => setViewMode('grid')} accessibilityLabel="Dạng lưới" accessibilityState={{ selected: viewMode === 'grid' }}>
-              <Ionicons name="grid-outline" size={18} color={viewMode === 'grid' ? colors.surface : colors.muted} />
+          <View style={styles.toolbarActions}>
+            <TouchableOpacity style={styles.shelfButton} onPress={() => setShelvesVisible(true)} accessibilityLabel="Quản lý tủ sách cá nhân">
+              <Ionicons name="albums-outline" size={16} color={theme.colors.primary} />
+              <Text style={styles.shelfButtonText}>Tủ sách cá nhân</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.viewButton, viewMode === 'list' && styles.viewButtonActive]} onPress={() => setViewMode('list')} accessibilityLabel="Dạng danh sách" accessibilityState={{ selected: viewMode === 'list' }}>
-              <Ionicons name="list-outline" size={20} color={viewMode === 'list' ? colors.surface : colors.muted} />
-            </TouchableOpacity>
+            <View style={styles.viewSwitcher}>
+              <TouchableOpacity style={[styles.viewButton, viewMode === 'grid' && styles.viewButtonActive]} onPress={() => setViewMode('grid')} accessibilityLabel="Dạng lưới" accessibilityState={{ selected: viewMode === 'grid' }}>
+                <Ionicons name="grid-outline" size={18} color={viewMode === 'grid' ? theme.colors.textInverse : theme.colors.textMuted} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.viewButton, viewMode === 'list' && styles.viewButtonActive]} onPress={() => setViewMode('list')} accessibilityLabel="Dạng danh sách" accessibilityState={{ selected: viewMode === 'list' }}>
+                <Ionicons name="list-outline" size={20} color={viewMode === 'list' ? theme.colors.textInverse : theme.colors.textMuted} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
 
       {loading ? (
-        <View style={styles.centerContainer}><ActivityIndicator size="large" color={colors.primary} /><Text style={styles.loadingText}>Đang tải thư viện sách...</Text></View>
+        <View style={styles.centerContainer}><ActivityIndicator size="large" color={theme.colors.primary} /><Text style={styles.loadingText}>Đang tải thư viện sách...</Text></View>
       ) : (
         <FlatList
           key={viewMode} data={filteredBooks} numColumns={viewMode === 'grid' ? 2 : 1}
@@ -236,64 +274,79 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
           keyExtractor={(item) => String(item.id)} contentContainerStyle={styles.listContent}
           renderItem={renderBook}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadLibrary(); }} tintColor="#059669" />}
-          ListEmptyComponent={<View style={styles.centerContainer}><Ionicons name="search-outline" size={36} color="#94A3B8" /><Text style={styles.emptyText}>Không tìm thấy sách phù hợp</Text></View>}
+          ListEmptyComponent={<View style={styles.centerContainer}>
+            <Ionicons name={searchQuery.trim() ? 'search-outline' : 'library-outline'} size={36} color="#94A3B8" />
+            <Text style={styles.emptyText}>{searchQuery.trim() ? 'Không tìm thấy sách phù hợp' : 'Thư viện chưa có sách'}</Text>
+            {searchQuery.trim() ? <TouchableOpacity style={styles.clearSearchButton} onPress={() => setSearchQuery('')}>
+              <Text style={styles.clearSearchText}>Xóa từ khóa tìm kiếm</Text>
+            </TouchableOpacity> : null}
+          </View>}
         />
       )}
+      <PersonalShelfModal visible={shelvesVisible} books={books} onSelectBook={onSelectBook}
+        onClose={() => setShelvesVisible(false)} />
       <AppBottomNavigation active="library" onOpenLibrary={() => {}} onOpenAccount={onOpenAccount} />
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingTop: Platform.OS === 'android' ? 20 : 12, paddingBottom: 14, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+const createStyles = (theme: AppTheme) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: theme.colors.background },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingTop: Platform.OS === 'android' ? 20 : 12, paddingBottom: 14, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   headerTitle: { flex: 1, marginRight: 12 },
-  appName: { color: colors.primary, fontSize: 22, fontWeight: '900', letterSpacing: 1.5 },
-  subTitle: { color: colors.muted, fontSize: 12, marginTop: 2, fontWeight: '500' },
-  userBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF5', paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: '#A7F3D0' },
-  userDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#10B981', marginRight: 6 },
-  userBadgeText: { color: '#065F46', fontSize: 12, fontWeight: '700', maxWidth: 110 },
+  appName: { color: theme.colors.primary, fontSize: 22, fontWeight: '900', letterSpacing: 1.5 },
+  subTitle: { color: theme.colors.textMuted, fontSize: 12, marginTop: 2, fontWeight: '500' },
+  userBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.primarySoft, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.primary },
+  userDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: theme.colors.success, marginRight: 6 },
+  userBadgeText: { color: theme.colors.primary, fontSize: 12, fontWeight: '700', maxWidth: 110 },
   toolsContainer: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 10 },
-  searchContainer: { flexDirection: 'row', alignItems: 'center', height: 46, backgroundColor: colors.surface, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
-  searchInput: { flex: 1, color: colors.text, fontSize: 14, marginHorizontal: 8 },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', height: 46, backgroundColor: theme.colors.surface, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border },
+  searchInput: { flex: 1, color: theme.colors.text, fontSize: 14, marginHorizontal: 8 },
+  errorRetry: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, marginBottom: 4, borderRadius: 10, backgroundColor: theme.colors.errorSoft },
+  errorRetryText: { flex: 1, color: theme.colors.error, fontSize: 12, lineHeight: 17 },
   libraryToolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
-  resultCount: { color: '#475569', fontSize: 13, fontWeight: '600' },
-  viewSwitcher: { flexDirection: 'row', backgroundColor: colors.border, padding: 2, borderRadius: 9 },
+  resultCount: { color: theme.colors.textSecondary, fontSize: 13, fontWeight: '600' },
+  toolbarActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  shelfButton: { height: 36, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, borderRadius: 9, borderWidth: 1, borderColor: theme.colors.primary, backgroundColor: theme.colors.primarySoft },
+  shelfButtonText: { color: theme.colors.primary, fontSize: 11, fontWeight: '800' },
+  viewSwitcher: { flexDirection: 'row', backgroundColor: theme.colors.border, padding: 2, borderRadius: 9 },
   viewButton: { width: 36, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 7 },
-  viewButtonActive: { backgroundColor: colors.primary },
+  viewButtonActive: { backgroundColor: theme.colors.primary },
   listContent: { paddingHorizontal: 18, paddingBottom: 24 },
   gridRow: { justifyContent: 'space-between' },
-  bookCard: { backgroundColor: colors.surface, borderRadius: 15, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, marginBottom: 13, elevation: 2, shadowColor: colors.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 },
+  clearSearchButton: { marginTop: 12, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 9, backgroundColor: theme.colors.primarySoft },
+  clearSearchText: { color: theme.colors.primary, fontSize: 12, fontWeight: '800' },
+  bookCard: { backgroundColor: theme.colors.surface, borderRadius: 15, overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.border, marginBottom: 13, elevation: 2, shadowColor: theme.colors.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 },
   listCard: { flexDirection: 'row', minHeight: 174 },
   gridCard: { width: '48.5%' },
-  coverWrapper: { position: 'relative', backgroundColor: colors.border },
-  listCover: { width: 118, height: 174, borderRightWidth: 1, borderRightColor: '#D1FAE5' },
+  coverWrapper: { position: 'relative', backgroundColor: theme.colors.border },
+  listCover: { width: 118, height: 174, borderRightWidth: 1, borderRightColor: theme.colors.border },
   gridCover: { width: '100%', aspectRatio: 0.72 },
   coverImage: { width: '100%', height: '100%' },
   pageCountBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(15,23,42,0.78)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 5 },
-  pageCountText: { color: colors.surface, fontSize: 9, fontWeight: '700' },
+  pageCountText: { color: '#FFFFFF', fontSize: 9, fontWeight: '700' },
   infoWrapper: { flex: 1, padding: 12 },
   gridInfo: { padding: 10 },
-  bookTitle: { color: colors.text, fontSize: 15, fontWeight: '700', lineHeight: 20 },
+  bookTitle: { color: theme.colors.text, fontSize: 15, fontWeight: '700', lineHeight: 20 },
   gridTitle: { fontSize: 13, lineHeight: 18, minHeight: 36 },
   authorRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5, gap: 4 },
-  bookAuthor: { flex: 1, color: '#475569', fontSize: 11, fontWeight: '500' },
+  bookAuthor: { flex: 1, color: theme.colors.textSecondary, fontSize: 11, fontWeight: '500' },
   progressSection: { marginTop: 9 },
   progressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 5 },
   compactProgressHeader: { alignItems: 'flex-start', flexDirection: 'column', gap: 4 },
   stateBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   stateText: { fontSize: 10, fontWeight: '800' },
-  pageProgress: { flex: 1, color: colors.muted, textAlign: 'right', fontSize: 9, fontWeight: '600' },
+  pageProgress: { flex: 1, color: theme.colors.textMuted, textAlign: 'right', fontSize: 9, fontWeight: '600' },
   compactPageProgress: { alignSelf: 'stretch', flex: 0, textAlign: 'left', fontSize: 10 },
-  progressTrack: { height: 4, borderRadius: 2, backgroundColor: colors.border, marginTop: 6, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 2, backgroundColor: '#3B82F6' },
-  lastRead: { color: '#94A3B8', fontSize: 9, marginTop: 4 },
+  progressTrack: { height: 4, borderRadius: 2, backgroundColor: theme.colors.border, marginTop: 6, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 2, backgroundColor: theme.colors.info },
+  lastRead: { color: theme.colors.disabled, fontSize: 9, marginTop: 4 },
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
   accessBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 6 },
-  freeBadge: { backgroundColor: '#ECFDF5' }, licensedBadge: { backgroundColor: '#FEF3C7' },
-  accessText: { fontSize: 10, fontWeight: '800' }, freeText: { color: '#047857' }, licensedText: { color: '#B45309' },
-  readButton: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.primary, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 8 },
-  readButtonText: { color: colors.surface, fontSize: 11, fontWeight: '800' },
+  freeBadge: { backgroundColor: theme.colors.successSoft }, licensedBadge: { backgroundColor: theme.colors.warningSoft },
+  accessText: { fontSize: 10, fontWeight: '800' }, freeText: { color: theme.colors.success }, licensedText: { color: theme.colors.warning },
+  readButton: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: theme.colors.primary, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 8 },
+  readButtonText: { color: theme.colors.textInverse, fontSize: 11, fontWeight: '800' },
   centerContainer: { flex: 1, minHeight: 220, justifyContent: 'center', alignItems: 'center', paddingVertical: 50 },
-  loadingText: { color: colors.muted, fontSize: 13, marginTop: 12 }, emptyText: { color: colors.muted, fontSize: 14, marginTop: 10 },
+  loadingText: { color: theme.colors.textMuted, fontSize: 13, marginTop: 12 }, emptyText: { color: theme.colors.textMuted, fontSize: 14, marginTop: 10 },
 });

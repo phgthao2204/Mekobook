@@ -14,7 +14,9 @@ process.env.EXPO_PUBLIC_API_BASE_URL = 'https://example.test';
 const { clampPage, hasReadAccess, normalizePreferences, latestProgress, mergeReadingProgress, normalizeSearchText, hasStartedReading, readingPercentage } = require('../src/utils/reader.ts');
 const { apiHttp, setApiAccessToken, setSessionRenewal, getMediaRequestHeaders } = require('../src/services/http.ts');
 const { getBooks, normalizeServerUrl, getPageImageUrl, getThumbnailUrl, getBookBookmarks, getBookAnnotations,
-  createBookmark, deleteBookmark, createAnnotation, deleteAnnotation, normalizeDrmLicense } = require('../src/services/api.ts');
+  createBookmark, deleteBookmark, createAnnotation, updateAnnotation, deleteAnnotation, normalizeDrmLicense,
+  getPersonalShelves, createPersonalShelf, updatePersonalShelf, addBookToShelf,
+  getShelfItemsByShelf, getShelfItemsByBook, deleteShelfItem, deletePersonalShelf } = require('../src/services/api.ts');
 const { prepareReader, getBookAccess } = require('../src/services/reader.ts');
 const { generateFlipbookHtml } = require('../src/component/flipbook/flipbookEngineHtml.ts');
 const { AxiosError } = require('axios');
@@ -46,12 +48,54 @@ test('web dev proxy only permits documented reads and OAuth grants', () => {
   assert.equal(allowedRequest('POST', '/o/oauth2/token'), true);
   assert.equal(allowedRequest('POST', '/o/c/bookmarks'), true);
   assert.equal(allowedRequest('POST', '/o/c/annotations'), true);
+  assert.equal(allowedRequest('GET', '/o/c/personalshelfs'), true);
+  assert.equal(allowedRequest('POST', '/o/c/personalshelfs'), true);
+  assert.equal(allowedRequest('PATCH', '/o/c/personalshelfs/33080'), true);
+  assert.equal(allowedRequest('POST', '/o/c/shelfitems'), true);
+  assert.equal(allowedRequest('GET', '/o/c/shelfitems'), true);
+  assert.equal(allowedRequest('DELETE', '/o/c/personalshelfs/33080'), true);
+  assert.equal(allowedRequest('DELETE', '/o/c/shelfitems/34740'), true);
   assert.equal(allowedRequest('PATCH', '/o/c/bookmarks/33130'), true);
   assert.equal(allowedRequest('DELETE', '/o/c/annotations/33140'), true);
   assert.equal(allowedRequest('POST', '/o/c/readingprogresses'), false);
   assert.equal(allowedRequest('DELETE', '/o/c/books/32884'), false);
   assert.equal(allowedRequest('GET', '/o/c/books/../drmlicenses'), false);
   assert.equal(allowedRequest('GET', '/external'), false);
+});
+test('personal shelf API lists, creates, updates and assigns books using documented contracts', async () => {
+  const requests = [];
+  apiHttp.defaults.adapter = async config => {
+    requests.push(config);
+    if (config.method === 'get' && config.url.endsWith('/personalshelfs')) return respond(config, { items: [
+      { id: 2, shelfName: 'Tham khảo', colorTag: '#10B981', displayOrder: 2 },
+      { id: 1, shelfName: 'Đang học', colorTag: '#3B82F6', displayOrder: 1 },
+    ], lastPage: 1 });
+    if (config.method === 'get' && config.url.endsWith('/shelfitems')) return respond(config, { items: [
+      { id: 9, shelfId: 1, bookId: 33048 },
+    ], lastPage: 1 });
+    const body = typeof config.data === 'string' ? JSON.parse(config.data) : config.data;
+    if (config.method === 'post' && config.url.endsWith('/personalshelfs')) return respond(config, { id: 3, ...body });
+    if (config.method === 'patch') return respond(config, { id: 1, displayOrder: 1, ...body });
+    if (config.method === 'post' && config.url.endsWith('/shelfitems')) return respond(config, { id: 9, ...body });
+    if (config.method === 'delete') return respond(config, null);
+    throw new Error('Unexpected shelf API request');
+  };
+  const shelves = await getPersonalShelves();
+  assert.equal(shelves.length, 2);
+  assert.equal(requests[0].params.sort, 'displayOrder:asc');
+  assert.equal((await createPersonalShelf({ shelfName: 'AI', colorTag: '#EC4899', displayOrder: 3 })).shelfName, 'AI');
+  assert.equal((await updatePersonalShelf(1, { shelfName: 'Đang đọc' })).shelfName, 'Đang đọc');
+  const item = await addBookToShelf(1, 33048);
+  assert.equal(item.shelfId, 1); assert.equal(item.bookId, 33048);
+  assert.equal((await getShelfItemsByShelf(1))[0].bookId, 33048);
+  assert.equal(requests.at(-1).params.filter, 'shelfId eq 1');
+  assert.equal(requests.at(-1).params.sort, 'dateCreated:desc');
+  assert.equal((await getShelfItemsByBook(33048))[0].shelfId, 1);
+  assert.equal(requests.at(-1).params.filter, 'bookId eq 33048');
+  await deleteShelfItem(9);
+  await deletePersonalShelf(1);
+  assert.ok(requests.some(request => request.method === 'delete' && request.url.endsWith('/shelfitems/9')));
+  assert.ok(requests.some(request => request.method === 'delete' && request.url.endsWith('/personalshelfs/1')));
 });
 test('dev proxy forwards Connect next so Metro fallback routes do not crash', () => {
   const { createDevApiProxy } = require('../scripts/dev-api-proxy.cjs');
@@ -260,18 +304,23 @@ test('bookmark and drawing writes follow the documented API contract', async () 
     const body = typeof config.data === 'string' ? JSON.parse(config.data) : config.data;
     if (config.method === 'post' && config.url.endsWith('/bookmarks')) return respond(config, { id: 31, ...body });
     if (config.method === 'post' && config.url.endsWith('/annotations')) return respond(config, { id: 41, ...body });
+    if (config.method === 'patch' && config.url.endsWith('/annotations/41')) return respond(config, { id: 41, ...body });
     return respond(config, {});
   };
   const bookmark = await createBookmark({ bookId: 1, pageNumber: 3, bookmarkTitle: 'Trang 3', colorTag: '#F59E0B' });
   const annotation = await createAnnotation({ bookId: 1, pageNumber: 3, type: 'DRAWING_PEN',
-    coordinateData: [{ x: 0.1, y: 0.2 }, { x: 0.3, y: 0.4 }], color: '#EF4444', strokeWidth: 0.004 });
+    coordinateData: [{ x: 0.1, y: 0.2 }, { x: 0.3, y: 0.4 }], color: '#EF4444', strokeWidth: 0.004,
+    noteText: 'Công thức cần nhớ' });
+  const updatedAnnotation = await updateAnnotation(annotation.id, { noteText: 'Xem lại trước kỳ thi' });
   await deleteBookmark(bookmark.id);
   await deleteAnnotation(annotation.id);
   assert.equal(bookmark.id, 31);
   assert.equal(annotation.id, 41);
   assert.equal(typeof annotation.coordinateData, 'string');
+  assert.equal(annotation.noteText, 'Công thức cần nhớ');
+  assert.equal(updatedAnnotation.noteText, 'Xem lại trước kỳ thi');
   assert.deepEqual(requests.map(item => [item.method, new URL(item.url).pathname]), [
-    ['post', '/o/c/bookmarks'], ['post', '/o/c/annotations'],
+    ['post', '/o/c/bookmarks'], ['post', '/o/c/annotations'], ['patch', '/o/c/annotations/41'],
     ['delete', '/o/c/bookmarks/31'], ['delete', '/o/c/annotations/41'],
   ]);
 });
@@ -360,7 +409,10 @@ test('generated engine scripts parse and wire preferences/zoom/load before ready
     assert.ok(html.includes("case 'ZOOM'"));
     assert.ok(html.includes("msg.type === 'UPDATE_PREFERENCES'"));
     assert.ok(html.includes("msg.type === 'SET_ANNOTATIONS'"));
+    assert.ok(html.includes("msg.type === 'SELECT_ANNOTATION'"));
+    assert.ok(html.includes('data-annotation-id'));
     assert.ok(html.includes('reader-annotation-layer'));
+    assert.ok(html.includes('Array.isArray(value[0]) ? value : [value]'), 'one annotation may contain several drawing strokes');
     assert.ok(html.includes('pinchStartScale * touchDistance'));
     assert.ok(html.includes('panX = drag.px + e.touches[0].clientX - drag.x'));
     assert.ok(html.includes('dx > 40 && dy < 55'));
@@ -409,7 +461,9 @@ test('engine bridge initializes once, sends ready, zooms/pans and applies effect
       flipNext() { turns++; current++; handlers.flip({ data: current }); }
       flipPrev() { turns++; current--; handlers.flip({ data: current }); }
       flip(index) { turns++; current = index; handlers.flip({ data: current }); }
-      turnToPage(index) { this.flip(index); }
+      // Reproduce Android builds that silently ignore a distant turnToPage;
+      // the engine must verify and fall back to the absolute flip API.
+      turnToPage(index) { if (Math.abs(index - current) <= 1) this.flip(index); }
       destroy() {}
     }
     const html = generateFlipbookHtml({ book, initialPage: 7, preferences: normalizePreferences({ pageTurnEffect: effect, brightness: 0.5 }) });
@@ -459,7 +513,7 @@ test('engine bridge initializes once, sends ready, zooms/pans and applies effect
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(turns, 2, 'a horizontal swipe should turn a page under every selected effect');
     windowEvents.message({ data: { type: 'GO_TO_PAGE', page: 4 } });
-    await new Promise(resolve => setTimeout(resolve, 700));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     assert.equal(current, 3, 'page picker must navigate to the exact one-based page');
     assert.ok(messages.some(message => message.type === 'PAGE_CHANGED' && message.page === 4));
     await new Promise(resolve => setTimeout(resolve, 650));
