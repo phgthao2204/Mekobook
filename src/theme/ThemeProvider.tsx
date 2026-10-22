@@ -35,7 +35,7 @@ function resolveMode(preference: ThemeMode, system: ColorSchemeName): ResolvedTh
   return preference === 'system' ? (system === 'dark' ? 'dark' : 'light') : preference;
 }
 
-export function ThemeProvider({ children, initialMode = 'system' }: PropsWithChildren<{ initialMode?: ThemeMode }>) {
+export function ThemeProvider({ children, initialMode = 'light' }: PropsWithChildren<{ initialMode?: ThemeMode }>) {
   const system = useColorScheme();
   const [preference, setPreference] = useState<ThemeMode>(initialMode);
   const value = useMemo<ThemeContextValue>(() => ({
