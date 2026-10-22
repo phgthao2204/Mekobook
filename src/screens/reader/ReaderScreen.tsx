@@ -58,6 +58,8 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
   const [annotationNote, setAnnotationNote] = useState('');
   const [annotationSaving, setAnnotationSaving] = useState(false);
   const viewer = useRef<FlipbookViewerRef>(null);
+  const requestedPage = useRef<number | null>(null);
+  const jumpFallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const readerOpacity = useRef(new Animated.Value(0)).current;
   const zoomRailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,6 +85,11 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
     pageRef.current = next;
     setPage(next);
     setZoom(1);
+    if (requestedPage.current === next) {
+      requestedPage.current = null;
+      if (jumpFallbackTimer.current) clearTimeout(jumpFallbackTimer.current);
+      jumpFallbackTimer.current = null;
+    }
     if (!session?.user.id) return;
     if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
     progressSaveTimer.current = setTimeout(() => {
@@ -102,6 +109,9 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
   };
   useEffect(() => () => {
     if (zoomRailTimer.current) clearTimeout(zoomRailTimer.current);
+  }, []);
+  useEffect(() => () => {
+    if (jumpFallbackTimer.current) clearTimeout(jumpFallbackTimer.current);
   }, []);
   useEffect(() => () => {
     if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
@@ -237,7 +247,24 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
       <FlipbookControls book={book} currentPage={page} totalPages={book.totalPages} visible={visible}
         themeMode={resolvedPreferences.themeMode}
         onBack={navigation.goBack} onPrevPage={() => viewer.current?.flipPrev()} onNextPage={() => viewer.current?.flipNext()}
-        onJumpToPage={target => viewer.current?.goToPage(target)} onOpenSettings={() => setSettingsVisible(true)}
+        onJumpToPage={target => {
+          requestedPage.current = target;
+          if (jumpFallbackTimer.current) clearTimeout(jumpFallbackTimer.current);
+          viewer.current?.goToPage(target);
+          jumpFallbackTimer.current = setTimeout(() => {
+            jumpFallbackTimer.current = null;
+            if (pageRef.current === target) { requestedPage.current = null; return; }
+            requestedPage.current = null;
+            pageRef.current = target;
+            setPage(target);
+            setOpeningPage(target);
+            setZoom(1);
+            setError('');
+            setReady(false);
+            readerOpacity.setValue(0);
+            setAttempt(value => value + 1);
+          }, 1400);
+        }} onOpenSettings={() => setSettingsVisible(true)}
         bookmarks={bookmarks} annotations={annotations} bookmarksLoading={bookmarksLoading} annotationsLoading={annotationsLoading}
         bookmarksError={bookmarksError} annotationsError={annotationsError}
         onRetryBookmarks={() => setMarksReload(value => value + 1)} onRetryAnnotations={() => setMarksReload(value => value + 1)}
