@@ -102,7 +102,7 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
       </View>
 
       <View style={[styles.permissionCard, { backgroundColor: permission.background, borderColor: permission.border }]}>
-        <View style={[styles.permissionIcon, { backgroundColor: permission.border }]}><Ionicons name={permission.icon} size={21} color={permission.color} /></View>
+        <View style={[styles.permissionIcon, { backgroundColor: permission.color }]}><Ionicons name={permission.icon} size={18} color={theme.colors.textInverse} /></View>
         <View style={styles.permissionContent}>
           <Text style={styles.permissionCaption}>QUYỀN ĐỌC</Text>
           <Text style={[styles.permissionTitle, { color: permission.color }]}>{permission.label}</Text>
@@ -191,9 +191,9 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   notStartedBadge: { backgroundColor: theme.colors.surfaceMuted }, notStartedText: { color: theme.colors.textMuted }, progressLabel: { flex: 1, color: theme.colors.textMuted, fontSize: 12, fontWeight: '700', textAlign: 'right' },
   progressTrack: { height: 6, borderRadius: 3, backgroundColor: theme.colors.border, marginTop: 11, overflow: 'hidden' }, progressFill: { height: '100%', borderRadius: 3, backgroundColor: theme.colors.info },
   retryButton: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10, alignSelf: 'flex-end' }, retryText: { color: theme.colors.primary, fontSize: 12, fontWeight: '700' },
-  permissionCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 16, borderWidth: 1, marginBottom: 14 }, permissionIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  permissionCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 16, borderWidth: 1, marginBottom: 14 }, permissionIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   permissionContent: { flex: 1, marginLeft: 12 }, permissionCaption: { color: theme.colors.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 0.8 }, permissionTitle: { fontSize: 15, fontWeight: '900', marginTop: 2 }, permissionDetail: { color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 },
-  permissionRetry: { minHeight: 30, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 7, paddingHorizontal: 9, borderRadius: 8, backgroundColor: theme.colors.surface },
+  permissionRetry: { minHeight: 34, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, paddingHorizontal: 11, borderRadius: 10, backgroundColor: theme.colors.surface },
   permissionRetryText: { color: theme.colors.primary, fontSize: 11, fontWeight: '800' },
   licenseCard: { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.info, borderRadius: 16, padding: 15, marginBottom: 14 },
   licenseHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 }, licenseHeaderIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: theme.colors.infoSoft, alignItems: 'center', justifyContent: 'center', marginRight: 10 }, licenseHeaderTitle: { color: theme.colors.text, fontSize: 15, fontWeight: '800' },
