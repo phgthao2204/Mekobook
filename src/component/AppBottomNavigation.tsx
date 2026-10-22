@@ -43,7 +43,7 @@ const createStyles = (theme: AppTheme): {
   container: ViewStyle; item: ViewStyle; iconWrap: ViewStyle; iconWrapActive: ViewStyle;
   label: TextStyle; labelActive: TextStyle;
 } => ({
-  container: { minHeight: 62, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface,
+  container: { minHeight: 62, flexShrink: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface,
     borderTopWidth: 1, borderTopColor: theme.colors.border, paddingHorizontal: theme.spacing.xl,
     paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.xs, ...theme.shadows.md },
   item: { flex: 1, minHeight: 49, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.xxs },

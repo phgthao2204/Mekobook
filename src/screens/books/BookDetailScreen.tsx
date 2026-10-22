@@ -69,7 +69,7 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
       <View style={styles.headerSpacer} />
     </View>
 
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.hero}>
         <View style={styles.coverFrame}>
           <Image source={{ uri: book.coverUrl, headers: getMediaRequestHeaders(book.coverUrl) }} style={styles.cover} resizeMode="cover" />
@@ -175,9 +175,10 @@ export function BookDetailScreen({ route, navigation }: NativeStackScreenProps<R
 }
 const createStyles = (theme: AppTheme) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.colors.background },
-  header: { height: 58, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  header: { height: 58, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   back: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surfaceMuted },
   headerTitle: { color: theme.colors.text, fontSize: 17, fontWeight: '800' }, headerSpacer: { width: 40 },
+  scroll: { flex: 1 },
   content: { padding: 16, paddingBottom: 24 },
   hero: { flexDirection: 'row', backgroundColor: theme.colors.surface, padding: 14, borderRadius: 18, borderWidth: 1, borderColor: theme.colors.border, marginBottom: 14 },
   coverFrame: { width: 112, aspectRatio: 0.72, borderRadius: 10, overflow: 'hidden', backgroundColor: theme.colors.border, elevation: 3, shadowColor: theme.colors.shadow, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 6 },
@@ -206,7 +207,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   addToShelfContent: { flex: 1, paddingHorizontal: 11 }, addToShelfTitle: { color: theme.colors.text, fontSize: 14, fontWeight: '800' }, addToShelfText: { color: theme.colors.textMuted, fontSize: 11, marginTop: 3 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }, infoLabel: { color: theme.colors.textMuted, fontSize: 12 }, infoValue: { flex: 1, color: theme.colors.text, fontSize: 12, fontWeight: '700', textAlign: 'right' }, divider: { height: 1, backgroundColor: theme.colors.border, marginVertical: 11 },
   description: { color: theme.colors.textSecondary, fontSize: 13, lineHeight: 21 },
-  stickyActions: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, backgroundColor: theme.colors.surface, borderTopWidth: 1, borderTopColor: theme.colors.border, elevation: 12, shadowColor: theme.colors.shadow, shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.1, shadowRadius: 8 },
+  stickyActions: { flexShrink: 0, flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, backgroundColor: theme.colors.surface, borderTopWidth: 1, borderTopColor: theme.colors.border, elevation: 12, shadowColor: theme.colors.shadow, shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.1, shadowRadius: 8 },
   primaryButton: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 14, borderRadius: 13, backgroundColor: theme.colors.primary }, flexButton: { flex: 1.25 }, primaryButtonText: { color: theme.colors.textInverse, fontSize: 13, fontWeight: '800' },
   secondaryButton: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 10, borderRadius: 13, backgroundColor: theme.colors.primarySoft, borderWidth: 1, borderColor: theme.colors.primary }, secondaryButtonText: { color: theme.colors.primary, fontSize: 13, fontWeight: '800' },
   disabled: { opacity: 0.4 },

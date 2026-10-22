@@ -270,6 +270,7 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
       ) : (
         <FlatList
           key={viewMode} data={filteredBooks} numColumns={viewMode === 'grid' ? 2 : 1}
+          style={styles.bookList}
           columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
           keyExtractor={(item) => String(item.id)} contentContainerStyle={styles.listContent}
           renderItem={renderBook}
@@ -292,14 +293,14 @@ export const BookCatalog: React.FC<BookCatalogProps> = ({ user, onSelectBook, on
 
 const createStyles = (theme: AppTheme) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.colors.background },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingTop: Platform.OS === 'android' ? 20 : 12, paddingBottom: 14, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  header: { flexShrink: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingTop: Platform.OS === 'android' ? 20 : 12, paddingBottom: 14, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   headerTitle: { flex: 1, marginRight: 12 },
   appName: { color: theme.colors.primary, fontSize: 22, fontWeight: '900', letterSpacing: 1.5 },
   subTitle: { color: theme.colors.textMuted, fontSize: 12, marginTop: 2, fontWeight: '500' },
   userBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.primarySoft, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.primary },
   userDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: theme.colors.success, marginRight: 6 },
   userBadgeText: { color: theme.colors.primary, fontSize: 12, fontWeight: '700', maxWidth: 110 },
-  toolsContainer: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 10 },
+  toolsContainer: { flexShrink: 0, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 10 },
   searchContainer: { flexDirection: 'row', alignItems: 'center', height: 46, backgroundColor: theme.colors.surface, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border },
   searchInput: { flex: 1, color: theme.colors.text, fontSize: 14, marginHorizontal: 8 },
   errorRetry: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, marginBottom: 4, borderRadius: 10, backgroundColor: theme.colors.errorSoft },
@@ -312,6 +313,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   viewSwitcher: { flexDirection: 'row', backgroundColor: theme.colors.border, padding: 2, borderRadius: 9 },
   viewButton: { width: 36, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 7 },
   viewButtonActive: { backgroundColor: theme.colors.primary },
+  bookList: { flex: 1 },
   listContent: { paddingHorizontal: 18, paddingBottom: 24 },
   gridRow: { justifyContent: 'space-between' },
   clearSearchButton: { marginTop: 12, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 9, backgroundColor: theme.colors.primarySoft },

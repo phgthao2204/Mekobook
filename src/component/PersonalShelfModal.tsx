@@ -235,7 +235,7 @@ export function PersonalShelfModal({ visible, bookId, books = [], onSelectBook, 
 
 const createStyles = (theme: AppTheme) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15,23,42,0.45)' }, dismissArea: { flex: 1 },
-  sheet: { maxHeight: '86%', minHeight: 430, backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 18, paddingBottom: 24 },
+  sheet: { height: '86%', maxHeight: 680, backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 18, paddingBottom: 24 },
   handle: { width: 42, height: 4, borderRadius: 2, alignSelf: 'center', backgroundColor: theme.colors.borderStrong, marginTop: 9, marginBottom: 14 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, gap: 10 }, heading: { flex: 1 },
   title: { color: theme.colors.text, fontSize: 20, fontWeight: '900' }, subtitle: { color: theme.colors.textMuted, fontSize: 12, marginTop: 3 },

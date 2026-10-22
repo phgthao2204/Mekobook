@@ -59,7 +59,7 @@ export function AccountScreen({ user, onBack, onOpenLibrary, onLogout, onRefresh
       <View style={styles.headerSpacer} />
     </View>
 
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <View style={styles.profileCard}>
         <View style={styles.avatar}><Ionicons name="person" size={38} color={theme.colors.primary} /></View>
         <Text style={styles.name}>{displayName}</Text>
@@ -123,10 +123,11 @@ export function AccountScreen({ user, onBack, onOpenLibrary, onLogout, onRefresh
 
 const createStyles = (theme: AppTheme) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.colors.background },
-  header: { height: 58, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  header: { height: 58, flexShrink: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   backButton: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, color: theme.colors.text, fontSize: 17, fontWeight: '800', textAlign: 'center' },
   headerSpacer: { width: 42 },
+  scroll: { flex: 1 },
   content: { padding: 18, paddingBottom: 36 },
   profileCard: { backgroundColor: theme.colors.surface, borderRadius: 18, borderWidth: 1, borderColor: theme.colors.border, padding: 22, alignItems: 'center' },
   avatar: { width: 78, height: 78, borderRadius: 39, backgroundColor: theme.colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
