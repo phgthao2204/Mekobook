@@ -1,6 +1,6 @@
 {
   "name": "mekobook-mobile",
-  "version": "1.6.0",
+  "version": "1.7.1",
   "main": "index.ts",
   "dependencies": {
     "@expo/ui": "~57.0.25",

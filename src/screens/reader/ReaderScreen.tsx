@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Modal, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { Alert, Animated, AppState, Modal, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { usePreventRemove } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../navigation/types';
 import { FlipbookViewer, FlipbookViewerRef } from '../../component/flipbook/FlipbookViewer';
 import { FlipbookControls } from '../../component/flipbook/FlipbookControls';
@@ -13,14 +12,19 @@ import { useAuth } from '../../hooks/useAuth';
 import { createAnnotation, createBookmark, deleteAnnotation, deleteBookmark, getBookAnnotations, getBookBookmarks, updateAnnotation } from '../../services/api';
 import { saveLocalReadingProgress } from '../../services/localReadingProgress';
 import { errorMessage } from '../../services/http';
-import { Annotation, AnnotationInput, AnnotationPoint, Bookmark } from '../../types';
+import { Annotation, AnnotationInput, AnnotationPoint, Bookmark, UserPreference } from '../../types';
 const PENDING_DRAWING_ID = -1;
 export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, 'Reader'>) {
   const { session } = useAuth();
-  const insets = useSafeAreaInsets();
   const systemColorScheme = useColorScheme();
   const { book, initialPage } = route.params;
-  const [preferences, setPreferences] = useState(route.params.preferences);
+  // Reader always starts in the app's light presentation. Users can still
+  // switch to Dark, Sepia or System from the reading settings for this session.
+  const [preferences, setPreferences] = useState<UserPreference>({
+    ...route.params.preferences,
+    themeMode: 'LIGHT',
+    brightness: 1,
+  });
   const resolvedPreferences = useMemo(() => ({ ...preferences,
     themeMode: preferences.themeMode === 'SYSTEM'
       ? (systemColorScheme === 'dark' ? 'DARK' : 'LIGHT') as 'DARK' | 'LIGHT' : preferences.themeMode,
@@ -39,8 +43,7 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [zoom, setZoom] = useState(1);
-  const [zoomRailVisible, setZoomRailVisible] = useState(false);
-  const [zoomExpanded, setZoomExpanded] = useState(false);
+  const [readerChrome, setReaderChrome] = useState({ top: 82, bottom: 118 });
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -61,7 +64,6 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
   const requestedPage = useRef<number | null>(null);
   const jumpFallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const readerOpacity = useRef(new Animated.Value(0)).current;
-  const zoomRailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   usePreventRemove(!!pendingDrawing, ({ data }) => {
     Alert.alert('Nét vẽ chưa được lưu', 'Bạn muốn tiếp tục chỉnh sửa hay bỏ nét vẽ và rời khỏi sách?', [
@@ -95,27 +97,24 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
     progressSaveTimer.current = setTimeout(() => {
       progressSaveTimer.current = null;
       persistPage(pageRef.current);
-    }, 250);
+    }, 5000);
   };
-  const revealZoomRail = (scale: number) => {
-    setZoom(scale);
-    setZoomRailVisible(true);
-    setZoomExpanded(false);
-    if (zoomRailTimer.current) clearTimeout(zoomRailTimer.current);
-    zoomRailTimer.current = setTimeout(() => {
-      setZoomRailVisible(false);
-      setZoomExpanded(false);
-    }, 1800);
-  };
-  useEffect(() => () => {
-    if (zoomRailTimer.current) clearTimeout(zoomRailTimer.current);
-  }, []);
   useEffect(() => () => {
     if (jumpFallbackTimer.current) clearTimeout(jumpFallbackTimer.current);
   }, []);
   useEffect(() => () => {
     if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
     persistPage(pageRef.current);
+  }, [book.id, book.totalPages, session?.user.id]);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => {
+      if (state !== 'active') {
+        if (progressSaveTimer.current) clearTimeout(progressSaveTimer.current);
+        progressSaveTimer.current = null;
+        persistPage(pageRef.current);
+      }
+    });
+    return () => subscription.remove();
   }, [book.id, book.totalPages, session?.user.id]);
   useEffect(() => {
     let active = true;
@@ -135,6 +134,9 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
     return () => { active = false; };
   }, [book.id, marksReload]);
   const currentBookmark = bookmarks.find(item => item.pageNumber === page);
+  const pendingCoordinates = pendingDrawing?.coordinateData;
+  const pendingStrokeCount = Array.isArray(pendingCoordinates) && pendingCoordinates.length
+    ? (Array.isArray(pendingCoordinates[0]) ? pendingCoordinates.length : 1) : 0;
   const toggleBookmark = async () => {
     if (bookmarkSaving) return;
     setBookmarkSaving(true);
@@ -226,14 +228,18 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
   }, [ready, error, attempt]);
   return <View style={styles.screen}>
     <StatusBar hidden={ready && !visible} barStyle={resolvedPreferences.themeMode === 'DARK' ? 'light-content' : 'dark-content'} />
-    <Animated.View style={[styles.viewer, { opacity: readerOpacity }]}>
+    <Animated.View style={[styles.viewer, {
+      opacity: readerOpacity,
+      marginTop: ready && visible ? readerChrome.top : 0,
+      marginBottom: ready && visible && !drawingMode ? readerChrome.bottom : 0,
+    }]}>
       <FlipbookViewer key={attempt} ref={viewer} book={book} accessToken={session?.accessToken} annotations={annotations}
         drawingMode={{ enabled: drawingMode, color: drawingColor, strokeWidth: drawingWidth }} onDrawingCreated={drawing => {
           appendDrawingStroke(drawing);
         }}
         initialPage={openingPage} preferences={enginePreferences}
         onPageChange={handlePageChange} onToggleControls={() => setVisible(x => !x)}
-        onZoomChange={revealZoomRail}
+        onZoomChange={setZoom}
         onReady={() => {
           setReady(true);
           setError('');
@@ -246,6 +252,9 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
     </View> : <>
       <FlipbookControls book={book} currentPage={page} totalPages={book.totalPages} visible={visible}
         themeMode={resolvedPreferences.themeMode}
+        onTopBarHeightChange={height => setReaderChrome(current => current.top === height ? current : { ...current, top: height })}
+        onFooterHeightChange={height => setReaderChrome(current => current.bottom === height ? current : { ...current, bottom: height })}
+        zoom={zoom} onZoomChange={scale => { setZoom(scale); viewer.current?.zoom(scale); }}
         onBack={navigation.goBack} onPrevPage={() => viewer.current?.flipPrev()} onNextPage={() => viewer.current?.flipNext()}
         onJumpToPage={target => {
           requestedPage.current = target;
@@ -270,10 +279,24 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
         onRetryBookmarks={() => setMarksReload(value => value + 1)} onRetryAnnotations={() => setMarksReload(value => value + 1)}
         onToggleBookmark={toggleBookmark} currentPageBookmarked={!!currentBookmark} bookmarkSaving={bookmarkSaving}
         drawingMode={drawingMode} drawingColor={drawingColor} drawingWidth={drawingWidth} drawingLocked={!!pendingDrawing}
+        drawingStrokeCount={pendingStrokeCount}
         onToggleDrawing={() => {
           if (drawingMode && pendingDrawing) {
             setDrawingMode(false); setVisible(true); setAnnotationNote(''); setAnnotationEditor({ drawing: pendingDrawing });
           } else { setDrawingMode(value => !value); setVisible(true); }
+        }}
+        onCancelDrawing={() => {
+          const discard = () => {
+            setPendingDrawing(null);
+            setAnnotations(items => items.filter(item => item.id !== PENDING_DRAWING_ID));
+            setDrawingMode(false);
+            setVisible(true);
+          };
+          if (!pendingDrawing) { discard(); return; }
+          Alert.alert('Hủy nét vẽ?', 'Các nét chưa lưu trên trang này sẽ bị xóa.', [
+            { text: 'Tiếp tục vẽ', style: 'cancel' },
+            { text: 'Hủy nét vẽ', style: 'destructive', onPress: discard },
+          ]);
         }}
         onDrawingColorChange={setDrawingColor} onDrawingWidthChange={setDrawingWidth}
         onDeleteBookmark={async bookmark => {
@@ -281,25 +304,6 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
           catch (cause) { Alert.alert('Không thể xóa đánh dấu', errorMessage(cause)); }
         }} onDeleteAnnotation={confirmRemoveAnnotation} onEditAnnotation={editDrawingNote}
         onSelectAnnotation={annotation => { viewer.current?.selectAnnotation(annotation.id, annotation.pageNumber); setVisible(false); }} />
-      {(visible || zoomRailVisible) && <View style={[styles.zoom, {
-        top: insets.top + 76,
-        backgroundColor: resolvedPreferences.themeMode === 'DARK' ? '#18212F' : resolvedPreferences.themeMode === 'SEPIA' ? '#EADFC8' : colors.surface,
-      }]}>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Mở các mức phóng trang"
-          style={styles.zoomCurrent} onPress={() => setZoomExpanded(value => !value)}>
-          <Text style={[styles.zoomValue, { color: resolvedPreferences.themeMode === 'DARK' ? '#F8FAFC' : colors.primary }]}>
-            {Math.round(zoom * 100)}%
-          </Text>
-        </TouchableOpacity>
-        {zoomExpanded && [1, 1.5, 2, 3].map(scale => <TouchableOpacity key={scale} accessibilityRole="button"
-          accessibilityLabel={`Phóng trang ${scale * 100}%`}
-          style={[styles.zoomButton, Math.abs(zoom - scale) < 0.01 && styles.zoomButtonActive]}
-          onPress={() => { setZoom(scale); setZoomExpanded(false); viewer.current?.zoom(scale); }}>
-          <Text style={[styles.zoomText, {
-            color: Math.abs(zoom - scale) < 0.01 ? colors.surface : resolvedPreferences.themeMode === 'DARK' ? '#CBD5E1' : colors.muted,
-          }]}>{scale * 100}%</Text>
-        </TouchableOpacity>)}
-      </View>}
     </>}
     <Modal visible={!!annotationEditor} transparent animationType="fade" onRequestClose={() => {
       if (annotationEditor?.annotation) setAnnotationEditor(null);
@@ -352,14 +356,6 @@ export function ReaderScreen({ route, navigation }: NativeStackScreenProps<RootS
 }
 const styles = StyleSheet.create({
   screen: { flex: 1 }, viewer: { flex: 1 },
-  zoom: { position: 'absolute', right: 12, minHeight: 38, padding: 4, flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface, borderRadius: 13, elevation: 5, shadowColor: '#0F172A', shadowOpacity: 0.14,
-    shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
-  zoomCurrent: { minWidth: 52, height: 34, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' },
-  zoomValue: { textAlign: 'center', fontSize: 12, fontWeight: '900' },
-  zoomButton: { minWidth: 48, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginLeft: 3 },
-  zoomButtonActive: { backgroundColor: colors.primary },
-  zoomText: { fontSize: 12, fontWeight: '700' },
   annotationModalBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 22, backgroundColor: 'rgba(15,23,42,0.62)' },
   annotationModalCard: { width: '100%', maxWidth: 430, borderRadius: 20, padding: 19, backgroundColor: colors.surface },
   annotationModalCardDark: { backgroundColor: '#18212F', borderWidth: 1, borderColor: '#334155' },
