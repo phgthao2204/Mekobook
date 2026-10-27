@@ -273,7 +273,11 @@ export function generateFlipbookHtml({
       preferences.dualPageMode = false;
       var zoomScale = 1, panX = 0, panY = 0;
       var changing = false;
-      var preloadTimers = [], preloadGeneration = 0;
+      // Keep the curl short enough to feel responsive on Android WebView. Image
+      // decoding and neighbour preloads are deliberately kept outside this
+      // animation window to avoid stealing frames from the page renderer.
+      var curlDuration = 380;
+      var preloadTimers = [], preloadGeneration = 0, preloadAfterFlipTimer = null;
       bookEl.style.touchAction = 'none';
       function applyAppearance() {
         var background = preferences.themeMode === 'DARK' ? '#18212f' : preferences.themeMode === 'SEPIA' ? '#eadfc8' : '#F1F5F9';
@@ -390,16 +394,33 @@ export function generateFlipbookHtml({
         } catch (_) {}
       }
       function waitForPage(page) {
-        updateSlidingWindow(page);
         var pages = [page];
         if (preferences.dualPageMode && page < totalPages) pages.push(page + 1);
+        // Cancel obsolete low-priority work immediately, but do not schedule a
+        // new neighbour window until the page animation has finished.
+        if (pageFlipInstance) {
+          preloadTimers.forEach(clearTimeout);
+          preloadTimers = [];
+          preloadGeneration++;
+          document.querySelectorAll('.page').forEach(function(pageEl) {
+            var pageNumber = Number(pageEl.getAttribute('data-page'));
+            var pendingImage = pageEl.querySelector('.page-img');
+            if (pendingImage && pages.indexOf(pageNumber) < 0 && !isPageVisible(pageNumber)
+              && pendingImage.getAttribute('data-loading-src')) clearImage(pendingImage);
+          });
+        }
         return Promise.all(pages.map(function(p) {
           var img = document.querySelector('[data-page="' + p + '"] .page-img');
-          if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+          var targetSrc = img && img.getAttribute('data-src');
+          if (img && targetSrc) loadPageImage(img, targetSrc, true);
+          function decodeImage() {
+            return typeof img.decode === 'function' ? img.decode().catch(function() {}) : Promise.resolve();
+          }
+          if (img.complete && img.naturalWidth > 0) return decodeImage();
           return new Promise(function(resolve, reject) {
             var timer = setTimeout(function() { cleanup(); reject(new Error('Không tải được ảnh trang ' + p)); }, 15000);
             function cleanup() { clearTimeout(timer); img.removeEventListener('load', loaded); img.removeEventListener('error', failed); }
-            function loaded() { cleanup(); resolve(); }
+            function loaded() { cleanup(); decodeImage().then(resolve, resolve); }
             function failed() { cleanup(); reject(new Error('Không tải được ảnh trang ' + p)); }
             img.addEventListener('load', loaded); img.addEventListener('error', failed);
           });
@@ -428,7 +449,7 @@ export function generateFlipbookHtml({
           playPageSound();
           zoomScale = 1; panX = panY = 0; applyZoom();
           if (preferences.pageTurnEffect === 'CURL_3D') {
-            setTimeout(function() { changing = false; }, 600);
+            setTimeout(function() { changing = false; }, curlDuration + 70);
           } else {
             changing = false;
           }
@@ -690,14 +711,18 @@ export function generateFlipbookHtml({
             maxWidth: 1200,
             minHeight: 120,
             maxHeight: 1800,
-            drawShadow: true,
-            flippingTime: 550,
+            // Dynamic canvas shadows are expensive on phone WebViews. The curl
+            // geometry still provides the 3D effect; keep shadows for the
+            // larger tablet viewport where there is more rendering headroom.
+            drawShadow: containerWidth >= 700,
+            maxShadowOpacity: 0.18,
+            flippingTime: curlDuration,
             usePortrait: usePortrait,
             startPage: initialPage - 1,
             showCover: false,
             mobileScrollSupport: false,
             swipeDistance: 15,
-            showPageCorners: true,
+            showPageCorners: false,
             // Use exactly one gesture owner. The native PageFlip touch handler
             // and our reader swipe handler previously reacted to the same
             // gesture, which could advance twice or bounce to the old page.
@@ -707,13 +732,15 @@ export function generateFlipbookHtml({
 
           pageFlipInstance.on('flip', function(e) {
             var newPage = e.data + 1;
-            updateSlidingWindow(newPage);
             if (!changing) playPageSound();
-            waitForPage(newPage).catch(function(error) {
-              // A user can turn several pages before an older image request
-              // times out. Never replace the current page with that stale error.
-              if (isPageVisible(newPage)) postToRN({ type: 'ERROR', message: error.message });
-            });
+            // The destination image was decoded before navigatePage initiated
+            // the curl. Start neighbour fetch/decode only after the animation
+            // has settled so it cannot cause dropped frames mid-turn.
+            if (preloadAfterFlipTimer) clearTimeout(preloadAfterFlipTimer);
+            preloadAfterFlipTimer = setTimeout(function() {
+              preloadAfterFlipTimer = null;
+              if (isPageVisible(newPage)) updateSlidingWindow(newPage);
+            }, preferences.pageTurnEffect === 'CURL_3D' ? curlDuration + 80 : 40);
             postToRN({
               type: 'PAGE_CHANGED',
               page: newPage,
@@ -923,6 +950,7 @@ export function generateFlipbookHtml({
       });
 
       window.addEventListener('pagehide', function() {
+        if (preloadAfterFlipTimer) clearTimeout(preloadAfterFlipTimer);
         document.querySelectorAll('.page-img').forEach(function(img) { clearImage(img); });
         if (audioContext) audioContext.close();
         if (pageFlipInstance) pageFlipInstance.destroy();

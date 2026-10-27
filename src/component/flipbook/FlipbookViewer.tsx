@@ -159,6 +159,7 @@ export const FlipbookViewer = forwardRef<FlipbookViewerRef, FlipbookViewerProps>
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={false}
           mixedContentMode="always"
+          androidLayerType="hardware"
         />
       </View>
     );

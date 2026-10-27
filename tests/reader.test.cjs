@@ -416,6 +416,8 @@ test('generated engine scripts parse and wire preferences/zoom/load before ready
     assert.ok(html.includes('pinchStartScale * touchDistance'));
     assert.ok(html.includes('panX = drag.px + e.touches[0].clientX - drag.x'));
     assert.ok(html.includes('dx > 40 && dy < 55'));
+    assert.ok(html.includes("typeof img.decode === 'function'"), 'page image should decode before animation');
+    assert.ok(html.includes('preloadAfterFlipTimer'), 'neighbor preload should wait until the curl settles');
     assert.ok(html.includes("target.origin !== apiOrigin"));
     assert.ok(html.includes("'Authorization': 'Bearer ' + accessToken"));
     assert.ok(!html.includes('reader-token&'));
@@ -473,6 +475,9 @@ test('engine bridge initializes once, sends ready, zooms/pans and applies effect
     assert.equal(instances, 1); assert.equal(messages[0].type, 'ENGINE_READY');
     assert.equal(receivedSettings.usePortrait, true);
     assert.equal(receivedSettings.useMouseEvents, false, 'only the reader gesture handler may own a swipe');
+    assert.equal(receivedSettings.flippingTime, 380, 'mobile curl should remain responsive');
+    assert.equal(receivedSettings.drawShadow, false, 'phone curl should avoid expensive dynamic shadows');
+    assert.equal(receivedSettings.showPageCorners, false, 'unused corner animation should remain disabled');
     assert.ok(receivedSettings.minWidth > window.innerWidth / 2);
     assert.ok(bookEl.style.filter.includes('brightness(0.5)'));
     windowEvents.message({ data: { type: 'ZOOM', scale: 2 } });
@@ -590,10 +595,13 @@ test('authenticated reader isolates failed neighbor preloads, aborts obsolete lo
   windowEvents.message({ data: { type: 'SET_ACCESS_TOKEN', token: 'synthetic-new' } });
   windowEvents.message({ data: { type: 'GO_TO_PAGE', page: 8 } });
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(requests.find(value => value.url.endsWith('/5.jpg')).signal.aborted, true);
+  const staleRequest = requests.find(value => value.url.endsWith('/5.jpg'));
+  if (staleRequest) assert.equal(staleRequest.signal.aborted, true);
   const allocated = objectUrls;
-  deferred();
-  await new Promise(resolve => setImmediate(resolve));
+  if (deferred) {
+    deferred();
+    await new Promise(resolve => setImmediate(resolve));
+  }
   assert.equal(objectUrls, allocated);
   assert.ok(requests.some(value => value.url.endsWith('/8.jpg') && value.headers.Authorization === 'Bearer synthetic-new'));
   assert.equal(instances, 1);
